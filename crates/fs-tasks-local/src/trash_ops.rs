@@ -10,9 +10,10 @@ use fs_objects::v5;
 use fs_objects::v5::codec::{get_text, id_value};
 use fs_objects::v5::envelope::{delete_final, due, state, trash, untrash};
 use fs_tasks_testdata::tasks_v1::{
-    Deleted, ObjectId, Revision, SUBTASK_DEPTH_MAX, SeriesScope, Task, TaskResult,
+    Deleted, ListAccess, ObjectId, Revision, SUBTASK_DEPTH_MAX, SeriesScope, Task, TaskResult,
 };
 
+use crate::access::need;
 use crate::error::{adapt, bad, changed, gone};
 use crate::lists::any;
 use crate::registry::DOMAIN;
@@ -20,16 +21,19 @@ use crate::stored::{load_one, marks};
 use crate::tasks_write::{live_task, whole_only};
 use crate::trash_state::Gone;
 use crate::tree::Tree;
+use crate::who::Who;
 
 /// `delete`: the task goes into the trash with its living subtasks, one deadline.
 pub async fn delete(
     c: &v5::Conn<'_>,
+    who: &Who,
     now: i64,
     id: ObjectId,
     expected: Revision,
     scope: SeriesScope,
 ) -> TaskResult<Deleted> {
     let s = live_task(c, id).await?;
+    need(c, who, s.task.list, ListAccess::Write, "task.delete").await?;
     if s.task.revision != expected {
         return Err(changed(s.task.revision));
     }
@@ -62,12 +66,14 @@ pub async fn delete(
 /// the parent is in the trash, the tree would be too deep); nothing is written on a refusal.
 pub async fn restore(
     c: &v5::Conn<'_>,
+    who: &Who,
     now: i64,
     id: ObjectId,
     scope: SeriesScope,
 ) -> TaskResult<Task> {
-    whole_only(scope)?;
     let s = load_one(c, id).await?.ok_or_else(|| gone(id))?;
+    need(c, who, s.task.list, ListAccess::Write, "task.restore").await?;
+    whole_only(scope)?;
     if s.trash().is_none() {
         return Err(bad("task", "not-deleted"));
     }
@@ -105,14 +111,16 @@ pub async fn restore(
 }
 
 /// `purge`: a task (with the subtasks that went with it) or a list (with all its tasks) in the trash goes now.
-pub async fn purge(c: &v5::Conn<'_>, id: ObjectId) -> TaskResult<()> {
+pub async fn purge(c: &v5::Conn<'_>, who: &Who, id: ObjectId) -> TaskResult<()> {
     let kind = kind_of(c, id).await?.ok_or_else(|| gone(id))?;
     if kind == "list" {
+        need(c, who, id, ListAccess::Manage, "trash.purge").await?;
         if any(c, id).await?.trash.is_none() {
             return Err(bad("id", "not-in-trash"));
         }
     } else {
         let s = load_one(c, id).await?.ok_or_else(|| gone(id))?;
+        need(c, who, s.task.list, ListAccess::Manage, "trash.purge").await?;
         if s.trash().is_none() {
             return Err(bad("id", "not-in-trash"));
         }

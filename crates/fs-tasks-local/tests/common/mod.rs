@@ -4,10 +4,11 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, Ordering};
 
 use async_trait::async_trait;
+use fs_objects::v5::codec::get_int;
 use fs_tasks_local::{Clock, LocalTasks};
 use fs_tasks_testdata::conformance::ConformanceFixture;
-use fs_tasks_testdata::tasks_v1::{PersonRef, Tasks};
-use fs_tasks_testdata::{START_MS, person};
+use fs_tasks_testdata::tasks_v1::{ObjectId, PersonRef, Progress, TaskDraft, TaskPatch, Tasks};
+use fs_tasks_testdata::{KNOWN, Known, START_MS, person};
 
 /// The provider, the clock behind it, and the account that asks.
 pub struct LocalFx {
@@ -24,6 +25,7 @@ impl LocalFx {
         let tasks = LocalTasks::open(path, account.clone(), clock)
             .await
             .expect("the store opens");
+        tasks.mark_agent(known(8));
         Self {
             tasks,
             now: now.clone(),
@@ -51,9 +53,71 @@ impl ConformanceFixture for LocalFx {
     async fn account(&self) -> Option<PersonRef> {
         Some(self.account.clone())
     }
+
+    async fn act_as(&self, who: Option<PersonRef>) -> bool {
+        self.tasks.act_as(who);
+        true
+    }
+
+    /// Another human (sample person 2).
+    async fn colleague(&self) -> Option<PersonRef> {
+        Some(known(2))
+    }
+
+    /// An AI (sample person 8), marked as one in `open`.
+    async fn agent(&self) -> Option<PersonRef> {
+        Some(known(8))
+    }
+
+    async fn read_only(&self, who: &PersonRef, list: ObjectId) -> bool {
+        self.tasks.make_read_only(who, list).await.is_ok()
+    }
+
+    /// Days until the automatic purge; `None` (= never) needs `trash_auto` of fs-objects v0.0.3 (run 2b), so it stays
+    /// refused and the rules for `Manual` are skipped and named.
+    async fn set_trash_days(&self, days: Option<u32>) -> bool {
+        match days {
+            Some(d) => self.tasks.set_trash_days(d).await.is_ok(),
+            None => false,
+        }
+    }
+}
+
+/// A person of the sample by number.
+pub fn known(n: u64) -> PersonRef {
+    KNOWN
+        .iter()
+        .find(|k| k.number == n)
+        .map(Known::person)
+        .expect("a person of the sample")
 }
 
 /// Move the clock of a provider by hand.
 pub fn advance(fx: &LocalFx, millis: i64) {
     fx.now.fetch_add(millis, Ordering::SeqCst);
+}
+
+pub fn draft(
+    list: fs_tasks_testdata::tasks_v1::ObjectId,
+    title: &str,
+    rest: TaskPatch,
+) -> TaskDraft {
+    TaskDraft {
+        list,
+        uid: None,
+        title: title.to_owned(),
+        progress: Progress::NeedsAction,
+        assignees: Vec::new(),
+        checklist: Vec::new(),
+        rest,
+    }
+}
+
+pub async fn count(fx: &LocalFx, table: &str) -> i64 {
+    let c = fx.tasks.store().read().await;
+    let rows = c
+        .query(&format!("SELECT count(*) FROM {table}"), Vec::new())
+        .await
+        .expect("a count");
+    get_int(&rows[0], 0).expect("a number")
 }

@@ -1,22 +1,25 @@
-//! Conformance Fake = Local for the rules run 1 covers: the same rules, written once in `fs-tasks-testdata`, run against
+//! Conformance Fake = Local for the rules run 2a covers: the same rules, written once in `fs-tasks-testdata`, run against
 //! `LocalTasks`. The rules of the capabilities this run does not offer are skipped and named (never counted as passed).
 
 #[allow(dead_code)]
 mod common;
 
 use common::LocalFx;
-use fs_tasks_testdata::conformance::{Options, run_fixture_conformance_with};
+use fs_tasks_testdata::conformance::{
+    Options, RankPart, run_fixture_conformance_with, run_rank_conformance,
+};
 
+/// The quick run: every group but the rank rules (they write thousands of tasks and run as tests of their own below).
 fn partial() -> Options {
     Options {
         heavy: false,
-        skip_rank: false,
+        skip_rank: true,
         partial: true,
     }
 }
 
 #[tokio::test]
-async fn local_tasks_pass_the_rules_run_1_covers() {
+async fn local_tasks_pass_the_rules_run_2a_covers() {
     let fx = LocalFx::memory().await;
     let report = Box::pin(run_fixture_conformance_with(&fx, partial())).await;
     assert!(
@@ -44,7 +47,6 @@ async fn strict_mode_fails_what_partial_mode_skips() {
     let fx = LocalFx::memory().await;
     let strict = Options {
         partial: false,
-        skip_rank: true,
         ..partial()
     };
     let report = Box::pin(run_fixture_conformance_with(&fx, strict)).await;
@@ -65,5 +67,29 @@ async fn strict_mode_fails_what_partial_mode_skips() {
             .any(|s| s.starts_with("assign: the provider lacks task.assign")),
         "partial mode names the skipped group: {:#?}",
         report.skipped
+    );
+}
+
+/// The rank rules that need only `create` (new on top, the top edge, the spread on top), against `LocalTasks`.
+#[tokio::test]
+async fn the_rank_rules_on_top_pass() {
+    let fx = LocalFx::memory().await;
+    let report = run_rank_conformance(&fx.tasks, RankPart::Top, partial()).await;
+    assert!(report.failures.is_empty(), "failed: {:#?}", report.failures);
+    println!("rank top: checked {}", report.checked);
+    assert!(report.checked >= 7, "too few rules ran: {}", report.checked);
+}
+
+/// The rank rules with `place` (neighbours, the bottom, the spread by placing), against `LocalTasks`.
+#[tokio::test]
+async fn the_rank_rules_with_place_pass() {
+    let fx = LocalFx::memory().await;
+    let report = run_rank_conformance(&fx.tasks, RankPart::Place, partial()).await;
+    assert!(report.failures.is_empty(), "failed: {:#?}", report.failures);
+    println!("rank place: checked {}", report.checked);
+    assert!(
+        report.checked >= 10,
+        "too few rules ran: {}",
+        report.checked
     );
 }

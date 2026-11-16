@@ -1,4 +1,4 @@
-//! The domain tables `tasks_*` of this run (PLAN section 3.1): lists, tasks and labels. Every field has a typed
+//! The domain tables `tasks_*` (PLAN section 3.1): lists, tasks, labels and the grants of lists. Every field has a typed
 //! column, no JSON and no blob; the checklist, assignees, alerts, links, rules, dependencies and the claim are the
 //! tables of run 2 (named in `stand.md`). `created` and `updated` are not repeated here: the envelope (`objects`)
 //! has them (`published`, `updated`), one source.
@@ -118,5 +118,54 @@ pub const LABEL: Table = Table {
     indexes: &["CREATE INDEX IF NOT EXISTS tasks_label_value ON tasks_label (value)"],
 };
 
+/// Who may see a list besides its owner, or sees less than the owner would: one row per list and person (step 2: run
+/// 2a). A grant row REPLACES the level of the owner (the owner made `Read` only reads); without a row the owner has
+/// `Manage` and nobody else sees the list. Groups come with run 2b (`GroupMembers`).
+pub const GRANT: Table = Table {
+    name: "tasks_grant",
+    cols: &[
+        Col::req("list", Ref),
+        Col::req("who_id", Iri),
+        Col::req("who_art", Enum(ART)),
+        Col::opt("who_abzug", Ref),
+        Col::req("level", Enum(crate::access::LEVELS)),
+    ],
+    constraints: &[
+        "PRIMARY KEY (list, who_id)",
+        "FOREIGN KEY (list) REFERENCES tasks_list(id) ON DELETE CASCADE",
+    ],
+    indexes: &[],
+};
+
+/// The checklist of a task: light items to tick (no subtasks). `key` is the stable name of an item inside its task (it
+/// stays when the item is renamed or moved), `rank` the hand order inside the task. `done_*` is who ticked and when:
+/// all empty (open) or all set.
+pub const CHECKLIST: Table = Table {
+    name: "tasks_checklist",
+    cols: &[
+        Col::req("task", Ref),
+        Col::req("key", Text),
+        Col::req("title", Text),
+        Col::req("rank", Text),
+        Col::opt("done_by_id", Iri),
+        Col::opt("done_by_art", Enum(ART)),
+        Col::opt("done_by_abzug", Ref),
+        Col::opt("done_at", Utc),
+    ],
+    constraints: &[
+        "PRIMARY KEY (task, key)",
+        "FOREIGN KEY (task) REFERENCES tasks_task(id) ON DELETE CASCADE",
+        "CHECK (done_by_id IS NULL AND done_by_art IS NULL AND done_by_abzug IS NULL AND done_at IS NULL \
+         OR done_by_id IS NOT NULL AND done_by_art IS NOT NULL AND done_at IS NOT NULL)",
+    ],
+    indexes: &["CREATE INDEX IF NOT EXISTS tasks_checklist_order ON tasks_checklist (task, rank)"],
+};
+
+/// The tables of step 1 (run 1).
+pub const STEP_1: [Table; 3] = [LIST, TASK, LABEL];
+/// The tables of step 2 (run 2a).
+pub const STEP_2: [Table; 1] = [GRANT];
+/// The tables of step 3 (run 2a, the checklist).
+pub const STEP_3: [Table; 1] = [CHECKLIST];
 /// All tables of the domain, in creation order (a table comes after the ones it points to).
-pub const ALL: [Table; 3] = [LIST, TASK, LABEL];
+pub const ALL: [Table; 5] = [LIST, TASK, LABEL, GRANT, CHECKLIST];

@@ -14,12 +14,13 @@ use crate::error::{adapt, bad};
 use crate::words::progress_word;
 
 /// The living tasks of a sequence with their ranks, in order.
-async fn column(
+pub async fn column(
     c: &v5::Conn<'_>,
     list: ObjectId,
     parent: Option<ObjectId>,
     progress: Progress,
     exclude: Option<ObjectId>,
+    limit: Option<usize>,
 ) -> TaskResult<Vec<(Rank, ObjectId)>> {
     let mut sql = "SELECT t.rank, t.id FROM tasks_task t JOIN objects o ON o.id = t.id \
         WHERE t.list = ? AND t.progress = ? AND o.deleted IS NULL AND t.deleted_with IS NULL"
@@ -37,6 +38,10 @@ async fn column(
         params.push(id_value(x));
     }
     sql.push_str(" ORDER BY t.rank, t.id");
+    if let Some(n) = limit {
+        sql.push_str(" LIMIT ");
+        sql.push_str(&n.to_string());
+    }
     let rows = c.query(&sql, params).await.map_err(adapt)?;
     let mut out = Vec::new();
     for row in &rows {
@@ -48,7 +53,8 @@ async fn column(
     Ok(out)
 }
 
-/// A rank above everything in the sequence (the new card is on top). `exclude` is the task that is being moved.
+/// A rank above everything in the sequence (the new card is on top). `exclude` is the task that is being moved. The
+/// normal case reads ONE row (the first of the column); only a rank that runs out loads the whole column to spread it.
 pub async fn top(
     c: &v5::Conn<'_>,
     now: i64,
@@ -57,11 +63,12 @@ pub async fn top(
     progress: Progress,
     exclude: Option<ObjectId>,
 ) -> TaskResult<Rank> {
-    let col = column(c, list, parent, progress, exclude).await?;
-    match Rank::between(None, col.first().map(|f| &f.0)) {
+    let first = column(c, list, parent, progress, exclude, Some(1)).await?;
+    match Rank::between(None, first.first().map(|f| &f.0)) {
         Ok(rank) => Ok(rank),
         Err(RankError::Swapped) => Err(bad("rank", "swapped")),
         Err(RankError::Equal | RankError::Exhausted) => {
+            let col = column(c, list, parent, progress, exclude, None).await?;
             let spread = Rank::spread(col.len());
             for ((_, id), rank) in col.iter().zip(&spread) {
                 c.exec(

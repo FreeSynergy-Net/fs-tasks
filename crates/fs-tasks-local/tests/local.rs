@@ -7,37 +7,16 @@ mod common;
 use std::sync::Arc;
 use std::sync::atomic::AtomicI64;
 
-use common::LocalFx;
+use common::{LocalFx, count, draft};
 use fs_objects::v5::codec::get_int;
 use fs_objects::v5::spec::Logical;
 use fs_tasks_local::tables::ALL;
 use fs_tasks_testdata::tasks_v1::{
-    Error, Progress, Restorable, SeriesScope, TaskDraft, TaskError, TaskPatch, Tasks, Trash,
+    Error, Restorable, SeriesScope, TaskError, TaskPatch, Tasks, Trash,
 };
 use fs_tasks_testdata::{START_MS, person};
 
 const DAY: i64 = 86_400_000;
-
-fn draft(list: fs_tasks_testdata::tasks_v1::ObjectId, title: &str, rest: TaskPatch) -> TaskDraft {
-    TaskDraft {
-        list,
-        uid: None,
-        title: title.to_owned(),
-        progress: Progress::NeedsAction,
-        assignees: Vec::new(),
-        checklist: Vec::new(),
-        rest,
-    }
-}
-
-async fn count(fx: &LocalFx, table: &str) -> i64 {
-    let c = fx.tasks.store().read().await;
-    let rows = c
-        .query(&format!("SELECT count(*) FROM {table}"), Vec::new())
-        .await
-        .expect("a count");
-    get_int(&rows[0], 0).expect("a number")
-}
 
 #[test]
 fn no_column_is_a_blob_or_a_json_text() {
@@ -231,10 +210,21 @@ async fn what_this_run_does_not_store_is_refused_by_name_never_dropped() {
         matches!(r, Err(TaskError::Common(Error::Unsupported { .. }))),
         "{r:?}"
     );
-    let mut d = draft(list.id, "T", TaskPatch::default());
-    d.checklist = vec!["one".into()];
+    let rest = TaskPatch {
+        alerts: Some(Vec::new()),
+        links: Some(vec![fs_tasks_testdata::tasks_v1::Link {
+            key: "l".into(),
+            href: Some("https://example.org/".into()),
+            file: None,
+            content_type: None,
+            size: None,
+            rel: None,
+            title: None,
+        }]),
+        ..TaskPatch::default()
+    };
     assert!(matches!(
-        fx.tasks.create(d).await,
+        fx.tasks.create(draft(list.id, "T", rest)).await,
         Err(TaskError::Common(Error::Unsupported { .. }))
     ));
     let rest = TaskPatch {

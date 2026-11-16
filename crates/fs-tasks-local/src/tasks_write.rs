@@ -8,10 +8,12 @@ use fs_objects::v5::envelope::{bump, insert, touch};
 use fs_objects::v5::new_id;
 use fs_tasks_testdata::blank_task;
 use fs_tasks_testdata::tasks_v1::{
-    ObjectId, PersonRef, Revision, SUBTASK_DEPTH_MAX, SeriesScope, Task, TaskDraft, TaskError,
+    ListAccess, ObjectId, Revision, SUBTASK_DEPTH_MAX, SeriesScope, Task, TaskDraft, TaskError,
     TaskPatch, TaskResult, Utc,
 };
 
+use crate::access::need;
+use crate::checklist_rows::create_items;
 use crate::error::{adapt, bad, changed, gone, unsupported};
 use crate::lists::live;
 use crate::patch::{apply, check};
@@ -19,6 +21,7 @@ use crate::rank::top;
 use crate::stored::{Stored, load_one, row_values, update_row, write_labels};
 use crate::tables::TASK;
 use crate::tree::Tree;
+use crate::who::Who;
 use crate::words::is_done;
 
 /// A living task (not deleted, not with a parent, its list alive); `NotFound` otherwise.
@@ -39,12 +42,8 @@ pub fn whole_only(scope: SeriesScope) -> TaskResult<()> {
 }
 
 /// `create`.
-pub async fn create(
-    c: &v5::Conn<'_>,
-    asker: &PersonRef,
-    now: i64,
-    d: TaskDraft,
-) -> TaskResult<Task> {
+pub async fn create(c: &v5::Conn<'_>, who: &Who, now: i64, d: TaskDraft) -> TaskResult<Task> {
+    need(c, who, d.list, ListAccess::Write, "task.create").await?;
     if d.rest.title.is_some() || d.rest.list.is_some() {
         return Err(bad("rest", "title-or-list-set-twice"));
     }
@@ -53,10 +52,10 @@ pub async fn create(
     }
     live(c, d.list).await?;
     check(&d.rest)?;
-    if !d.assignees.is_empty() || !d.checklist.is_empty() {
+    if !d.assignees.is_empty() {
         return Err(unsupported(
             "task.create",
-            "assignees and checklists are stored in K1 run 2",
+            "assignees are stored in K1 run 2b (they need the groups)",
         ));
     }
     let parent = d.rest.parent.flatten();
@@ -85,13 +84,14 @@ pub async fn create(
         t.progress_updated = Some(Utc::from_millis(now));
     }
     t.rank = top(c, now, t.list, t.parent, t.progress, None).await?;
-    insert(c, id, "task", &t.title, asker, now)
+    insert(c, id, "task", &t.title, &who.me, now)
         .await
         .map_err(adapt)?;
     c.insert(&TASK, row_values(&t, None)?)
         .await
         .map_err(adapt)?;
     write_labels(c, id, &t.labels).await?;
+    create_items(c, id, &d.checklist).await?;
     Ok(load_one(c, id).await?.ok_or_else(|| gone(id))?.task)
 }
 
@@ -117,6 +117,7 @@ async fn parent_error(c: &v5::Conn<'_>, p: ObjectId, list: ObjectId) -> TaskResu
 /// `update`: the stored fields; moving to another list or under another task moves the whole subtree.
 pub async fn update(
     c: &v5::Conn<'_>,
+    who: &Who,
     now: i64,
     id: ObjectId,
     expected: Revision,
@@ -124,6 +125,7 @@ pub async fn update(
     scope: SeriesScope,
 ) -> TaskResult<Task> {
     let stored = live_task(c, id).await?;
+    need(c, who, stored.task.list, ListAccess::Write, "task.edit").await?;
     let old = stored.task.clone();
     if old.revision != expected {
         return Err(changed(old.revision));
@@ -133,6 +135,7 @@ pub async fn update(
     let list = patch.list.unwrap_or(old.list);
     let parent = patch.parent.unwrap_or(old.parent);
     if list != old.list {
+        need(c, who, list, ListAccess::Write, "task.edit").await?;
         live(c, list).await?;
     }
     let old_tree = Tree::load(c, old.list).await?;

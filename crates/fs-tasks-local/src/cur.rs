@@ -74,4 +74,17 @@ impl<'a> Cur<'a> {
         let abzug = self.opt_id()?;
         Ok(PersonRef { id, art, abzug })
     }
+
+    /// A person that may be empty (three columns: all empty or the id and the kind set).
+    pub fn opt_person(&mut self) -> TaskResult<Option<PersonRef>> {
+        let (id, art, abzug) = (self.opt_text()?, self.opt_text()?, self.opt_id()?);
+        match (id, art) {
+            (Some(id), Some(art)) => Ok(Some(PersonRef {
+                id: reference_of(&id).map_err(adapt)?,
+                art: art_of(&art).map_err(adapt)?,
+                abzug,
+            })),
+            _ => Ok(None),
+        }
+    }
 }

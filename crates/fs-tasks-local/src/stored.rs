@@ -61,19 +61,33 @@ impl Stored {
 
 /// Load the tasks that match `cond` (SQL over the aliases `t`, `o`, `lo`, `wo`), by id, with their labels.
 pub async fn load(c: &v5::Conn<'_>, cond: &str, params: Vec<Value>) -> TaskResult<Vec<Stored>> {
-    let sql = format!("SELECT {COLUMNS} {FROM} WHERE {cond} ORDER BY t.id");
+    load_with(c, cond, params, "ORDER BY t.id").await
+}
+
+/// [`load`] with the end of the statement (`ORDER BY .. LIMIT .. OFFSET ..`) in the caller's hands: the order and the
+/// page are the database's work.
+pub async fn load_with(
+    c: &v5::Conn<'_>,
+    cond: &str,
+    params: Vec<Value>,
+    tail: &str,
+) -> TaskResult<Vec<Stored>> {
+    let sql = format!("SELECT {COLUMNS} {FROM} WHERE {cond} {tail}");
     let rows = c.query(&sql, params).await.map_err(adapt)?;
     let mut out = Vec::new();
     for row in &rows {
         out.push(read(&mut Cur::new(row))?);
     }
-    let labels = labels_of(c, &out.iter().map(|s| s.task.id).collect::<Vec<_>>()).await?;
+    let ids: Vec<ObjectId> = out.iter().map(|s| s.task.id).collect();
+    let labels = labels_of(c, &ids).await?;
+    let mut items = crate::checklist_rows::items_of(c, &ids).await?;
     for s in &mut out {
         s.task.labels = labels
             .iter()
             .filter(|(t, _)| *t == s.task.id)
             .map(|(_, v)| v.clone())
             .collect();
+        s.task.checklist = items.remove(&s.task.id).unwrap_or_default();
     }
     Ok(out)
 }

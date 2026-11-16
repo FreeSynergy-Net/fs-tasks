@@ -2,8 +2,8 @@
 //!
 //! Pattern: Transaction scripts (each function runs in the caller's unit of work; compare-and-set on the envelope's
 //! `rev`). Who may own a list (PLAN EIGENTUM): the asking person themselves; a group or organisation needs
-//! `GroupMembers` (run 2) and is `Forbidden` until then; another person is `Invalid`. The provider does not know AIs
-//! yet (the directory comes with run 2), so the AI-owner rule is the fixture's job later.
+//! `GroupMembers` (run 2b) and is `Forbidden` until then; another person is `Invalid`; an AI owns nothing and asking
+//! as an AI is `Forbidden` (the provider knows its AIs from `mark_agent`).
 
 use fs_objects::v5;
 use fs_objects::v5::codec::{id_value, opt_text, person_values, text};
@@ -15,11 +15,13 @@ use fs_tasks_testdata::tasks_v1::{
 };
 use turso::Value;
 
+use crate::access::{need, visible};
 use crate::cur::Cur;
 use crate::error::{adapt, bad, changed, forbidden, gone};
 use crate::stored::load;
 use crate::tables::LIST;
 use crate::trash_state::{Gone, gone as gone_of};
+use crate::who::Who;
 
 const SELECT: &str = "SELECT l.id, l.name, l.color, l.owner_id, l.owner_art, l.owner_abzug, o.rev, o.deleted, \
     o.purge_after FROM tasks_list l JOIN objects o ON o.id = l.id";
@@ -54,14 +56,22 @@ pub async fn load_lists(
     Ok(out)
 }
 
-/// The lists the asking person sees (all of them: this provider has only the asker's own lists), by trash view.
-pub async fn lists(c: &v5::Conn<'_>, view: Trash) -> TaskResult<Vec<TaskList>> {
+/// The lists the asking person sees (their own and those granted to them), with their access, by trash view.
+pub async fn lists(c: &v5::Conn<'_>, who: &Who, view: Trash) -> TaskResult<Vec<TaskList>> {
     let cond = match view {
         Trash::Exclude => "o.deleted IS NULL",
         Trash::Include => "1 = 1",
         Trash::Only => "o.deleted IS NOT NULL",
     };
-    load_lists(c, cond, Vec::new()).await
+    let seen = visible(c, who).await?;
+    let mut out = load_lists(c, cond, Vec::new()).await?;
+    out.retain_mut(|l| {
+        seen.iter().find(|s| s.0 == l.id).is_some_and(|s| {
+            l.access = s.1;
+            true
+        })
+    });
+    Ok(out)
 }
 
 /// A list in any trash state, `NotFound` when there is none.
@@ -82,12 +92,15 @@ pub async fn live(c: &v5::Conn<'_>, id: ObjectId) -> TaskResult<TaskList> {
     Ok(list)
 }
 
-/// Who may own a list: the asker; a group needs `GroupMembers` (run 2), another person is `Invalid`.
-fn check_owner(asker: &PersonRef, owner: &PersonRef, capability: &str) -> TaskResult<()> {
-    if matches!(owner.art, PersonArt::Group | PersonArt::Organization) {
+/// Who may own a list: the asker (not an AI); a group needs `GroupMembers` (run 2b), another person is `Invalid`.
+fn check_owner(who: &Who, owner: &PersonRef, capability: &str) -> TaskResult<()> {
+    if matches!(owner.art, PersonArt::Group | PersonArt::Organization)
+        || who.is_agent(owner)
+        || who.asks_as_agent()
+    {
         return Err(forbidden(capability));
     }
-    if owner.id == asker.id {
+    if owner.id == who.me.id {
         Ok(())
     } else {
         Err(bad("owner", "other-person"))
@@ -104,17 +117,17 @@ fn check_name(name: &str) -> TaskResult<()> {
 /// `create_list`.
 pub async fn create(
     c: &v5::Conn<'_>,
-    asker: &PersonRef,
+    who: &Who,
     now: i64,
     name: &str,
     color: Option<&str>,
     owner: Option<&PersonRef>,
 ) -> TaskResult<TaskList> {
     check_name(name)?;
-    let owner = owner.unwrap_or(asker);
-    check_owner(asker, owner, "list.create")?;
+    let owner = owner.unwrap_or(&who.me);
+    check_owner(who, owner, "list.create")?;
     let id = new_id(now).map_err(adapt)?;
-    insert(c, id, "list", name, asker, now)
+    insert(c, id, "list", name, &who.me, now)
         .await
         .map_err(adapt)?;
     let [oid, oart, oabzug] = person_values(owner);
@@ -130,12 +143,13 @@ pub async fn create(
 /// `update_list`: `NotFound`, then `Changed`, then `Invalid`; nothing changed = no new revision.
 pub async fn update(
     c: &v5::Conn<'_>,
-    asker: &PersonRef,
+    who: &Who,
     now: i64,
     id: ObjectId,
     expected: Revision,
     patch: TaskListPatch,
 ) -> TaskResult<TaskList> {
+    need(c, who, id, ListAccess::Manage, "list.edit").await?;
     let old = live(c, id).await?;
     if old.revision != expected {
         return Err(changed(old.revision));
@@ -144,7 +158,7 @@ pub async fn update(
         check_name(n)?;
     }
     if let Some(o) = &patch.owner {
-        check_owner(asker, o, "list.edit")?;
+        check_owner(who, o, "list.edit")?;
     }
     let name = patch.name.unwrap_or_else(|| old.name.clone());
     let color = patch.color.unwrap_or_else(|| old.color.clone());
@@ -168,10 +182,12 @@ pub async fn update(
 /// `delete_list`: the list goes into the trash with every living task in it (also subtasks), one deadline.
 pub async fn delete(
     c: &v5::Conn<'_>,
+    who: &Who,
     now: i64,
     id: ObjectId,
     expected: Revision,
 ) -> TaskResult<Deleted> {
+    need(c, who, id, ListAccess::Manage, "list.delete").await?;
     let old = live(c, id).await?;
     if old.revision != expected {
         return Err(changed(old.revision));
@@ -198,7 +214,8 @@ pub async fn delete(
 }
 
 /// `restore_list`: only while the deadline holds; a living list is `NotFound`.
-pub async fn restore(c: &v5::Conn<'_>, now: i64, id: ObjectId) -> TaskResult<TaskList> {
+pub async fn restore(c: &v5::Conn<'_>, who: &Who, now: i64, id: ObjectId) -> TaskResult<TaskList> {
+    need(c, who, id, ListAccess::Manage, "list.delete").await?;
     let old = any(c, id).await?;
     if old.trash.is_none() {
         return Err(gone(id));

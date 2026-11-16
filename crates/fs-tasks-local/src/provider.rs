@@ -14,13 +14,13 @@ use fs_tasks_testdata::tasks_v1::{
 
 use crate::local::{LocalTasks, OFFERED};
 use crate::store::finish;
-use crate::stored::load_one;
-use crate::{lists, query, tasks_write, trash_ops};
+use crate::{checklist, labels, lists, place, progress, query, reads, tasks_write, trash_ops};
 
 /// One unit of work: the deadline run, the time of the write, `begin`, the body, `finish`.
 macro_rules! write {
-    ($s:expr, $c:ident, $now:ident, $body:expr) => {{
+    ($s:expr, $w:ident, $c:ident, $now:ident, $body:expr) => {{
         $s.sweep().await?;
+        let $w = $s.who();
         let $now = $s.clock.tick();
         let $c = $s.store.begin().await?;
         let r = $body.await;
@@ -30,8 +30,9 @@ macro_rules! write {
 
 /// One read after the deadline run.
 macro_rules! read {
-    ($s:expr, $c:ident, $body:expr) => {{
+    ($s:expr, $w:ident, $c:ident, $body:expr) => {{
         $s.sweep().await?;
+        let $w = $s.who();
         let $c = $s.store.read().await;
         $body.await
     }};
@@ -49,11 +50,11 @@ impl Tasks for LocalTasks {
     }
 
     async fn asker(&self) -> TaskResult<PersonRef> {
-        Ok(self.actor.clone())
+        Ok(self.who().me)
     }
 
     async fn lists(&self, trash: Trash) -> TaskResult<Vec<TaskList>> {
-        read!(self, c, lists::lists(&c, trash))
+        read!(self, w, c, lists::lists(&c, &w, trash))
     }
 
     async fn create_list(
@@ -64,9 +65,10 @@ impl Tasks for LocalTasks {
     ) -> TaskResult<TaskList> {
         write!(
             self,
+            w,
             c,
             now,
-            lists::create(&c, &self.actor, now, name, color, owner)
+            lists::create(&c, &w, now, name, color, owner)
         )
     }
 
@@ -78,39 +80,27 @@ impl Tasks for LocalTasks {
     ) -> TaskResult<TaskList> {
         write!(
             self,
+            w,
             c,
             now,
-            lists::update(&c, &self.actor, now, id, expected, change)
+            lists::update(&c, &w, now, id, expected, change)
         )
     }
 
     async fn delete_list(&self, id: ObjectId, expected: Revision) -> TaskResult<Deleted> {
-        write!(self, c, now, lists::delete(&c, now, id, expected))
+        write!(self, w, c, now, lists::delete(&c, &w, now, id, expected))
     }
 
     async fn restore_list(&self, id: ObjectId) -> TaskResult<TaskList> {
-        write!(self, c, now, lists::restore(&c, now, id))
+        write!(self, w, c, now, lists::restore(&c, &w, now, id))
     }
 
     async fn get(&self, id: ObjectId) -> TaskResult<Option<Task>> {
-        read!(self, c, async {
-            Ok(load_one(&c, id)
-                .await?
-                .filter(crate::stored::Stored::alive)
-                .map(|s| s.task))
-        })
+        read!(self, w, c, reads::get(&c, &w, id))
     }
 
     async fn get_by_uid(&self, uid: &str) -> TaskResult<Option<Task>> {
-        read!(self, c, async {
-            let found =
-                crate::stored::load(&c, "t.uid = ?", vec![fs_objects::v5::codec::text(uid)])
-                    .await?;
-            Ok(found
-                .into_iter()
-                .find(crate::stored::Stored::alive)
-                .map(|s| s.task))
-        })
+        read!(self, w, c, reads::get_by_uid(&c, &w, uid))
     }
 
     async fn list(
@@ -119,17 +109,22 @@ impl Tasks for LocalTasks {
         after: Option<&Place>,
         size: usize,
     ) -> TaskResult<Page<TaskSummary>> {
-        read!(self, c, query::list(&c, q, after, size))
+        read!(self, w, c, query::list(&c, &w, q, after, size))
     }
 
     async fn labels(
         &self,
-        _lists: &[ObjectId],
-        _prefix: Option<&str>,
-        _after: Option<&Place>,
-        _size: usize,
+        lists: &[ObjectId],
+        prefix: Option<&str>,
+        after: Option<&Place>,
+        size: usize,
     ) -> TaskResult<Page<LabelCount>> {
-        not_possible("task.labels")
+        read!(
+            self,
+            w,
+            c,
+            labels::labels(&c, &w, lists, prefix, after, size)
+        )
     }
 
     async fn readiness(&self, _ids: &[ObjectId]) -> TaskResult<Vec<(ObjectId, Readiness)>> {
@@ -137,12 +132,7 @@ impl Tasks for LocalTasks {
     }
 
     async fn create(&self, draft: TaskDraft) -> TaskResult<Task> {
-        write!(
-            self,
-            c,
-            now,
-            tasks_write::create(&c, &self.actor, now, draft)
-        )
+        write!(self, w, c, now, tasks_write::create(&c, &w, now, draft))
     }
 
     async fn update(
@@ -154,9 +144,10 @@ impl Tasks for LocalTasks {
     ) -> TaskResult<Task> {
         write!(
             self,
+            w,
             c,
             now,
-            tasks_write::update(&c, now, id, expected, change, scope)
+            tasks_write::update(&c, &w, now, id, expected, change, scope)
         )
     }
 
@@ -193,31 +184,49 @@ impl Tasks for LocalTasks {
 
     async fn progress(
         &self,
-        _id: ObjectId,
-        _expected: Revision,
-        _to: Progress,
-        _children: Children,
-        _scope: SeriesScope,
+        id: ObjectId,
+        expected: Revision,
+        to: Progress,
+        children: Children,
+        scope: SeriesScope,
     ) -> TaskResult<Task> {
-        not_possible("task.progress")
+        write!(
+            self,
+            w,
+            c,
+            now,
+            progress::progress(&c, &w, now, id, expected, to, children, scope)
+        )
     }
 
     async fn place(
         &self,
-        _id: ObjectId,
-        _expected: Revision,
-        _after: Option<ObjectId>,
+        id: ObjectId,
+        expected: Revision,
+        after: Option<ObjectId>,
     ) -> TaskResult<Task> {
-        not_possible("task.place")
+        write!(
+            self,
+            w,
+            c,
+            now,
+            place::place(&c, &w, now, id, expected, after)
+        )
     }
 
     async fn checklist(
         &self,
-        _id: ObjectId,
-        _expected: Revision,
-        _change: ChecklistChange,
+        id: ObjectId,
+        expected: Revision,
+        change: ChecklistChange,
     ) -> TaskResult<Task> {
-        not_possible("task.checklist")
+        write!(
+            self,
+            w,
+            c,
+            now,
+            checklist::change(&c, &w, now, id, expected, change)
+        )
     }
 
     async fn relate(
@@ -259,18 +268,19 @@ impl Tasks for LocalTasks {
     ) -> TaskResult<Deleted> {
         write!(
             self,
+            w,
             c,
             now,
-            trash_ops::delete(&c, now, id, expected, scope)
+            trash_ops::delete(&c, &w, now, id, expected, scope)
         )
     }
 
     async fn restore(&self, id: ObjectId, scope: SeriesScope) -> TaskResult<Task> {
-        write!(self, c, now, trash_ops::restore(&c, now, id, scope))
+        write!(self, w, c, now, trash_ops::restore(&c, &w, now, id, scope))
     }
 
     async fn purge(&self, id: ObjectId) -> TaskResult<()> {
-        write!(self, c, _now, trash_ops::purge(&c, id))
+        write!(self, w, c, _now, trash_ops::purge(&c, &w, id))
     }
 
     async fn history(

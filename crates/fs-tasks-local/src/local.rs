@@ -3,33 +3,48 @@
 //!
 //! Pattern: Repository (one provider of the trait) over a small typed store; the trait impl is in `provider`.
 
+use std::sync::{Mutex, MutexGuard};
+
 use fs_objects::v5::envelope::{due, set_trash_days};
 use fs_tasks_testdata::tasks_v1::{PersonRef, TaskResult};
 
+use crate::access;
 use crate::clock::{Clock, Ticker};
 use crate::error::adapt;
 use crate::store::{Store, finish};
 use crate::trash_ops;
+use crate::who::Who;
 
-/// What this run offers (the rest of `CAPABILITIES` is run 2).
-pub const OFFERED: [&str; 10] = [
+/// What this run offers (the rest of `CAPABILITIES` is named in `stand.md`: run 2a-rest and run 2b).
+pub const OFFERED: [&str; 14] = [
     "list.read",
     "list.create",
     "list.edit",
     "list.delete",
     "task.read",
+    "task.labels",
     "task.create",
     "task.edit",
+    "task.progress",
+    "task.place",
+    "task.checklist",
     "task.delete",
     "task.restore",
     "trash.purge",
 ];
 
-/// The local provider: the typed v5 tables of one store file; `actor` is the asking person (the account).
+/// The local provider: the typed v5 tables of one store file; the account is the person it belongs to, and it asks
+/// unless somebody else is acted as (`act_as`).
 pub struct LocalTasks {
     pub(crate) store: Store,
-    pub(crate) actor: PersonRef,
+    pub(crate) account: PersonRef,
+    pub(crate) acting: Mutex<Option<PersonRef>>,
+    pub(crate) agents: Mutex<Vec<PersonRef>>,
     pub(crate) clock: Ticker,
+}
+
+fn locked<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
+    m.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 impl LocalTasks {
@@ -37,14 +52,52 @@ impl LocalTasks {
     ///
     /// # Errors
     /// `Unavailable` when the engine cannot open the file; `Invalid` on a clash in the registry.
-    pub async fn open(path: &str, actor: PersonRef, clock: Clock) -> TaskResult<Self> {
+    pub async fn open(path: &str, account: PersonRef, clock: Clock) -> TaskResult<Self> {
         let clock = Ticker::new(clock);
         let store = Store::open(path, clock.tick()).await?;
         Ok(Self {
             store,
-            actor,
+            account,
+            acting: Mutex::new(None),
+            agents: Mutex::new(Vec::new()),
             clock,
         })
+    }
+
+    /// Who asks now: the account, or the person acted as, and the AIs the provider knows.
+    #[must_use]
+    pub fn who(&self) -> Who {
+        Who {
+            me: locked(&self.acting)
+                .clone()
+                .unwrap_or_else(|| self.account.clone()),
+            agents: locked(&self.agents).clone(),
+        }
+    }
+
+    /// Somebody else asks from now on (`Some`), or the account again (`None`). The provider trusts the caller (the
+    /// frontend of a signed-in person is the caller; the tests act as a colleague or an AI).
+    pub fn act_as(&self, who: Option<PersonRef>) {
+        *locked(&self.acting) = who;
+    }
+
+    /// `agent` is an AI (no list of its own, at most `Write`, nobody's owner). The directory of run 2b is the real source.
+    pub fn mark_agent(&self, agent: PersonRef) {
+        locked(&self.agents).push(agent);
+    }
+
+    /// `who` may only read `list` from now on (the access of the owner is replaced by `Read`).
+    ///
+    /// # Errors
+    /// `Unavailable` when the store refuses.
+    pub async fn make_read_only(
+        &self,
+        who: &PersonRef,
+        list: fs_tasks_testdata::tasks_v1::ObjectId,
+    ) -> TaskResult<()> {
+        let c = self.store.begin().await?;
+        let r = access::set_read_only(&c, who, list).await;
+        finish(c, r).await
     }
 
     /// The trash period in days (the program's setting; the default is 30, at least 1).

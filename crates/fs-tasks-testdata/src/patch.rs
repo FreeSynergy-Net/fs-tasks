@@ -44,6 +44,18 @@ pub(crate) fn check_patch(p: &TaskPatch) -> TaskResult<()> {
     {
         return Err(invalid("links", "href-or-file"));
     }
+    keys_once(p.alerts.iter().flatten().map(|a| a.key.as_str()), "alerts")?;
+    keys_once(p.links.iter().flatten().map(|l| l.key.as_str()), "links")
+}
+
+/// A map by key: no key empty, none twice.
+fn keys_once<'a>(keys: impl Iterator<Item = &'a str>, field: &str) -> TaskResult<()> {
+    let mut seen = std::collections::BTreeSet::new();
+    for k in keys {
+        if k.is_empty() || !seen.insert(k) {
+            return Err(invalid(field, "key"));
+        }
+    }
     Ok(())
 }
 

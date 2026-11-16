@@ -5,7 +5,7 @@
 //! `participants/p/freesynergy.net:sensitive`, or a JSCalendar `privacy` other than `public` counts as
 //! marked. A mention in a text does not, and neither does a key of an id map: a label called `privacy` is
 //! a label. **Provisional:** `fs-tasks-core` has no check of its own yet, so this walks the task; replace
-//! it with the core's when there is one. The key is the one `fs-people` and `fs-calendar` use.
+//! it with the core's when there is one. The key is the one `fs-people` and `fs-calendars` use.
 
 use fs_tasks_core::TaskEntry;
 use serde_json::Value;

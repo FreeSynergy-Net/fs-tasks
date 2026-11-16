@@ -2,6 +2,8 @@
 //!
 //! Pattern: Test fixture (the provider, its clock and the people of the sample behind the conformance hooks).
 
+pub mod deps;
+
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, Ordering};
 
@@ -128,4 +130,31 @@ pub async fn count(fx: &LocalFx, table: &str) -> i64 {
         .await
         .expect("a count");
     get_int(&rows[0], 0).expect("a number")
+}
+
+/// A date of the tests (`2026-11-17`).
+pub fn date(s: &str) -> fs_tasks_testdata::tasks_v1::Date {
+    use fs_types::BasicValue;
+    fs_tasks_testdata::tasks_v1::Date::parse(s).unwrap()
+}
+
+/// A timed due value: the local time `at` in the zone `zone`.
+pub fn timed(at: &str, zone: &str) -> fs_tasks_testdata::tasks_v1::Due {
+    fs_tasks_testdata::tasks_v1::Due::Timed {
+        at: fs_tasks_testdata::occurrence(at).unwrap(),
+        zone: fs_tasks_testdata::tasks_v1::Zone::iana(zone).unwrap(),
+        zone_assumed: false,
+    }
+}
+
+/// The tasks of `list` in a day range, seen from `view`.
+pub fn day_query(
+    list: ObjectId,
+    view: &str,
+    due: Option<fs_tasks_testdata::tasks_v1::DueRange>,
+) -> fs_tasks_testdata::tasks_v1::TaskQuery {
+    let mut q = deps::list_query(list);
+    q.due = due;
+    q.view_zone = fs_tasks_testdata::tasks_v1::Zone::iana(view).unwrap();
+    q
 }

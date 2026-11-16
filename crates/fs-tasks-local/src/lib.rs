@@ -1,10 +1,11 @@
 //! `LocalTasks`: the first provider of the `Tasks` trait (`tasks_v1`), over typed fs-objects v5 tables (ADR 0086).
-//! Pilot `programm-grundgeruest`, core step K1, run 2a of 2b: schema and registry (`tasks_*`, three steps), create,
-//! read, change, the trash with its deadline (`Restorable` computed here), the subtask tree (PLAN O18), labels, the
-//! hand order (`place`), progress (without a series), the checklist, who sees which list (owner, grant, AI), `list`
-//! with the filters, the order and the page in SQL, conformance Fake = Local. What is not here yet (assignees and
-//! the claim, dependencies, series, alerts and links, history and changes, `Held`/`Manual`) is named in
-//! `.scratch/pilot-tasks/stand.md` ("Rest fuer Lauf 2b") and answers `Unsupported`.
+//! Pilot `programm-grundgeruest`, core step K1, run 2a rest 2: schema and registry (`tasks_*`, six steps), create, read,
+//! change, the trash with its deadline (`Restorable` computed here), the subtask tree (PLAN O18), labels, the hand order
+//! (`place`), progress (without a series), the checklist, dependencies (`relate`, `unrelate`, `readiness`, the ready
+//! filter), alerts and links, who sees which list (owner, grant, AI), `list` with the filters (also the day range and the
+//! ready filter), the order and the page in SQL, conformance Fake = Local. What is not here yet (assignees and the claim,
+//! series, history and changes, `Held`/`Manual`) is named in `DESIGN.md` and answers `Unsupported`; its conformance groups
+//! are skipped by name.
 //!
 //! Pattern: Repository (one provider of the trait) over a small typed store. The v5 layer is the tagged fs-objects
 //! (v0.0.2, no lift): its envelope gives revision (compare-and-set), trash, deadline and the final delete; the program
@@ -51,6 +52,7 @@ pub mod tasks_write;
 pub mod trash_ops;
 pub mod trash_state;
 pub mod tree;
+pub(crate) mod unit;
 pub mod who;
 pub mod words;
 pub mod zones;

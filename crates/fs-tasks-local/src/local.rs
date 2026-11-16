@@ -17,7 +17,7 @@ use crate::trash_ops;
 use crate::who::Flaw;
 use crate::who::Who;
 
-/// What this run offers (the rest of `CAPABILITIES` is named in `stand.md`: run 2a-rest and run 2b).
+/// What this run offers (the rest of `CAPABILITIES` is named in `DESIGN.md`: assign, respond, claim, changes, history).
 pub const OFFERED: [&str; 17] = [
     "list.read",
     "list.create",

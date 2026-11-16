@@ -13,32 +13,10 @@ use fs_tasks_testdata::tasks_v1::{
 };
 
 use crate::local::{LocalTasks, OFFERED};
-use crate::store::finish;
+use crate::unit::{read, write};
 use crate::{
     checklist, deps, labels, lists, place, progress, query, reads, tasks_write, trash_ops,
 };
-
-/// One unit of work: the deadline run, the time of the write, `begin`, the body, `finish`.
-macro_rules! write {
-    ($s:expr, $w:ident, $c:ident, $now:ident, $body:expr) => {{
-        $s.sweep().await?;
-        let $w = $s.who();
-        let $now = $s.clock.tick();
-        let $c = $s.store.begin().await?;
-        let r = $body.await;
-        finish($c, r).await
-    }};
-}
-
-/// One read after the deadline run.
-macro_rules! read {
-    ($s:expr, $w:ident, $c:ident, $body:expr) => {{
-        $s.sweep().await?;
-        let $w = $s.who();
-        let $c = $s.store.read().await;
-        $body.await
-    }};
-}
 
 #[async_trait]
 impl Tasks for LocalTasks {

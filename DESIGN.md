@@ -215,6 +215,30 @@ skipped **by name** (`Report::skipped`), never counted as passed.
 * **Page size:** `list` and `labels` cut `size` to 1000 rows (`query::PAGE_MAX`); `usize::MAX` is allowed and means "as many
   as one page holds". The cursor (`Place`, the offset as text) says where the next page starts, so every task is reached;
   the trait does not fix a size and a provider may cap it.
+* **Dependencies** (`deps.rs`, `deps_rows.rs`, `graph.rs`, `ready_sql.rs`; table `tasks_dependency`, step 5): `relate` and
+  `unrelate` write typed rows (holder, other `uid`, kind, the gap as three columns, the order given); a tie held already is
+  no change and no new revision; a cycle (also through the four time kinds, whose holder is the predecessor) is refused
+  with its path. `readiness` and the card judge a task from the graph of the LIVING tasks (`Graph`: finished, cycle,
+  unknown name, predecessors); the ready filter of `list` is the same judgement in ONE SQL condition (a recursive query
+  finds the cycles), so the page is cut by the database. The two are held against each other over a graph with every state
+  (`local_deps.rs`). A cycle that appears later (a restore closes it, the trait's "sync" case) is not refused but shown as
+  `Readiness::Conflict`.
+* **The day range** (`day.rs`, `due_sql.rs`; table `tasks_day`, steps 5 and 6): a due or start value is stored as its own day
+  (plain date, floating time) or its instant (timed); the derived columns are written on every write. The range of days in
+  the viewer's zone becomes bounds on those columns, with the first instant of a day found from the zone rules, so the last
+  second of a day and the first of the next, an hour a zone skips or repeats, and a day a zone does not have give the answer
+  of `zones::day_in` (`local_days.rs` holds the SQL against that rule over 2541 queries). Step 6 is a code step that fills the
+  columns of a file made before step 5. The text filter and the order by day still use the loaded tasks.
+* **Alerts and links** (`alerts_rows.rs`, `links_rows.rs`; tables `tasks_alert`, `tasks_link`, step 5): a map by key, written
+  whole by `update`/`create`, read back in the order given; a file of ours is the reference, its checksum as 64 hex digits and
+  its media type; the card counts both. A key twice, an empty key, a link that is not exactly one of address and file, or a
+  size above the signed range is `Invalid` (the Fake says the same).
+* **Not built, named** (the conformance groups are skipped by name, `Report::skipped`): `task.assign` and `task.respond`
+  (assign, unassign, respond; needs the groups of run 2b), `task.claim` (claim, release, claim_next: they come with `assign`),
+  the series (`series`, `repeat`, `repeat kept`, `repeat dates`; run 2a rest 3), `task.changes` and `task.history` (`feed`;
+  fs-objects v0.0.5), the leak rules (`leak`; they need the foreign group and the history), the states `Held` and `Manual`
+  (the lift). Two spots still answer `Unsupported` under a capability that is `true`: a patch with a recurrence under
+  `task.edit` and a draft with assignees under `task.create` (both go with the series and with `assign`).
 
 ## Crates
 

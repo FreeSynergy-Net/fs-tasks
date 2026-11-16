@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.0.9 (unreleased until tagged)
+
+### English
+
+- **`LocalTasks` (`crates/fs-tasks-local`), run 2a rest 2 on the fixed trait `tasks_v1`** (no lift; hash of the trait folder unchanged): `relate`, `unrelate` and `readiness` (capabilities `relation.create`, `relation.delete`, `dependency.evaluate`), the `ready` filter of `list` decided in SQL, alerts and links as typed rows, and the day range of `list` decided in SQL on derived day columns (`tasks_day`). New tables in step 5, a code step 6 that fills the day columns of an older file. The conformance rules (Fake = Local) gained the day range in more zones and the alerts and links.
+- **Test hooks are not in the delivered provider:** `Flaw`/`set_flaw` and `seed_rank` exist only with the feature `test-hooks`. A stored grant level that nobody knows is an error, not `Manage`. A page size is cut to 1000 (`usize::MAX` is allowed; the cursor says where the next page starts).
+- **The migration steps are open until the first merge to `main`** (ADR 0086): a file of run 2a is refused at step 2 (`StepMismatch`), written down as a test.
+- Not built yet, skipped by name in the conformance run: assign, respond and claim, the series, changes and history, the leak rules.
+
+### Deutsch
+
+- **`LocalTasks` (`crates/fs-tasks-local`), Lauf 2a-Rest-2 auf dem festen Trait `tasks_v1`** (kein Lift; Hash des Trait-Ordners unverändert): `relate`, `unrelate` und `readiness` (Fähigkeiten `relation.create`, `relation.delete`, `dependency.evaluate`), der `ready`-Filter von `list` in SQL, Erinnerungen und Verweise als typisierte Zeilen und der Tagesbereich von `list` in SQL auf abgeleiteten Tagesspalten (`tasks_day`). Neue Tabellen in Schritt 5, ein Code-Schritt 6 füllt die Tagesspalten einer älteren Datei. Die Konformitätsregeln (Fake = Local) prüfen jetzt den Tagesbereich in mehr Zonen sowie Erinnerungen und Verweise.
+- **Test-Haken sind nicht im ausgelieferten Anbieter:** `Flaw`/`set_flaw` und `seed_rank` gibt es nur mit dem Feature `test-hooks`. Ein gespeicherter Freigabe-Stand, den niemand kennt, ist ein Fehler, nicht `Manage`. Die Seitengröße wird auf 1000 gekappt (`usize::MAX` ist erlaubt; der Cursor sagt, wo die nächste Seite beginnt).
+- **Die Migrationsschritte bleiben bis zum ersten Merge nach `main` offen** (ADR 0086): eine Datei aus Lauf 2a wird bei Schritt 2 abgelehnt (`StepMismatch`), als Test festgehalten.
+- Noch nicht gebaut, in der Konformität namentlich übersprungen: Zuweisen, Antworten und Übernehmen, Serien, Änderungen und Verlauf, die Leck-Regeln.
+
 ## 0.0.8 (unreleased until tagged)
 
 ### English

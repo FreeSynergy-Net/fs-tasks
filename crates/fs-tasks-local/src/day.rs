@@ -55,7 +55,7 @@ pub async fn write(c: &v5::Conn<'_>, t: &Task) -> TaskResult<()> {
 
 /// Step 6: the day columns of every task that has no row yet (a file that was made before step 5). The same function
 /// as the writes, so the old and the new rows cannot differ.
-pub fn fill<'a, 'c>(c: &'a v5::Conn<'c>) -> StepFuture<'a> {
+pub fn fill<'a>(c: &'a v5::Conn<'_>) -> StepFuture<'a> {
     Box::pin(async move {
         let ids: Vec<ObjectId> = {
             let rows = c

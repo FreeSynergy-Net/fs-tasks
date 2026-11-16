@@ -4,6 +4,7 @@
 //! Pattern: Repository helper (rows to values and back; the checks of a patch are in `patch`).
 
 use std::collections::BTreeMap;
+use std::fmt::Write;
 
 use fs_objects::v5;
 use fs_objects::v5::codec::{damaged, id_value, int, opt_int, opt_text, reference_of, text};
@@ -15,7 +16,10 @@ use crate::stored::marks;
 use crate::tables_more::LINK;
 
 fn hex(bytes: &[u8; 32]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
+    bytes.iter().fold(String::new(), |mut out, b| {
+        let _ = write!(out, "{b:02x}");
+        out
+    })
 }
 
 fn unhex(s: &str) -> Option<[u8; 32]> {

@@ -84,6 +84,7 @@ fn sorted<const N: usize>(mut v: [ObjectId; N]) -> Vec<ObjectId> {
 }
 
 pub(super) async fn rules(cx: &mut Cx<'_>) {
+    use DateField::{Due as D, DueOrStart as DS, Start as S};
     let Some(list) = cx.list("due").await else {
         return;
     };
@@ -111,7 +112,6 @@ pub(super) async fn rules(cx: &mut Cx<'_>) {
         q.view_zone = view.clone();
         q.clone()
     };
-    use DateField::{Due as D, DueOrStart as DS, Start as S};
     let cases: Vec<(TaskQuery, Vec<ObjectId>, &str)> = vec![
         (
             check(D, Some("2026-11-17"), Some("2026-11-17"), &berlin),

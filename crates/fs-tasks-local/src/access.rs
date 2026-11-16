@@ -5,14 +5,25 @@
 //! owner's level (the owner who is made `Read` only reads); without one the owner has `Manage`.
 
 use fs_objects::v5;
-use fs_objects::v5::codec::{get_opt_text, get_text, id_value, text};
+use fs_objects::v5::codec::{damaged, get_opt_text, get_text, id_value, text};
 use fs_tasks_testdata::tasks_v1::{BasicValue, ListAccess, ObjectId, PersonRef, TaskResult};
 
 use crate::error::{adapt, forbidden, gone};
-use crate::who::{Flaw, Who};
+use crate::who::Who;
 
 /// The words of a grant level.
 pub const LEVELS: &[&str] = &["read", "write", "manage"];
+
+/// The level of a stored word. A word nobody knows is a damaged row (`Unavailable`), never a guess: guessing `Manage`
+/// would open a list that was meant to be closed.
+pub fn level_of(word: &str) -> TaskResult<ListAccess> {
+    match word {
+        "read" => Ok(ListAccess::Read),
+        "write" => Ok(ListAccess::Write),
+        "manage" => Ok(ListAccess::Manage),
+        _ => Err(adapt(damaged("grant level"))),
+    }
+}
 
 /// The levels of the asker: on `list` only, or on every list (`None`); a list they may not see is left out. One
 /// `SELECT` over the lists and the asker's grant rows.
@@ -38,17 +49,15 @@ async fn levels(
         let owner = get_text(r, 1).map_err(adapt)? == me;
         let grant = get_opt_text(r, 2)
             .map_err(adapt)?
-            .filter(|_| who.flaw != Some(Flaw::GrantIgnored));
+            .filter(|_| !who.grants_ignored());
         let level = match grant.as_deref() {
-            Some("read") => ListAccess::Read,
-            Some("write") => ListAccess::Write,
-            Some(_) => ListAccess::Manage,
+            Some(word) => level_of(word)?,
             None if owner => ListAccess::Manage,
             None => continue,
         };
         out.push((
             id,
-            if who.asks_as_agent() && who.flaw != Some(Flaw::NoAiCap) {
+            if who.asks_as_agent() && !who.ai_uncapped() {
                 level.min(ListAccess::Write)
             } else {
                 level

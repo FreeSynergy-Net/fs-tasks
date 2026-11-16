@@ -7,7 +7,9 @@
 mod common;
 
 use common::{LocalFx, count, draft};
-use fs_tasks_testdata::tasks_v1::{Error, SeriesScope, TaskError, TaskPatch, Tasks, Trash};
+use fs_tasks_testdata::tasks_v1::{
+    Error, ListAccess, SeriesScope, TaskError, TaskPatch, Tasks, Trash,
+};
 
 #[tokio::test]
 async fn labels_are_counted_by_the_database() {
@@ -115,4 +117,15 @@ async fn the_checklist_lives_in_its_table_and_goes_with_its_task() {
         0,
         "the items went with the task"
     );
+}
+
+/// A stored level that nobody knows is an error, never `Manage` (a guess would open a list that was meant to be closed).
+#[test]
+fn a_level_word_nobody_knows_is_an_error_not_manage() {
+    use fs_tasks_local::access::level_of;
+    assert_eq!(level_of("read").unwrap(), ListAccess::Read);
+    assert_eq!(level_of("write").unwrap(), ListAccess::Write);
+    assert_eq!(level_of("manage").unwrap(), ListAccess::Manage);
+    assert!(level_of("admin").is_err());
+    assert!(level_of("").is_err());
 }

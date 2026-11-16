@@ -20,5 +20,15 @@ async-trait = "0.1"
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 chrono-tz = "0.10"
 
+[features]
+# The hooks of the tests (a deliberate fault of the rights, a seeded rank): not part of the delivered provider. Without
+# the feature these symbols do not exist; the tests that use them need it (`required-features`, `--all-features`). A
+# dev-dependency of the crate on itself would do it without a flag, but it changes `Cargo.lock`, which this run keeps.
+test-hooks = []
+
+[[test]]
+name = "local_rights"
+required-features = ["test-hooks"]
+
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

@@ -71,6 +71,8 @@ impl ConformanceFixture for LocalFx {
         Some(known(8))
     }
 
+    /// Only with `test-hooks`; without it the rank rules that need a seeded rank are skipped and named.
+    #[cfg(feature = "test-hooks")]
     async fn seed_rank(&self, id: ObjectId, rank: &fs_tasks_testdata::tasks_v1::Rank) -> bool {
         self.tasks.seed_rank(id, rank).await.is_ok()
     }

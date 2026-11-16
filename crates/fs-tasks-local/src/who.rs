@@ -5,7 +5,9 @@
 
 use fs_tasks_testdata::tasks_v1::PersonRef;
 
-/// A deliberate fault of the rights (mutants of the tests, never set otherwise): the rule must turn red.
+/// A deliberate fault of the rights (mutants of the tests, never set otherwise): the rule must turn red. Only with the
+/// feature `test-hooks`: the delivered provider has no way to switch its own protection off.
+#[cfg(feature = "test-hooks")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Flaw {
     /// An AI is not held at `Write` (its `Manage` grant works).
@@ -19,6 +21,7 @@ pub enum Flaw {
 pub struct Who {
     pub me: PersonRef,
     pub agents: Vec<PersonRef>,
+    #[cfg(feature = "test-hooks")]
     pub flaw: Option<Flaw>,
 }
 
@@ -33,5 +36,23 @@ impl Who {
     #[must_use]
     pub fn asks_as_agent(&self) -> bool {
         self.is_agent(&self.me)
+    }
+
+    /// The deliberate fault "the grant rows are not read" is on (always `false` without `test-hooks`).
+    #[must_use]
+    pub fn grants_ignored(&self) -> bool {
+        #[cfg(feature = "test-hooks")]
+        return self.flaw == Some(Flaw::GrantIgnored);
+        #[cfg(not(feature = "test-hooks"))]
+        false
+    }
+
+    /// The deliberate fault "an AI is not held at `Write`" is on (always `false` without `test-hooks`).
+    #[must_use]
+    pub fn ai_uncapped(&self) -> bool {
+        #[cfg(feature = "test-hooks")]
+        return self.flaw == Some(Flaw::NoAiCap);
+        #[cfg(not(feature = "test-hooks"))]
+        false
     }
 }

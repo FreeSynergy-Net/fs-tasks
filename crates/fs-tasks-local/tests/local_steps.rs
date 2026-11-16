@@ -13,12 +13,15 @@ use std::sync::atomic::AtomicI64;
 
 use common::{LocalFx, draft};
 use fs_objects::v5::codec::{get_int, get_text};
+use fs_objects::v5::spec::{Col, Logical, Table};
+use fs_objects::v5::tables::ART;
 use fs_objects::v5::{Step, Store};
 use fs_tasks_local::registry::DOMAIN;
 use fs_tasks_local::tables::{STEP_1, STEP_2, STEP_3, STEP_4};
+use fs_tasks_local::{Clock, LocalTasks};
 use fs_tasks_testdata::START_MS;
 use fs_tasks_testdata::tasks_v1::{
-    ChecklistChange, Order, TaskPatch, TaskQuery, Tasks, Trash, Zone,
+    ChecklistChange, Error, Order, TaskError, TaskPatch, TaskQuery, Tasks, Trash, Zone,
 };
 
 fn path_of(name: &str) -> String {
@@ -180,4 +183,65 @@ async fn a_page_size_that_is_far_too_big_is_cut() {
     assert_eq!((page.items.len(), page.next.is_none()), (1, true));
     let labels = fx.tasks.labels(&[], None, None, usize::MAX).await.unwrap();
     assert_eq!(labels.items.len(), 0);
+}
+
+/// Step 2 of run 2a (`75a71a7`, the state of that file): the grant table knew two levels. Since then the word `manage`
+/// belongs to it, which changes the `CHECK` and so the fingerprint of the step that was already applied.
+static OLD_GRANT: Table = Table {
+    name: "tasks_grant",
+    cols: &[
+        Col::req("list", Logical::Ref),
+        Col::req("who_id", Logical::Iri),
+        Col::req("who_art", Logical::Enum(ART)),
+        Col::opt("who_abzug", Logical::Ref),
+        Col::req("level", Logical::Enum(&["read", "write"])),
+    ],
+    constraints: &[
+        "PRIMARY KEY (list, who_id)",
+        "FOREIGN KEY (list) REFERENCES tasks_list(id) ON DELETE CASCADE",
+    ],
+    indexes: &[],
+};
+
+/// A file of run 2a (three steps, step 2 with two levels) is NOT opened by the current provider: `StepMismatch` at step 2
+/// (ADR 0086, the word list of a `CHECK` is part of the fingerprint). This is known and wanted: the steps stay OPEN until
+/// the first merge to `main` (decision of the strategy, 2026-11-16; no store of real data exists, the branch is not
+/// published), and nothing was written away to keep such a file readable. The test says so in code: when the first
+/// release freezes the steps, this test is replaced by one that opens the frozen file and migrates it.
+#[tokio::test]
+async fn a_file_of_run_2a_with_the_old_step_2_is_refused_until_the_first_main_merge() {
+    let path = path_of("run_2a");
+    {
+        static THREE: [Step; 3] = [
+            Step::Create(&STEP_1),
+            Step::Create(std::slice::from_ref(&OLD_GRANT)),
+            Step::Create(&STEP_3),
+        ];
+        static TABLES: [Table; 5] = [
+            fs_tasks_local::tables::LIST,
+            fs_tasks_local::tables::TASK,
+            fs_tasks_local::tables::LABEL,
+            OLD_GRANT,
+            fs_tasks_local::tables::CHECKLIST,
+        ];
+        let old = fs_objects::v5::registry::Domain {
+            tables: &TABLES,
+            steps: &THREE,
+            ..DOMAIN
+        };
+        let store = Store::open(&path, START_MS).await.unwrap();
+        store.register_domain(&old, START_MS).await.unwrap();
+    }
+    let now = Arc::new(AtomicI64::new(START_MS));
+    let opened = LocalTasks::open(&path, common::known(1), Clock::from_counter(now)).await;
+    match opened {
+        Err(TaskError::Common(Error::Unavailable(why))) => {
+            assert!(
+                why.contains("step 2"),
+                "the step that differs is named: {why}"
+            );
+        }
+        Err(other) => panic!("an unexpected error: {other:?}"),
+        Ok(_) => panic!("the file of run 2a must not open until the steps are frozen"),
+    }
 }

@@ -19,6 +19,8 @@ pub mod clock;
 pub mod cur;
 pub mod due;
 pub mod error;
+#[cfg(feature = "test-hooks")]
+pub mod hooks;
 pub mod labels;
 pub mod lists;
 pub mod local;
@@ -45,4 +47,5 @@ pub mod zones;
 pub use clock::Clock;
 pub use local::{LocalTasks, OFFERED};
 pub use store::Store;
+#[cfg(feature = "test-hooks")]
 pub use who::Flaw;

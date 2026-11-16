@@ -192,6 +192,30 @@ column -> status mapping and ordering arrives with boards.
 
 * **v0.5.0, v0.5.1.** Both pin `fs-interfaces` v0.22.0, whose `rpc` is superseded (see its `DESIGN.md`). In the server: a `due` of 15 MiB of control characters passes intake, its error escapes to more than a message and ends the connection; a report of an import can do the same, and the report is lost; a title of nearly 16 MiB is accepted, and then `list` answers 413 forever, as the title counts twice. In the core: `:60` is taken in any minute; a time near year 0 or 9999 falls out of every range; a `DURATION` raises a false alarm, while garbage in other properties goes unsaid; a continuation line can end a `VTODO`, and data is lost silently (`fs-jscalendar` before 0.1.3).
 
+## LocalTasks (`crates/fs-tasks-local`, provider of `tasks_v1`; pilot `programm-grundgeruest`)
+
+`LocalTasks` is the first provider of the fixed trait `tasks_v1` (hash `de4618e1...d46`, folder in `fs-tasks-testdata`): typed
+tables `tasks_*` over fs-objects v5 (ADR 0086; no JSON and no blob column for new data), the Fake of `fs-tasks-testdata`
+and `LocalTasks` run the same conformance rules (`run_fixture_conformance_with`). A capability that `capabilities` reports
+as `true` never answers `Unsupported` (`api.rs`); what is not built stays `false` and the conformance rule of that group is
+skipped **by name** (`Report::skipped`), never counted as passed.
+
+* **Migration steps are OPEN until the first merge to `main`** (decision of the strategy, 2026-11-16, ADR 0086). No store of
+  real data exists (the branch is not published), so a step that was already applied in a development file may still change.
+  The known case: step 2 (`tasks_grant`) got the word `manage` in its `CHECK`; a file of run 2a (three steps) is therefore
+  refused with `StepMismatch` at step 2 (`local_steps.rs`, `a_file_of_run_2a_with_the_old_step_2_is_refused_...`, written
+  down as a test so the behaviour is stated, not hidden). From the first merge on a step is only ever appended, with a
+  fixture test of the old file (ADR 0086), and that test is replaced by one that migrates the frozen file.
+* **The hooks of the tests are not in the delivered provider.** `Flaw`/`set_flaw` (a deliberate fault of the rights: the
+  mutants of `local_rights.rs`) and `seed_rank` (puts a rank at an exact value) exist only with the feature `test-hooks`
+  (`hooks.rs`). The tests that use them declare `required-features`; the gates run with `--all-features`. Without the
+  feature the crate compiles and `cargo doc` lists none of these symbols. (A dev-dependency of the crate on itself would
+  switch the feature on by itself, but it changes `Cargo.lock`, which the run keeps.)
+* **A stored grant level that nobody knows is an error** (`access::level_of`), never `Manage`.
+* **Page size:** `list` and `labels` cut `size` to 1000 rows (`query::PAGE_MAX`); `usize::MAX` is allowed and means "as many
+  as one page holds". The cursor (`Place`, the offset as text) says where the next page starts, so every task is reached;
+  the trait does not fix a size and a provider may cap it.
+
 ## Crates
 
 * `fs-interfaces` (git tag v0.44.0), `fs-objects` (git tag v0.4.0): contract, `Capabilities`, `Unsupported`, the store.

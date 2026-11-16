@@ -1,0 +1,2 @@
+# Required run by workflow name: check (.github/workflows/check.yml:2, calls the reusable fs-release check; the run keeps the caller name).
+required = ["check"]

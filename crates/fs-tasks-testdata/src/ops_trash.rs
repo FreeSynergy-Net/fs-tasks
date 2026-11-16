@@ -5,11 +5,12 @@
 //! if nobody changed the series since, else `Changed`).
 
 use crate::clock::{local, naive};
-use crate::series::rule;
+use crate::ops_repeat::is_completion;
+use crate::series::{base, rule};
 use crate::state::{Cut, State};
 use crate::tasks_v1::{
     Deleted, Error, HistoryKind, LocalDateTime, ObjectId, Override, OverrideChange, Recurrence,
-    RecurrenceRule, Revision, RuleEnd, SeriesScope, Task, TaskResult,
+    RecurrenceRule, Revision, RuleEnd, SeriesScope, Task, TaskResult, Utc,
 };
 use chrono::Duration;
 
@@ -20,8 +21,12 @@ impl State {
         expected: Revision,
         scope: SeriesScope,
     ) -> TaskResult<Deleted> {
-        self.purge();
+        self.expire();
         let i = self.live_expected(id, expected)?;
+        self.need_write(self.rows[i].task.list, "task.delete")?;
+        if is_completion(&self.rows[i].task) {
+            return self.atomic(|s| s.delete_completion(i, scope));
+        }
         self.atomic(|s| match scope {
             SeriesScope::Whole => Ok(s.delete_whole(i)),
             SeriesScope::This { recurrence_id } => {
@@ -37,31 +42,60 @@ impl State {
         })
     }
 
+    /// A series from completion: `This` at the current occurrence skips it (the last one deletes the task), a later
+    /// or earlier one is `Invalid`, `ThisAndFollowing` at the current one is `Whole`.
+    fn delete_completion(&mut self, i: usize, scope: SeriesScope) -> TaskResult<Deleted> {
+        let current = base(&self.rows[i].task).and_then(local);
+        match scope {
+            SeriesScope::Whole => Ok(self.delete_whole(i)),
+            SeriesScope::This { recurrence_id } if Some(recurrence_id) == current => {
+                let last = matches!(
+                    self.rows[i].task.recurrence.first(),
+                    Some(Recurrence::Rule(r)) if matches!(r.end, RuleEnd::Count(c) if c <= 1)
+                );
+                if last {
+                    Ok(self.delete_whole(i))
+                } else {
+                    self.skip_completion(i, recurrence_id)
+                }
+            }
+            SeriesScope::ThisAndFollowing { recurrence_id } if Some(recurrence_id) == current => {
+                Ok(self.delete_whole(i))
+            }
+            _ => Err(Self::bad("recurrence_id", "not-current")),
+        }
+    }
+
     fn delete_whole(&mut self, i: usize) -> Deleted {
         let id = self.rows[i].task.id;
         let kids = self.descendants(id);
         self.tick();
-        let until = self.trash_until();
+        let bin = self.new_bin();
         for &k in &kids {
-            self.rows[k].deleted = Some(until);
+            self.rows[k].deleted = Some(bin);
             self.rows[k].deleted_with = Some(id);
             let (t, l) = (self.rows[k].task.id, self.rows[k].task.list);
             self.feed(t, l, HistoryKind::Delete);
         }
         self.bump(i, HistoryKind::Delete, Vec::new());
-        self.rows[i].deleted = Some(until);
+        self.rows[i].deleted = Some(bin);
         Deleted {
             id,
             scope: SeriesScope::Whole,
             with_subtasks: kids.into_iter().map(|k| self.rows[k].task.id).collect(),
-            restorable_until: Some(until),
+            restorable: Some(self.bin_state(id, bin)),
         }
     }
 
     fn delete_occurrence(&mut self, i: usize, rid: LocalDateTime) -> Deleted {
-        let until = self.trash_until();
+        let bin = self.new_bin();
+        let until = bin
+            .until
+            .unwrap_or(Utc::from_millis(self.now.millis() + 30 * 86_400_000));
         let id = self.rows[i].task.id;
         let t = &mut self.rows[i].task;
+        t.claim = None;
+        t.checklist.iter_mut().for_each(|c| c.done = None);
         let replaced: Vec<Override> = t
             .overrides
             .iter()
@@ -88,13 +122,16 @@ impl State {
             id,
             scope: SeriesScope::This { recurrence_id: rid },
             with_subtasks: Vec::new(),
-            restorable_until: Some(until),
+            restorable: Some(self.bin_state(id, bin)),
         }
     }
 
     /// Shorten the series: the rule ends before `rid` (`RuleEnd::Until`), later exceptions go.
     fn cut_following(&mut self, i: usize, rid: LocalDateTime) -> TaskResult<Deleted> {
-        let until = self.trash_until();
+        let bin = self.new_bin();
+        let until = bin
+            .until
+            .unwrap_or(Utc::from_millis(self.now.millis() + 30 * 86_400_000));
         let old: Task = self.rows[i].task.clone();
         let (Some(r), Some(at)) = (rule(&old), naive(&rid)) else {
             return Err(Self::bad("recurrence_id", "unknown-occurrence"));
@@ -124,12 +161,12 @@ impl State {
             id: old.id,
             scope: SeriesScope::ThisAndFollowing { recurrence_id: rid },
             with_subtasks: Vec::new(),
-            restorable_until: Some(until),
+            restorable: Some(self.bin_state(old.id, bin)),
         })
     }
 
     pub(crate) fn restore(&mut self, id: ObjectId, scope: SeriesScope) -> TaskResult<Task> {
-        self.purge();
+        self.expire();
         match scope {
             SeriesScope::Whole => self.restore_whole(id),
             SeriesScope::This { recurrence_id } => self.restore_cut(id, recurrence_id, false),
@@ -144,7 +181,7 @@ impl State {
         if self.rows[i].deleted.is_none() {
             return Err(Self::bad(
                 "task",
-                if self.deleted_until(i).is_some() {
+                if self.trash_of(i).is_some() {
                     "list-in-trash"
                 } else {
                     "not-deleted"
@@ -154,12 +191,15 @@ impl State {
         if self.rows[i].deleted_with.is_some() {
             return Err(Self::bad("task", "deleted-with-parent"));
         }
-        if self
-            .list_at(self.rows[i].task.list)
-            .is_some_and(|l| self.lists[l].restorable_until.is_some())
-        {
+        if self.list_bins.contains_key(&self.rows[i].task.list) {
             return Err(Self::bad("task", "list-in-trash"));
         }
+        if let Some(p) = self.rows[i].task.parent
+            && self.at(p).is_some_and(|k| self.trash_of(k).is_some())
+        {
+            return Err(Self::bad("parent", "in-trash"));
+        }
+        self.need_write(self.rows[i].task.list, "task.restore")?;
         for k in 0..self.rows.len() {
             if self.rows[k].deleted_with == Some(id) {
                 self.rows[k].deleted = None;
@@ -180,6 +220,9 @@ impl State {
         following: bool,
     ) -> TaskResult<Task> {
         let i = self.live(id)?;
+        if is_completion(&self.rows[i].task) && !following {
+            return self.undo_completion(i, &rid, true);
+        }
         let at = self
             .cuts
             .iter()

@@ -66,7 +66,10 @@ impl<'a> Cx<'a> {
 
     /// A list named `Zzconf <name>`.
     pub(crate) async fn list(&mut self, name: &str) -> Option<TaskList> {
-        let made = self.dir.create_list(&format!("Zzconf {name}"), None).await;
+        let made = self
+            .dir
+            .create_list(&format!("Zzconf {name}"), None, None)
+            .await;
         self.ensure(made.is_ok(), &format!("setup: create_list {name}"));
         made.ok()
     }
@@ -152,6 +155,7 @@ pub(crate) fn draft(list: ObjectId, title: &str, rest: TaskPatch) -> TaskDraft {
         title: title.to_owned(),
         progress: Progress::NeedsAction,
         assignees: Vec::new(),
+        checklist: Vec::new(),
         rest,
     }
 }
@@ -171,8 +175,9 @@ pub(crate) fn is_forbidden(e: &TaskError) -> bool {
 pub(crate) fn is_unsupported(e: &TaskError) -> bool {
     matches!(e, TaskError::Common(Error::Unsupported { .. }))
 }
+/// A zone nobody knows is `Invalid` with the code of the zone check (`zone.bad`), as in `appointments_v1`.
 pub(crate) fn is_unknown_zone(e: &TaskError) -> bool {
-    matches!(e, TaskError::Common(Error::UnknownZone(_)))
+    matches!(e, TaskError::Common(Error::Invalid(p)) if p.iter().any(|x| x.reason == "zone.bad"))
 }
 pub(crate) fn is_cycle(e: &TaskError) -> bool {
     matches!(e, TaskError::Cycle(_))

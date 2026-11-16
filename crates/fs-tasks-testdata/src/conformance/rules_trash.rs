@@ -41,7 +41,7 @@ pub(super) async fn rules(cx: &mut Cx<'_>) {
         "delete: takes the subtasks along",
     );
     cx.ensure(
-        d.restorable_until.is_some(),
+        d.restorable.is_some(),
         "delete: a deadline (there is no unlimited trash)",
     );
     cx.ensure(
@@ -61,10 +61,7 @@ pub(super) async fn rules(cx: &mut Cx<'_>) {
     q.trash = Trash::Only;
     let only = cx.all(&q).await;
     cx.ensure(
-        only.len() == 2
-            && only
-                .iter()
-                .all(|s| s.restorable_until == d.restorable_until),
+        only.len() == 2 && only.iter().all(|s| s.trash == d.restorable),
         "list(Only): the deleted, with their deadline",
     );
     let alone = dir.restore(k.id, SeriesScope::Whole).await;
@@ -105,10 +102,9 @@ pub(super) async fn deadline(fx: &dyn ConformanceFixture, cx: &mut Cx<'_>) {
     let Ok(d) = dir.delete(t.id, t.revision, SeriesScope::Whole).await else {
         return;
     };
-    let Some(until) = d.restorable_until else {
+    if d.restorable.is_none() {
         return;
-    };
-    let _ = until;
+    }
     if !fx.advance_clock(31 * 86_400_000).await {
         cx.skip("restore: after the deadline (fixture cannot move the clock)");
         return;

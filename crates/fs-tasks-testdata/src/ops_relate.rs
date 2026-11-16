@@ -16,7 +16,7 @@ impl State {
         expected: Revision,
         dep: Dependency,
     ) -> TaskResult<Task> {
-        self.purge();
+        self.expire();
         let i = self.live_expected(id, expected)?;
         if dep.kind == DependencyKind::DependsOn && dep.gap.is_some() {
             return Err(Self::bad("gap", "not-with-depends-on"));
@@ -51,7 +51,7 @@ impl State {
         other_uid: &str,
         kind: DependencyKind,
     ) -> TaskResult<Task> {
-        self.purge();
+        self.expire();
         let i = self.live_expected(id, expected)?;
         let deps = &mut self.rows[i].task.dependencies;
         let before = deps.len();

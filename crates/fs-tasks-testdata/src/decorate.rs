@@ -3,9 +3,10 @@
 //! Pattern: Decorator (over `dyn Tasks`) with a Strategy for the gate (`FailGate`, `SlowGate`).
 
 use crate::tasks_v1::{
-    Answer, Capabilities, Change, Children, Deleted, Dependency, DependencyKind, HistoryEntry,
-    LabelCount, ObjectId, Page, PersonRef, Place, Progress, Readiness, Revision, SeriesScope, Task,
-    TaskDraft, TaskList, TaskPatch, TaskQuery, TaskResult, TaskSummary, Tasks, Trash, Utc,
+    Answer, Capabilities, Change, ChecklistChange, Children, Deleted, Dependency, DependencyKind,
+    HistoryEntry, LabelCount, ObjectId, Page, PersonRef, Place, Progress, Readiness, Revision,
+    SeriesScope, Task, TaskDraft, TaskList, TaskListPatch, TaskPatch, TaskQuery, TaskResult,
+    TaskSummary, Tasks, Trash, Utc,
 };
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -31,29 +32,37 @@ pub enum Op {
     Respond,
     Progress,
     Place,
+    Checklist,
     Relate,
     Unrelate,
     Claim,
     Release,
+    ClaimNext,
     Delete,
     Restore,
+    Purge,
     History,
     Changes,
 }
 
 /// What a gate decides before a call: let it pass (maybe after a virtual wait) or answer with an error.
+#[async_trait]
 pub trait Gate: Send + Sync {
+    /// Waits (`SlowGate` moves the fake's clock, `HoldGate` stays open until it is released) and then lets the call
+    /// pass.
+    ///
     /// # Errors
     /// The error the call answers with instead of reaching the provider inside.
-    fn pass(&self, op: Op) -> TaskResult<()>;
+    async fn pass(&self, op: Op) -> TaskResult<()>;
 
-    /// Same for `list`, which knows the lists asked for (a partly broken provider, plan Z4).
+    /// Same for `list`, which knows the lists asked for (a partly broken provider, plan Z4); an empty slice means
+    /// "all lists", so every broken list is among them.
     ///
     /// # Errors
     /// As [`Gate::pass`].
-    fn pass_list(&self, lists: &[ObjectId]) -> TaskResult<()> {
+    async fn pass_list(&self, lists: &[ObjectId]) -> TaskResult<()> {
         let _ = lists;
-        self.pass(Op::List)
+        self.pass(Op::List).await
     }
 }
 
@@ -75,41 +84,45 @@ impl<G: Gate> Tasks for Decorated<G> {
         self.inner.capabilities()
     }
     async fn asker(&self) -> TaskResult<PersonRef> {
-        self.gate.pass(Op::Asker)?;
+        self.gate.pass(Op::Asker).await?;
         self.inner.asker().await
     }
     async fn lists(&self, trash: Trash) -> TaskResult<Vec<TaskList>> {
-        self.gate.pass(Op::Lists)?;
+        self.gate.pass(Op::Lists).await?;
         self.inner.lists(trash).await
     }
-    async fn create_list(&self, name: &str, color: Option<&str>) -> TaskResult<TaskList> {
-        self.gate.pass(Op::CreateList)?;
-        self.inner.create_list(name, color).await
+    async fn create_list(
+        &self,
+        name: &str,
+        color: Option<&str>,
+        owner: Option<&PersonRef>,
+    ) -> TaskResult<TaskList> {
+        self.gate.pass(Op::CreateList).await?;
+        self.inner.create_list(name, color, owner).await
     }
     async fn update_list(
         &self,
         id: ObjectId,
         expected: Revision,
-        name: Option<&str>,
-        color: Option<Option<&str>>,
+        change: TaskListPatch,
     ) -> TaskResult<TaskList> {
-        self.gate.pass(Op::UpdateList)?;
-        self.inner.update_list(id, expected, name, color).await
+        self.gate.pass(Op::UpdateList).await?;
+        self.inner.update_list(id, expected, change).await
     }
     async fn delete_list(&self, id: ObjectId, expected: Revision) -> TaskResult<Deleted> {
-        self.gate.pass(Op::DeleteList)?;
+        self.gate.pass(Op::DeleteList).await?;
         self.inner.delete_list(id, expected).await
     }
     async fn restore_list(&self, id: ObjectId) -> TaskResult<TaskList> {
-        self.gate.pass(Op::RestoreList)?;
+        self.gate.pass(Op::RestoreList).await?;
         self.inner.restore_list(id).await
     }
     async fn get(&self, id: ObjectId) -> TaskResult<Option<Task>> {
-        self.gate.pass(Op::Get)?;
+        self.gate.pass(Op::Get).await?;
         self.inner.get(id).await
     }
     async fn get_by_uid(&self, uid: &str) -> TaskResult<Option<Task>> {
-        self.gate.pass(Op::GetByUid)?;
+        self.gate.pass(Op::GetByUid).await?;
         self.inner.get_by_uid(uid).await
     }
     async fn list(
@@ -118,7 +131,7 @@ impl<G: Gate> Tasks for Decorated<G> {
         after: Option<&Place>,
         size: usize,
     ) -> TaskResult<Page<TaskSummary>> {
-        self.gate.pass_list(&query.lists)?;
+        self.gate.pass_list(&query.lists).await?;
         self.inner.list(query, after, size).await
     }
     async fn labels(
@@ -128,15 +141,15 @@ impl<G: Gate> Tasks for Decorated<G> {
         after: Option<&Place>,
         size: usize,
     ) -> TaskResult<Page<LabelCount>> {
-        self.gate.pass(Op::Labels)?;
+        self.gate.pass(Op::Labels).await?;
         self.inner.labels(lists, prefix, after, size).await
     }
     async fn readiness(&self, ids: &[ObjectId]) -> TaskResult<Vec<(ObjectId, Readiness)>> {
-        self.gate.pass(Op::Readiness)?;
+        self.gate.pass(Op::Readiness).await?;
         self.inner.readiness(ids).await
     }
     async fn create(&self, draft: TaskDraft) -> TaskResult<Task> {
-        self.gate.pass(Op::Create)?;
+        self.gate.pass(Op::Create).await?;
         self.inner.create(draft).await
     }
     async fn update(
@@ -146,7 +159,7 @@ impl<G: Gate> Tasks for Decorated<G> {
         change: TaskPatch,
         scope: SeriesScope,
     ) -> TaskResult<Task> {
-        self.gate.pass(Op::Update)?;
+        self.gate.pass(Op::Update).await?;
         self.inner.update(id, expected, change, scope).await
     }
     async fn assign(
@@ -156,7 +169,7 @@ impl<G: Gate> Tasks for Decorated<G> {
         who: &PersonRef,
         scope: SeriesScope,
     ) -> TaskResult<Task> {
-        self.gate.pass(Op::Assign)?;
+        self.gate.pass(Op::Assign).await?;
         self.inner.assign(id, expected, who, scope).await
     }
     async fn unassign(
@@ -166,7 +179,7 @@ impl<G: Gate> Tasks for Decorated<G> {
         who: &PersonRef,
         scope: SeriesScope,
     ) -> TaskResult<Task> {
-        self.gate.pass(Op::Unassign)?;
+        self.gate.pass(Op::Unassign).await?;
         self.inner.unassign(id, expected, who, scope).await
     }
     async fn respond(
@@ -177,7 +190,7 @@ impl<G: Gate> Tasks for Decorated<G> {
         comment: Option<&str>,
         scope: SeriesScope,
     ) -> TaskResult<Task> {
-        self.gate.pass(Op::Respond)?;
+        self.gate.pass(Op::Respond).await?;
         self.inner
             .respond(id, expected, answer, comment, scope)
             .await
@@ -190,7 +203,7 @@ impl<G: Gate> Tasks for Decorated<G> {
         children: Children,
         scope: SeriesScope,
     ) -> TaskResult<Task> {
-        self.gate.pass(Op::Progress)?;
+        self.gate.pass(Op::Progress).await?;
         self.inner.progress(id, expected, to, children, scope).await
     }
     async fn place(
@@ -199,8 +212,17 @@ impl<G: Gate> Tasks for Decorated<G> {
         expected: Revision,
         after: Option<ObjectId>,
     ) -> TaskResult<Task> {
-        self.gate.pass(Op::Place)?;
+        self.gate.pass(Op::Place).await?;
         self.inner.place(id, expected, after).await
+    }
+    async fn checklist(
+        &self,
+        id: ObjectId,
+        expected: Revision,
+        change: ChecklistChange,
+    ) -> TaskResult<Task> {
+        self.gate.pass(Op::Checklist).await?;
+        self.inner.checklist(id, expected, change).await
     }
     async fn relate(
         &self,
@@ -208,7 +230,7 @@ impl<G: Gate> Tasks for Decorated<G> {
         expected: Revision,
         dependency: Dependency,
     ) -> TaskResult<Task> {
-        self.gate.pass(Op::Relate)?;
+        self.gate.pass(Op::Relate).await?;
         self.inner.relate(id, expected, dependency).await
     }
     async fn unrelate(
@@ -218,16 +240,20 @@ impl<G: Gate> Tasks for Decorated<G> {
         other_uid: &str,
         kind: DependencyKind,
     ) -> TaskResult<Task> {
-        self.gate.pass(Op::Unrelate)?;
+        self.gate.pass(Op::Unrelate).await?;
         self.inner.unrelate(id, expected, other_uid, kind).await
     }
     async fn claim(&self, id: ObjectId, expected: Revision, until: Utc) -> TaskResult<Task> {
-        self.gate.pass(Op::Claim)?;
+        self.gate.pass(Op::Claim).await?;
         self.inner.claim(id, expected, until).await
     }
     async fn release(&self, id: ObjectId, expected: Revision) -> TaskResult<Task> {
-        self.gate.pass(Op::Release)?;
+        self.gate.pass(Op::Release).await?;
         self.inner.release(id, expected).await
+    }
+    async fn claim_next(&self, query: &TaskQuery, until: Utc) -> TaskResult<Option<Task>> {
+        self.gate.pass(Op::ClaimNext).await?;
+        self.inner.claim_next(query, until).await
     }
     async fn delete(
         &self,
@@ -235,12 +261,16 @@ impl<G: Gate> Tasks for Decorated<G> {
         expected: Revision,
         scope: SeriesScope,
     ) -> TaskResult<Deleted> {
-        self.gate.pass(Op::Delete)?;
+        self.gate.pass(Op::Delete).await?;
         self.inner.delete(id, expected, scope).await
     }
     async fn restore(&self, id: ObjectId, scope: SeriesScope) -> TaskResult<Task> {
-        self.gate.pass(Op::Restore)?;
+        self.gate.pass(Op::Restore).await?;
         self.inner.restore(id, scope).await
+    }
+    async fn purge(&self, id: ObjectId) -> TaskResult<()> {
+        self.gate.pass(Op::Purge).await?;
+        self.inner.purge(id).await
     }
     async fn history(
         &self,
@@ -248,11 +278,11 @@ impl<G: Gate> Tasks for Decorated<G> {
         after: Option<&Place>,
         size: usize,
     ) -> TaskResult<Page<HistoryEntry>> {
-        self.gate.pass(Op::History)?;
+        self.gate.pass(Op::History).await?;
         self.inner.history(id, after, size).await
     }
     async fn changes(&self, since: Option<&Place>, size: usize) -> TaskResult<Page<Change>> {
-        self.gate.pass(Op::Changes)?;
+        self.gate.pass(Op::Changes).await?;
         self.inner.changes(since, size).await
     }
 }

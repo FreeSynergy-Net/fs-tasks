@@ -59,7 +59,7 @@ fn the_people_are_invented_and_live_at_example_org() {
     for k in KNOWN {
         assert!(k.address.ends_with("@example.org"), "{}", k.address);
     }
-    assert_eq!(KNOWN.len(), 6);
+    assert_eq!(KNOWN.len(), 9);
 }
 
 #[tokio::test]

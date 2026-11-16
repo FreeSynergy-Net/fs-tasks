@@ -2,7 +2,7 @@
 //!
 //! Pattern: Builder (a starting value for `create` and for the sample).
 
-use crate::tasks_v1::{ObjectId, Progress, Rank, Revision, Task, TextType, Utc};
+use crate::tasks_v1::{ObjectId, Progress, Rank, RepeatFrom, Revision, Task, TextType, Utc};
 
 /// A task with only id, list, `uid`, title and creation time set; rank `n` (the middle of an empty sequence).
 ///
@@ -38,8 +38,10 @@ pub fn blank_task(id: ObjectId, list: ObjectId, uid: &str, title: &str, at: Utc)
         dependencies: Vec::new(),
         related: Vec::new(),
         recurrence: Vec::new(),
+        repeat_from: RepeatFrom::Schedule,
         excluded_recurrence: Vec::new(),
         overrides: Vec::new(),
+        checklist: Vec::new(),
         rank: Rank::parse("n").expect("`n` is a rank"),
         claim: None,
         origin: None,

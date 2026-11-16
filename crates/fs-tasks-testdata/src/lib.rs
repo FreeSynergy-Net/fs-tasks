@@ -31,6 +31,8 @@
 )]
 pub mod tasks_v1;
 
+mod access;
+mod bin;
 mod blank;
 mod clock;
 pub mod conformance;
@@ -39,11 +41,16 @@ mod doubles;
 mod exchange;
 mod fake;
 mod fake_impl;
+mod groups;
+mod hold;
 mod ids;
+mod ops_checklist;
+mod ops_claim;
 mod ops_list;
 mod ops_people;
 mod ops_progress;
 mod ops_relate;
+mod ops_repeat;
 mod ops_task;
 mod ops_trash;
 mod patch;
@@ -66,6 +73,8 @@ pub use decorate::{Decorated, Gate, Op};
 pub use doubles::{Clock, FailGate, FailingTasks, SlowGate, SlowTasks, forbidden, unavailable};
 pub use exchange::{FakeExchange, MEDIA_TYPES};
 pub use fake::{DECISIONS, EmptyTasks, FakeTasks, START_MS};
+pub use groups::{FakeGroupMembers, GroupMembers};
+pub use hold::{HeldTasks, HoldGate};
 pub use ids::{object_id, object_number, person, reference, try_reference};
 pub use people::FakePeople;
 pub use sample::{Sample, id_of, occurrence, sample};

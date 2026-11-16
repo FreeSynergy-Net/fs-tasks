@@ -3,11 +3,20 @@
 //! Pattern: Template method (rules as plain checks collected in the report).
 
 use super::cx::{Cx, is_changed, is_invalid, is_not_found};
-use crate::tasks_v1::{Revision, SeriesScope, TaskPatch, Trash};
+use crate::tasks_v1::{ListAccess, Revision, SeriesScope, TaskListPatch, TaskPatch, Trash};
+
+#[allow(clippy::option_option)] // `Some(None)` removes the colour, as in `TaskListPatch`
+fn patch(name: Option<&str>, color: Option<Option<&str>>) -> TaskListPatch {
+    TaskListPatch {
+        name: name.map(str::to_owned),
+        color: color.map(|c| c.map(str::to_owned)),
+        owner: None,
+    }
+}
 
 pub(super) async fn rules(cx: &mut Cx<'_>) {
     let dir = cx.dir;
-    let made = dir.create_list("Zzconf lists", Some("#112233")).await;
+    let made = dir.create_list("Zzconf lists", Some("#112233"), None).await;
     let Ok(list) = made else {
         cx.ensure(false, "create_list: answers");
         return;
@@ -15,14 +24,36 @@ pub(super) async fn rules(cx: &mut Cx<'_>) {
     cx.ensure(
         list.name == "Zzconf lists"
             && list.color.as_deref() == Some("#112233")
-            && list.restorable_until.is_none(),
+            && list.trash.is_none(),
         "create_list: name, colour, alive",
     );
-    let empty = dir.create_list("  ", None).await;
+    let asker = dir.asker().await.ok();
+    cx.ensure(
+        asker.as_ref() == Some(&list.owner) && list.access == ListAccess::Manage,
+        "create_list: the owner is the asking person, with Manage",
+    );
+    let stranger = crate::ids::person(4242);
+    let other = dir.create_list("Zzconf other", None, Some(&stranger)).await;
+    cx.fails(
+        &other,
+        "create_list: another person as owner is Invalid",
+        is_invalid,
+    );
+    let mine = dir.create_list("Zzconf mine", None, asker.as_ref()).await;
+    cx.ensure(
+        mine.as_ref()
+            .is_ok_and(|l| Some(&l.owner) == asker.as_ref()),
+        "create_list: the asking person may be named as owner",
+    );
+    let empty = dir.create_list("  ", None, None).await;
     cx.fails(&empty, "create_list: an empty name is Invalid", is_invalid);
 
     let renamed = dir
-        .update_list(list.id, list.revision, Some("Zzconf lists 2"), Some(None))
+        .update_list(
+            list.id,
+            list.revision,
+            patch(Some("Zzconf lists 2"), Some(None)),
+        )
         .await;
     let Ok(renamed) = renamed else {
         cx.ensure(false, "update_list: renames and removes the colour");
@@ -35,7 +66,7 @@ pub(super) async fn rules(cx: &mut Cx<'_>) {
         "update_list: renamed, colour removed, revision up",
     );
     let stale = dir
-        .update_list(list.id, list.revision, Some("x"), None)
+        .update_list(list.id, list.revision, patch(Some("x"), None))
         .await;
     cx.fails(
         &stale,
@@ -43,11 +74,15 @@ pub(super) async fn rules(cx: &mut Cx<'_>) {
         is_changed,
     );
     let blank = dir
-        .update_list(list.id, renamed.revision, Some(""), None)
+        .update_list(list.id, renamed.revision, patch(Some(""), None))
         .await;
     cx.fails(&blank, "update_list: an empty name is Invalid", is_invalid);
     let gone = dir
-        .update_list(crate::ids::object_id(u64::MAX), Revision(1), None, None)
+        .update_list(
+            crate::ids::object_id(u64::MAX),
+            Revision(1),
+            patch(None, None),
+        )
         .await;
     cx.fails(
         &gone,
@@ -96,10 +131,7 @@ async fn trash_rules(cx: &mut Cx<'_>, list: crate::tasks_v1::ObjectId, revision:
         got == want,
         "delete_list: with_subtasks = all living tasks of the list, subtasks too",
     );
-    cx.ensure(
-        deleted.restorable_until.is_some(),
-        "delete_list: a deadline",
-    );
+    cx.ensure(deleted.restorable.is_some(), "delete_list: a deadline");
     let alive = dir.lists(Trash::Exclude).await.unwrap_or_default();
     let all = dir.lists(Trash::Include).await.unwrap_or_default();
     let only = dir.lists(Trash::Only).await.unwrap_or_default();
@@ -113,7 +145,7 @@ async fn trash_rules(cx: &mut Cx<'_>, list: crate::tasks_v1::ObjectId, revision:
     );
     cx.ensure(
         only.iter()
-            .any(|l| l.id == list && l.restorable_until == deleted.restorable_until),
+            .any(|l| l.id == list && l.trash == deleted.restorable),
         "lists(Only): the deleted list with its deadline",
     );
     cx.ensure(
@@ -125,7 +157,7 @@ async fn trash_rules(cx: &mut Cx<'_>, list: crate::tasks_v1::ObjectId, revision:
     let in_trash = cx.all(&q).await;
     let with_list = in_trash
         .iter()
-        .filter(|s| s.restorable_until == deleted.restorable_until)
+        .filter(|s| s.trash == deleted.restorable)
         .count();
     cx.ensure(
         in_trash.len() == 4 && with_list == 3,
@@ -142,12 +174,14 @@ async fn trash_rules(cx: &mut Cx<'_>, list: crate::tasks_v1::ObjectId, revision:
         .create(super::cx::draft(list, "late", TaskPatch::default()))
         .await;
     cx.fails(&new, "create: in a deleted list is NotFound", is_not_found);
-    let edit = dir.update_list(list, Revision(1), Some("x"), None).await;
+    let edit = dir
+        .update_list(list, Revision(1), patch(Some("x"), None))
+        .await;
     cx.ensure(edit.is_err(), "update_list: a deleted list is not edited");
 
     let back = dir.restore_list(list).await;
     cx.ensure(
-        back.as_ref().is_ok_and(|l| l.restorable_until.is_none()),
+        back.as_ref().is_ok_and(|l| l.trash.is_none()),
         "restore_list: the list is alive again",
     );
     cx.ensure(

@@ -9,8 +9,8 @@ use super::{
     rules_ready, rules_series, rules_tasks, rules_trash,
 };
 use crate::tasks_v1::{
-    Answer, CAPABILITIES, Children, DependencyKind, Progress, SeriesScope, TaskDraft, TaskPatch,
-    Tasks, Trash,
+    Answer, CAPABILITIES, Children, DependencyKind, Progress, SeriesScope, TaskDraft,
+    TaskListPatch, TaskPatch, Tasks, Trash,
 };
 
 async fn base(cx: &mut Cx<'_>) {
@@ -74,17 +74,18 @@ pub async fn run_unsupported(dir: &dyn Tasks) -> Vec<String> {
         title: "x".to_owned(),
         progress: Progress::NeedsAction,
         assignees: Vec::new(),
+        checklist: Vec::new(),
         rest: TaskPatch::default(),
     };
     let w = SeriesScope::Whole;
     let off: [(&str, bool); 8] = [
         (
             "list.create",
-            is_unsupported_of(&dir.create_list("x", None).await),
+            is_unsupported_of(&dir.create_list("x", None, None).await),
         ),
         (
             "list.edit",
-            is_unsupported_of(&dir.update_list(id, rev, None, None).await),
+            is_unsupported_of(&dir.update_list(id, rev, TaskListPatch::default()).await),
         ),
         (
             "list.delete",

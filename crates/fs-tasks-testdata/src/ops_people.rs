@@ -34,7 +34,7 @@ impl State {
         capability: &str,
         edit: impl FnOnce(&mut Vec<Assignee>) -> TaskResult<Edit>,
     ) -> TaskResult<Task> {
-        self.purge();
+        self.expire();
         let i = self.live_expected(id, expected)?;
         self.atomic(|s| {
             let (j, rid) = match s.target(i, scope, capability)? {

@@ -46,6 +46,7 @@ async fn a_failing_provider_answers_the_chosen_error_and_heals() {
             title: "x".to_owned(),
             progress: Progress::NeedsAction,
             assignees: Vec::new(),
+            checklist: Vec::new(),
             rest: TaskPatch::default(),
         })
         .await,
@@ -59,7 +60,7 @@ async fn a_failing_provider_answers_the_chosen_error_and_heals() {
     assert!(f.list(&query(vec![broken]), None, 10).await.is_ok());
     let all = FailingTasks::new(Arc::new(FakeTasks::new())).failing_all(unavailable("gone"));
     assert!(all.get(s.tasks[0].1.id).await.is_err());
-    assert_eq!(all.capabilities().0.len(), 20);
+    assert_eq!(all.capabilities().0.len(), 22);
 }
 
 #[tokio::test]

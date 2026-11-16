@@ -22,7 +22,7 @@ impl State {
         self.rows
             .iter()
             .enumerate()
-            .find(|(i, r)| r.task.uid == uid && self.deleted_until(*i).is_none())
+            .find(|(i, r)| r.task.uid == uid && self.trash_of(*i).is_none())
             .map(|(_, r)| &r.task)
     }
 
@@ -34,7 +34,7 @@ impl State {
     ) -> Vec<(String, DependencyKind)> {
         let mut out = Vec::new();
         for (i, r) in self.rows.iter().enumerate() {
-            if self.deleted_until(i).is_some() {
+            if self.trash_of(i).is_some() {
                 continue;
             }
             for d in &r.task.dependencies {

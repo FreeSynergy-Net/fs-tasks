@@ -9,9 +9,9 @@ use crate::fake::{FakeTasks, START_MS};
 use crate::ids::{object_id, person};
 use crate::sample_people::{KNOWN, Known};
 use crate::tasks_v1::{
-    Assignee, AssigneeStatus, Date, Dependency, DependencyKind, Due, LocalDateTime, ObjectId,
-    Override, OverrideChange, Progress, Recurrence, RecurrenceRule, Revision, Span, Task, TaskList,
-    Utc, Zone,
+    Assignee, AssigneeStatus, Date, Dependency, DependencyKind, Due, ListAccess, ListSource,
+    LocalDateTime, ObjectId, Override, OverrideChange, Progress, Recurrence, RecurrenceRule,
+    Revision, Span, Task, TaskList, Utc, Zone,
 };
 use fs_types::BasicValue;
 
@@ -214,7 +214,9 @@ pub(crate) fn list(n: u64, name: &str, color: &str) -> TaskList {
         color: Some(color.to_owned()),
         owner: person(1),
         revision: Revision(1),
-        restorable_until: None,
+        access: ListAccess::Manage,
+        source: ListSource::Own,
+        trash: None,
     }
 }
 

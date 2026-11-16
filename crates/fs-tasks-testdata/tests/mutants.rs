@@ -224,7 +224,7 @@ async fn caught_on_top(mutation: Mutation, rule: &str) {
         skip_rank: false,
         partial: false,
     };
-    let report = run_rank_conformance(&fake, RankPart::Top, options).await;
+    let report = run_rank_conformance(&Fx(fake), RankPart::Top, options).await;
     assert!(
         report.failures.iter().any(|f| f.contains(rule)),
         "{mutation:?} was not caught by `{rule}`; failed rules: {:#?}",
@@ -236,7 +236,7 @@ async fn caught_on_top(mutation: Mutation, rule: &str) {
 async fn a_top_that_does_not_spread_is_caught() {
     Box::pin(caught_on_top(
         Mutation::TopNoSpread,
-        "the spread on top is in the same transaction",
+        "on top of a rank that does not fit spreads",
     ))
     .await;
 }

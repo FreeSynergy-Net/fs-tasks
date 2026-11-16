@@ -63,6 +63,12 @@ pub trait ConformanceFixture: Send + Sync {
         false
     }
 
+    /// Put a task at an exact rank WITHOUT a new revision (the rank rules start the spread by seeding a rank of 255
+    /// characters instead of creating thousands of tasks). `true` when done.
+    async fn seed_rank(&self, _id: ObjectId, _rank: &crate::tasks_v1::Rank) -> bool {
+        false
+    }
+
     /// The trash setting: days until the automatic purge, `None` = never automatically. `true` when done.
     async fn set_trash_days(&self, _days: Option<u32>) -> bool {
         false

@@ -8,7 +8,7 @@ use fs_objects::v5::Step;
 use fs_objects::v5::envelope::Child;
 use fs_objects::v5::registry::Domain;
 
-use crate::tables::{ALL, PREFIX, STEP_1, STEP_2, STEP_3};
+use crate::tables::{ALL, PREFIX, STEP_1, STEP_2, STEP_3, STEP_4};
 
 /// The channels `object_origin.channel` may hold (the same as the calendar's: file, `CalDAV`, closed accounts, `iTIP`, hub,
 /// subscription).
@@ -50,5 +50,6 @@ pub const DOMAIN: Domain = Domain {
         Step::Create(&STEP_1),
         Step::Create(&STEP_2),
         Step::Create(&STEP_3),
+        Step::Create(&STEP_4),
     ],
 };

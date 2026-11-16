@@ -1,5 +1,7 @@
 //! Conformance Fake = Local for the rules run 2a covers: the same rules, written once in `fs-tasks-testdata`, run against
 //! `LocalTasks`. The rules of the capabilities this run does not offer are skipped and named (never counted as passed).
+//!
+//! Pattern: Conformance suite (the rules are written once in `fs-tasks-testdata`; this file only supplies the provider and the fixture).
 
 #[allow(dead_code)]
 mod common;
@@ -74,7 +76,7 @@ async fn strict_mode_fails_what_partial_mode_skips() {
 #[tokio::test]
 async fn the_rank_rules_on_top_pass() {
     let fx = LocalFx::memory().await;
-    let report = run_rank_conformance(&fx.tasks, RankPart::Top, partial()).await;
+    let report = run_rank_conformance(&fx, RankPart::Top, partial()).await;
     assert!(report.failures.is_empty(), "failed: {:#?}", report.failures);
     println!("rank top: checked {}", report.checked);
     assert!(report.checked >= 7, "too few rules ran: {}", report.checked);
@@ -84,7 +86,7 @@ async fn the_rank_rules_on_top_pass() {
 #[tokio::test]
 async fn the_rank_rules_with_place_pass() {
     let fx = LocalFx::memory().await;
-    let report = run_rank_conformance(&fx.tasks, RankPart::Place, partial()).await;
+    let report = run_rank_conformance(&fx, RankPart::Place, partial()).await;
     assert!(report.failures.is_empty(), "failed: {:#?}", report.failures);
     println!("rank place: checked {}", report.checked);
     assert!(
@@ -92,4 +94,18 @@ async fn the_rank_rules_with_place_pass() {
         "too few rules ran: {}",
         report.checked
     );
+}
+
+/// The night run of the top rank rules: creations on top until the rank runs out for real (6362 and more) and edges of
+/// 6000. Slow in a debug build, so it is marked and runs once in CI (`cargo test -- --ignored`).
+#[tokio::test]
+#[ignore = "slow: the long rank rules run once in CI with --ignored"]
+async fn the_rank_rules_on_top_pass_the_long_run() {
+    let fx = LocalFx::memory().await;
+    let options = Options {
+        heavy: true,
+        ..partial()
+    };
+    let report = run_rank_conformance(&fx, RankPart::Top, options).await;
+    assert!(report.failures.is_empty(), "failed: {:#?}", report.failures);
 }

@@ -9,10 +9,10 @@ use fs_objects::v5::codec::{get_opt_text, get_text, id_value, text};
 use fs_tasks_testdata::tasks_v1::{BasicValue, ListAccess, ObjectId, PersonRef, TaskResult};
 
 use crate::error::{adapt, forbidden, gone};
-use crate::who::Who;
+use crate::who::{Flaw, Who};
 
 /// The words of a grant level.
-pub const LEVELS: &[&str] = &["read", "write"];
+pub const LEVELS: &[&str] = &["read", "write", "manage"];
 
 /// The levels of the asker: on `list` only, or on every list (`None`); a list they may not see is left out. One
 /// `SELECT` over the lists and the asker's grant rows.
@@ -36,15 +36,19 @@ async fn levels(
     for r in &rows {
         let id = v5::codec::get_id(r, 0).map_err(adapt)?;
         let owner = get_text(r, 1).map_err(adapt)? == me;
-        let level = match get_opt_text(r, 2).map_err(adapt)?.as_deref() {
+        let grant = get_opt_text(r, 2)
+            .map_err(adapt)?
+            .filter(|_| who.flaw != Some(Flaw::GrantIgnored));
+        let level = match grant.as_deref() {
             Some("read") => ListAccess::Read,
-            Some(_) => ListAccess::Write,
+            Some("write") => ListAccess::Write,
+            Some(_) => ListAccess::Manage,
             None if owner => ListAccess::Manage,
             None => continue,
         };
         out.push((
             id,
-            if who.asks_as_agent() {
+            if who.asks_as_agent() && who.flaw != Some(Flaw::NoAiCap) {
                 level.min(ListAccess::Write)
             } else {
                 level
@@ -80,8 +84,13 @@ pub async fn visible(c: &v5::Conn<'_>, who: &Who) -> TaskResult<Vec<(ObjectId, L
     levels(c, who, None).await
 }
 
-/// A person is made `Read` only on a list (the fixture and later the sharing of lists use this).
-pub async fn set_read_only(c: &v5::Conn<'_>, who: &PersonRef, list: ObjectId) -> TaskResult<()> {
+/// A person gets `level` on a list (the fixture and later the sharing of lists use this): a grant row, replacing any older one.
+pub async fn set_grant(
+    c: &v5::Conn<'_>,
+    who: &PersonRef,
+    list: ObjectId,
+    level: ListAccess,
+) -> TaskResult<()> {
     c.exec(
         "DELETE FROM tasks_grant WHERE list = ? AND who_id = ?",
         vec![id_value(list), text(&who.id.canonical())],
@@ -89,9 +98,14 @@ pub async fn set_read_only(c: &v5::Conn<'_>, who: &PersonRef, list: ObjectId) ->
     .await
     .map_err(adapt)?;
     let [id, art, abzug] = v5::codec::person_values(who);
+    let word = match level {
+        ListAccess::Read => "read",
+        ListAccess::Write => "write",
+        _ => "manage",
+    };
     c.insert(
         &crate::tables::GRANT,
-        vec![id_value(list), id, art, abzug, text("read")],
+        vec![id_value(list), id, art, abzug, text(word)],
     )
     .await
     .map_err(adapt)?;

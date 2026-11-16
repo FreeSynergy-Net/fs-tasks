@@ -167,6 +167,14 @@ impl FakeTasks {
         });
     }
 
+    /// Set the rank of a task by hand without a new revision (a fixture hook for the rank rules).
+    pub fn set_rank(&self, id: ObjectId, rank: crate::tasks_v1::Rank) {
+        let mut s = self.lock();
+        if let Some(i) = s.at(id) {
+            s.rows[i].task.rank = rank;
+        }
+    }
+
     /// Keep a task or a list (`keep_until`): `None` = without an end, `Some(t)` = until `t`. A kept one in the trash is
     /// `Held` and cannot be purged.
     pub fn keep(&self, id: ObjectId, until: Option<Utc>) {

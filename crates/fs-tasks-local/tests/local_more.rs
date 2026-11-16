@@ -1,5 +1,7 @@
 //! More of what only `LocalTasks` can show: the database counts the labels, who sees which list (a colleague, an AI, a
 //! list made read only), and the checklist rows that go with their task.
+//!
+//! Pattern: Behaviour tests (one scenario each, through the trait only).
 
 #[allow(dead_code)]
 mod common;

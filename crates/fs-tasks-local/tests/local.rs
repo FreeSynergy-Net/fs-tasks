@@ -1,5 +1,7 @@
 //! What only `LocalTasks` can show: the rows (typed columns, the deadline, the O18 detach), the file (it survives a
 //! reopen), and the honest refusal of what this run does not store.
+//!
+//! Pattern: Rows-level tests (the table and the file are looked at directly, what the trait cannot show).
 
 #[allow(dead_code)]
 mod common;

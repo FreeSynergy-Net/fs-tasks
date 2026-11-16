@@ -46,11 +46,8 @@ async fn base(cx: &mut Cx<'_>) {
     if cx.needs("feed", &["task.changes"]) {
         rules_feed::rules(cx).await;
     }
-    if !cx.skip_rank {
-        rules_rank_top::rules(cx).await;
-        if cx.needs("rank", &["task.place"]) {
-            rules_rank::rules(cx).await;
-        }
+    if !cx.skip_rank && cx.needs("rank", &["task.place"]) {
+        Box::pin(rules_rank::rules(cx)).await;
     }
     if cx.needs("checklist", &["task.checklist"]) {
         Box::pin(rules_checklist::rules(cx)).await;
@@ -75,8 +72,12 @@ pub enum RankPart {
 }
 
 /// Only the rank rules of one part (`skip_rank` of `options` is ignored).
-pub async fn run_rank_conformance(dir: &dyn Tasks, part: RankPart, options: Options) -> Report {
-    let Some(mut cx) = Cx::new(dir, options) else {
+pub async fn run_rank_conformance(
+    fixture: &dyn ConformanceFixture,
+    part: RankPart,
+    options: Options,
+) -> Report {
+    let Some(mut cx) = Cx::new(fixture.tasks(), options) else {
         return Report {
             failures: vec!["setup: the zones UTC and Europe/Berlin".to_owned()],
             skipped: Vec::new(),
@@ -84,10 +85,10 @@ pub async fn run_rank_conformance(dir: &dyn Tasks, part: RankPart, options: Opti
         };
     };
     match part {
-        RankPart::Top => rules_rank_top::rules(&mut cx).await,
+        RankPart::Top => rules_rank_top::rules(&mut cx, Some(fixture)).await,
         RankPart::Place => {
             if cx.needs("rank", &["task.place"]) {
-                rules_rank::rules(&mut cx).await;
+                Box::pin(rules_rank::rules(&mut cx)).await;
             }
         }
     }
@@ -107,6 +108,9 @@ pub async fn run_conformance_with(dir: &dyn Tasks, options: Options) -> Vec<Stri
         return vec!["setup: the zones UTC and Europe/Berlin".to_owned()];
     };
     base(&mut cx).await;
+    if !cx.skip_rank {
+        rules_rank_top::rules(&mut cx, None).await;
+    }
     cx.report.failures
 }
 
@@ -129,6 +133,9 @@ pub async fn run_fixture_conformance_with(
         };
     };
     base(&mut cx).await;
+    if !cx.skip_rank {
+        rules_rank_top::rules(&mut cx, Some(fixture)).await;
+    }
     rules_trash::moves(fixture, &mut cx).await;
     rules_trash::deadline(fixture, &mut cx).await;
     if cx.needs_series("repeat kept").await {

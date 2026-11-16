@@ -45,3 +45,4 @@ pub mod zones;
 pub use clock::Clock;
 pub use local::{LocalTasks, OFFERED};
 pub use store::Store;
+pub use who::Flaw;

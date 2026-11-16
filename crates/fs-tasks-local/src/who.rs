@@ -5,11 +5,21 @@
 
 use fs_tasks_testdata::tasks_v1::PersonRef;
 
+/// A deliberate fault of the rights (mutants of the tests, never set otherwise): the rule must turn red.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Flaw {
+    /// An AI is not held at `Write` (its `Manage` grant works).
+    NoAiCap,
+    /// The grant rows are not read (the owner has `Manage` whatever the grant says, nobody else sees the list).
+    GrantIgnored,
+}
+
 /// The asking person and the known AIs.
 #[derive(Clone, Debug)]
 pub struct Who {
     pub me: PersonRef,
     pub agents: Vec<PersonRef>,
+    pub flaw: Option<Flaw>,
 }
 
 impl Who {

@@ -45,6 +45,10 @@ impl ConformanceFixture for Fx {
         self.0.revoke_claims(agent);
         true
     }
+    async fn seed_rank(&self, id: ObjectId, rank: &fs_tasks_testdata::tasks_v1::Rank) -> bool {
+        self.0.set_rank(id, rank.clone());
+        true
+    }
     async fn set_trash_days(&self, days: Option<u32>) -> bool {
         self.0.set_trash_days(days);
         true

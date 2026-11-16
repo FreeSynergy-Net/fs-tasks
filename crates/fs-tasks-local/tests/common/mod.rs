@@ -1,4 +1,6 @@
 //! Shared by the tests: the fixture of `LocalTasks` (its clock moves by hand, the account is a fixed person).
+//!
+//! Pattern: Test fixture (the provider, its clock and the people of the sample behind the conformance hooks).
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, Ordering};
@@ -67,6 +69,10 @@ impl ConformanceFixture for LocalFx {
     /// An AI (sample person 8), marked as one in `open`.
     async fn agent(&self) -> Option<PersonRef> {
         Some(known(8))
+    }
+
+    async fn seed_rank(&self, id: ObjectId, rank: &fs_tasks_testdata::tasks_v1::Rank) -> bool {
+        self.tasks.seed_rank(id, rank).await.is_ok()
     }
 
     async fn read_only(&self, who: &PersonRef, list: ObjectId) -> bool {

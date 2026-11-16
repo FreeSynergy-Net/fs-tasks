@@ -161,11 +161,26 @@ pub const CHECKLIST: Table = Table {
     indexes: &["CREATE INDEX IF NOT EXISTS tasks_checklist_order ON tasks_checklist (task, rank)"],
 };
 
+/// The highest item number ever given in the checklist of a task: a key is never given twice, not even after the item
+/// that held it was removed (step 4).
+pub const CHECKLIST_SEQ: Table = Table {
+    name: "tasks_checklist_seq",
+    cols: &[Col::req("task", Ref), Col::req("last", Int)],
+    constraints: &[
+        "PRIMARY KEY (task)",
+        "FOREIGN KEY (task) REFERENCES tasks_task(id) ON DELETE CASCADE",
+        "CHECK (last >= 0)",
+    ],
+    indexes: &[],
+};
+
 /// The tables of step 1 (run 1).
 pub const STEP_1: [Table; 3] = [LIST, TASK, LABEL];
 /// The tables of step 2 (run 2a).
 pub const STEP_2: [Table; 1] = [GRANT];
 /// The tables of step 3 (run 2a, the checklist).
 pub const STEP_3: [Table; 1] = [CHECKLIST];
+/// The tables of step 4 (run 2a rest, the key counter of the checklist).
+pub const STEP_4: [Table; 1] = [CHECKLIST_SEQ];
 /// All tables of the domain, in creation order (a table comes after the ones it points to).
-pub const ALL: [Table; 5] = [LIST, TASK, LABEL, GRANT, CHECKLIST];
+pub const ALL: [Table; 6] = [LIST, TASK, LABEL, GRANT, CHECKLIST, CHECKLIST_SEQ];

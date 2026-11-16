@@ -108,6 +108,9 @@ fn page<T>(items: Vec<T>, after: Option<&Place>, size: usize) -> TaskResult<Page
     })
 }
 
+/// The most rows a page holds: a larger `size` is cut to it (the cursor says where the next page starts).
+pub const PAGE_MAX: usize = 1000;
+
 /// A task that is not in the trash: not deleted on its own, not with a parent that is, its list not deleted.
 pub const ALIVE: &str =
     "o.deleted IS NULL AND (t.deleted_with IS NULL OR wo.deleted IS NULL) AND lo.deleted IS NULL";
@@ -178,6 +181,7 @@ pub async fn list(
     if q.ready.is_some() {
         return not_possible("dependency.evaluate");
     }
+    let size = size.min(PAGE_MAX);
     let view = tz(&q.view_zone, "view_zone")?;
     let seen: Vec<ObjectId> = visible(c, who).await?.into_iter().map(|l| l.0).collect();
     let lists: Vec<ObjectId> = if q.lists.is_empty() {

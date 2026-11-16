@@ -23,8 +23,10 @@ pub(crate) struct Cx<'a> {
     pub dir: &'a dyn Tasks,
     pub report: Report,
     pub berlin: Zone,
-    /// Insertions at one edge of a rank sequence (2000; 6000 with [`Options::heavy`]).
+    /// Insertions at one edge of a rank sequence (200; 6000 with [`Options::heavy`]).
     pub edge: usize,
+    /// The night run (`Options::heavy`): the long rank rules run.
+    pub heavy: bool,
     pub skip_rank: bool,
     /// The provider offers only part of the capabilities (a staged build): a group of rules whose capability is off is
     /// skipped and listed in `Report::skipped`, never reported as failed and never as passed.
@@ -53,7 +55,8 @@ impl<'a> Cx<'a> {
             dir,
             report: Report::default(),
             berlin: Zone::iana("Europe/Berlin").ok()?,
-            edge: if options.heavy { 6000 } else { 2000 },
+            edge: if options.heavy { 6000 } else { 200 },
+            heavy: options.heavy,
             skip_rank: options.skip_rank,
             partial: options.partial,
             series: None,

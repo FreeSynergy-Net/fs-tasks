@@ -13,7 +13,7 @@ use crate::clock::{Clock, Ticker};
 use crate::error::adapt;
 use crate::store::{Store, finish};
 use crate::trash_ops;
-use crate::who::Who;
+use crate::who::{Flaw, Who};
 
 /// What this run offers (the rest of `CAPABILITIES` is named in `stand.md`: run 2a-rest and run 2b).
 pub const OFFERED: [&str; 14] = [
@@ -40,6 +40,7 @@ pub struct LocalTasks {
     pub(crate) account: PersonRef,
     pub(crate) acting: Mutex<Option<PersonRef>>,
     pub(crate) agents: Mutex<Vec<PersonRef>>,
+    pub(crate) flaw: Mutex<Option<Flaw>>,
     pub(crate) clock: Ticker,
 }
 
@@ -60,6 +61,7 @@ impl LocalTasks {
             account,
             acting: Mutex::new(None),
             agents: Mutex::new(Vec::new()),
+            flaw: Mutex::new(None),
             clock,
         })
     }
@@ -72,6 +74,7 @@ impl LocalTasks {
                 .clone()
                 .unwrap_or_else(|| self.account.clone()),
             agents: locked(&self.agents).clone(),
+            flaw: *locked(&self.flaw),
         }
     }
 
@@ -86,6 +89,51 @@ impl LocalTasks {
         locked(&self.agents).push(agent);
     }
 
+    /// Put a task at an exact rank without a new revision (a hook of the tests: the rank rules start the spread by
+    /// seeding a rank of 255 characters).
+    ///
+    /// # Errors
+    /// `Unavailable` when the store refuses.
+    pub async fn seed_rank(
+        &self,
+        id: fs_tasks_testdata::tasks_v1::ObjectId,
+        rank: &fs_tasks_testdata::tasks_v1::Rank,
+    ) -> TaskResult<()> {
+        let c = self.store.begin().await?;
+        let r = c
+            .exec(
+                "UPDATE tasks_task SET rank = ? WHERE id = ?",
+                vec![
+                    fs_objects::v5::codec::text(rank.as_str()),
+                    fs_objects::v5::codec::id_value(id),
+                ],
+            )
+            .await
+            .map(|_| ())
+            .map_err(adapt);
+        finish(c, r).await
+    }
+
+    /// Switch a deliberate fault on or off (the mutants of the tests of the rights).
+    pub fn set_flaw(&self, flaw: Option<Flaw>) {
+        *locked(&self.flaw) = flaw;
+    }
+
+    /// `who` gets `level` on `list` (a grant row; it replaces the level of the owner).
+    ///
+    /// # Errors
+    /// `Unavailable` when the store refuses.
+    pub async fn grant(
+        &self,
+        who: &PersonRef,
+        list: fs_tasks_testdata::tasks_v1::ObjectId,
+        level: fs_tasks_testdata::tasks_v1::ListAccess,
+    ) -> TaskResult<()> {
+        let c = self.store.begin().await?;
+        let r = access::set_grant(&c, who, list, level).await;
+        finish(c, r).await
+    }
+
     /// `who` may only read `list` from now on (the access of the owner is replaced by `Read`).
     ///
     /// # Errors
@@ -96,7 +144,8 @@ impl LocalTasks {
         list: fs_tasks_testdata::tasks_v1::ObjectId,
     ) -> TaskResult<()> {
         let c = self.store.begin().await?;
-        let r = access::set_read_only(&c, who, list).await;
+        let r =
+            access::set_grant(&c, who, list, fs_tasks_testdata::tasks_v1::ListAccess::Read).await;
         finish(c, r).await
     }
 

@@ -9,7 +9,7 @@ use turso::Value;
 
 use crate::access::visible;
 use crate::error::adapt;
-use crate::query::{ALIVE, offset};
+use crate::query::{ALIVE, PAGE_MAX, offset};
 use crate::stored::marks;
 use crate::who::Who;
 
@@ -22,6 +22,7 @@ pub async fn labels(
     after: Option<&Place>,
     size: usize,
 ) -> TaskResult<Page<LabelCount>> {
+    let size = size.min(PAGE_MAX);
     let from = offset(after)?;
     let seen: Vec<ObjectId> = visible(c, who).await?.into_iter().map(|l| l.0).collect();
     let lists: Vec<ObjectId> = if lists.is_empty() {

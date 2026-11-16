@@ -16,7 +16,7 @@ use fs_tasks_testdata::tasks_v1::{
 use turso::Value;
 
 use crate::access::need;
-use crate::checklist_rows::{check_title, row};
+use crate::checklist_rows::{check_title, next_key, row};
 use crate::error::{adapt, bad, changed};
 use crate::tables::CHECKLIST;
 use crate::tasks_write::live_task;
@@ -87,15 +87,6 @@ async fn place_rank(
     Err(bad("checklist", "rank"))
 }
 
-fn next_key(items: &[ChecklistItem]) -> String {
-    let n = items
-        .iter()
-        .filter_map(|i| i.key.strip_prefix('k').and_then(|n| n.parse::<u64>().ok()))
-        .max()
-        .unwrap_or(0);
-    format!("k{}", n + 1)
-}
-
 /// `checklist`: `NotFound`, `Forbidden`, `Changed`, then `Invalid`; a change that changes nothing (ticking a ticked
 /// item, the same title) writes nothing and keeps the revision.
 pub async fn change(
@@ -137,7 +128,7 @@ async fn apply(
             }
             let rank = place_rank(c, task, items, None, after.as_deref()).await?;
             let item = ChecklistItem {
-                key: next_key(items),
+                key: next_key(c, task, items).await?,
                 title,
                 done: None,
                 rank,

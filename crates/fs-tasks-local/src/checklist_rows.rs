@@ -14,7 +14,7 @@ use turso::Value;
 use crate::cur::Cur;
 use crate::error::{adapt, bad};
 use crate::stored::marks;
-use crate::tables::CHECKLIST;
+use crate::tables::{CHECKLIST, CHECKLIST_SEQ};
 
 /// The items of the given tasks, each task's items in their order.
 pub async fn items_of(
@@ -100,5 +100,52 @@ pub async fn create_items(c: &v5::Conn<'_>, task: ObjectId, titles: &[String]) -
             .await
             .map_err(adapt)?;
     }
+    if !titles.is_empty() {
+        c.insert(
+            &CHECKLIST_SEQ,
+            vec![
+                id_value(task),
+                int(i64::try_from(titles.len()).unwrap_or(0)),
+            ],
+        )
+        .await
+        .map_err(adapt)?;
+    }
     Ok(())
+}
+
+/// The key of the next item: one more than the highest number ever given in this task (the counter row), or than the
+/// items there are (a task from before the counter), and the counter moves on.
+pub(crate) async fn next_key(
+    c: &v5::Conn<'_>,
+    task: ObjectId,
+    items: &[ChecklistItem],
+) -> TaskResult<String> {
+    let rows = c
+        .query(
+            "SELECT last FROM tasks_checklist_seq WHERE task = ?",
+            vec![id_value(task)],
+        )
+        .await
+        .map_err(adapt)?;
+    let seen = match rows.first() {
+        Some(r) => v5::codec::get_int(r, 0).map_err(adapt)?,
+        None => 0,
+    };
+    let held = items
+        .iter()
+        .filter_map(|i| i.key.strip_prefix('k').and_then(|n| n.parse::<i64>().ok()))
+        .max()
+        .unwrap_or(0);
+    let next = seen.max(held) + 1;
+    c.exec(
+        "DELETE FROM tasks_checklist_seq WHERE task = ?",
+        vec![id_value(task)],
+    )
+    .await
+    .map_err(adapt)?;
+    c.insert(&CHECKLIST_SEQ, vec![id_value(task), int(next)])
+        .await
+        .map_err(adapt)?;
+    Ok(format!("k{next}"))
 }

@@ -200,6 +200,10 @@ async fn spread(cx: &mut Cx<'_>) {
                 break;
             }
         }
+        // The spread shows as a new revision of a neighbour: stop there (the same gap runs out after about 250 steps).
+        if i % 16 == 15 && spread_seen(cx, &low, &high).await {
+            break;
+        }
     }
     cx.ensure(
         moved_without_changed,
@@ -251,4 +255,14 @@ async fn start_of(cx: &Cx<'_>) -> Option<crate::tasks_v1::Page<crate::tasks_v1::
     } else {
         None
     }
+}
+
+/// Whether a task of the gap has a newer revision than it was created with.
+async fn spread_seen(
+    cx: &Cx<'_>,
+    low: &crate::tasks_v1::Task,
+    high: &crate::tasks_v1::Task,
+) -> bool {
+    let (l, h) = (cx.fresh(low.id).await, cx.fresh(high.id).await);
+    l.is_some_and(|l| l.revision > low.revision) || h.is_some_and(|h| h.revision > high.revision)
 }

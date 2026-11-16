@@ -16,7 +16,7 @@ test-access = ["fs-components-app/test-access"]
 [dependencies]
 fs-tasks-core = { path = "../fs-tasks-core" }
 fs-tasks-server = { path = "../fs-tasks-server" }
-fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.19", features = ["rpc"] }
+fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.22", features = ["rpc"] }
 fs-objects = { git = "https://github.com/FreeSynergy/fs-objects", tag = "v0.0.1" }
 fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.13" }
 fs-components-widgets = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.13" }

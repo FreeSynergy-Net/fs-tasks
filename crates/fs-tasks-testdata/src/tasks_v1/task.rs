@@ -148,7 +148,8 @@ pub struct Task {
     pub assignees: Vec<Assignee>,
     pub alerts: Vec<Alert>,
     pub links: Vec<Link>,
-    /// Eltern-Aufgabe (Teilaufgabe; RFC 9253 `parent`/`child`). Kreise sind `TaskError::Cycle`.
+    /// Eltern-Aufgabe (Teilaufgabe; RFC 9253 `parent`/`child`). Kreise sind `TaskError::Cycle`; höchstens
+    /// [`SUBTASK_DEPTH_MAX`] Ebenen.
     pub parent: Option<ObjectId>,
     pub dependencies: Vec<Dependency>,
     pub related: Vec<Related>,
@@ -226,3 +227,7 @@ pub struct Override {
     pub recurrence_id: LocalDateTime,
     pub change: OverrideChange,
 }
+
+/// Höchste Tiefe des Teilaufgaben-Baums (die oberste Aufgabe ist Ebene 1; Regel in `mod.rs`, TEILAUFGABEN). Tiefer ist
+/// `Invalid` (`parent`).
+pub const SUBTASK_DEPTH_MAX: usize = 8;

@@ -52,7 +52,7 @@ pub enum Order {
 
 /// Filter für `list` und `claim_next`. Leere Listen = kein Filter; `text` sucht in Titel, Beschreibung und
 /// Checklisten-Punkten. `view_zone` ist Pflicht (legt `Timed` auf einen Tag; eine eigene Zone
-/// `ZoneKind::Custom` ergibt `UnknownZone`).
+/// `ZoneKind::Custom` ergibt `Invalid` am Feld `view_zone` mit dem Zonen-Code).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TaskQuery {
     pub lists: Vec<ObjectId>,

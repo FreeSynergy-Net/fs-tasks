@@ -59,13 +59,15 @@ pub struct TaskListPatch {
 /// Bis wann Gelöschtes zurückgeholt werden kann (ADR 0073 Nachtrag 2026-11-16; formgleich mit `appointments_v1`).
 /// Die Frist ist eine Einstellung des Programms, nicht des Traits. Die Zusage gilt: nichts geht früher weg. Nach
 /// Ablauf geht das Objekt samt Verlauf endgültig (Kaskade). Papierkorb-Ansicht (`Trash::Only`): erst `Until` nach
-/// Datum, dann `Held`, dann `Manual`.
+/// Datum, dann `Held`, dann `Manual`. Vorrang: eine Aufbewahrung (`keep_until`) geht vor Frist UND vor "nie
+/// automatisch": solange sie gilt, ist es `Held`; danach `Until` bzw. `Manual`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Restorable {
     /// Frist läuft bis dahin ("noch N Tage").
     Until(Utc),
-    /// Eine Aufbewahrung (`keep_until`) geht vor: bis dahin ("aufbewahrt bis …"); `None` = ohne Ende.
+    /// Aufbewahrt ("aufbewahrt bis …"): `Some(t)` = bis zum SPÄTEREN von Frist und Aufbewahrungsende (so liefert es
+    /// fs-objects `restorable_until`); `None` = Aufbewahrung ohne Ende. `purge` ist dann `Forbidden`.
     Held(Option<Utc>),
     /// "Nie automatisch löschen" ist eingestellt: bleibt, bis jemand endgültig löscht (`purge`).
     Manual,

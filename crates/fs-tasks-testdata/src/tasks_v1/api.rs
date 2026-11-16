@@ -77,7 +77,9 @@ pub trait Tasks: Send + Sync {
     /// `list.delete`: Liste in den Papierkorb, MIT allen ihren Aufgaben (auch Teilaufgaben, `Deleted::with_subtasks`),
     /// alle mit derselben Frist. Die Aufgaben sind einzeln nicht wiederherstellbar (`restore` ergibt `Invalid`,
     /// solange ihre Liste im Papierkorb liegt) und neue Aufgaben darin sind `NotFound`. `restore_list` holt die Liste
-    /// mitsamt den Aufgaben zurück, die beim Löschen darin lagen; vorher einzeln gelöschte bleiben, wo sie sind.
+    /// mitsamt den Aufgaben zurück, die beim Löschen darin lagen; vorher einzeln gelöschte bleiben, wo sie sind. Geht
+    /// die Liste endgültig (`purge`, Ablauf ihrer Frist), gehen die vorher einzeln gelöschten Aufgaben mit (siehe
+    /// `purge`): ohne Liste leben sie nicht.
     async fn delete_list(&self, id: ObjectId, expected: Revision) -> TaskResult<Deleted>;
     /// `list.delete`: Liste und ihre mitgelöschten Aufgaben aus dem Papierkorb holen, solange die Frist gilt.
     async fn restore_list(&self, id: ObjectId) -> TaskResult<TaskList>;
@@ -194,12 +196,15 @@ pub trait Tasks: Send + Sync {
 
     /// `task.claim`: für die fragende Person bis `until` übernehmen (claim-Regel in `mod.rs`: nicht berechtigt =
     /// `Forbidden`); hält eine andere sie noch: `TaskError::Claimed`. Die eigene Übernahme darf erneuert werden. Eine
-    /// erledigte, abgebrochene oder gescheiterte Aufgabe ist `Invalid`.
+    /// erledigte, abgebrochene oder gescheiterte Aufgabe ist `Invalid`. Reihenfolge der Prüfung (gilt auch für
+    /// `release`): nicht lesbar oder unbekannt `NotFound`, dann claim-Regel `Forbidden`, dann Haltende `Claimed`; eine
+    /// abgelaufene Übernahme (`until` vorbei) hält niemand mehr.
     async fn claim(&self, id: ObjectId, expected: Revision, until: Utc) -> TaskResult<Task>;
     /// `task.claim`: zurückgeben; nur wer sie hält, eine abgelaufene darf jeder, sonst `TaskError::Claimed`.
     async fn release(&self, id: ObjectId, expected: Revision) -> TaskResult<Task>;
     /// `task.claim`: "die nächste für mich": die erste Aufgabe in der Reihenfolge von `query`, die offen
-    /// (`NeedsAction`/`InProcess`), nicht von anderen gehalten und für die fragende Person nach der claim-Regel
+    /// (`NeedsAction`/`InProcess`), nicht von anderen gehalten (abgelaufene Übernahmen gelten als frei) und für die
+    /// fragende Person nach der claim-Regel
     /// übernehmbar ist, in EINER Transaktion übernehmen (kein Wettlauf zwischen `list` und `claim`). Mit
     /// `dependency.evaluate` nur `Readiness::Ready`; ohne werden Aufgaben mit Abhängigkeiten übersprungen (nie eine
     /// womöglich blockierte). `None` = keine passende. `query.ready` gesetzt oder `trash` nicht `Exclude`: `Invalid`.
@@ -218,7 +223,11 @@ pub trait Tasks: Send + Sync {
     async fn restore(&self, id: ObjectId, scope: SeriesScope) -> TaskResult<Task>;
     /// `trash.purge`: eine Aufgabe (samt mitgelöschten Teilaufgaben) oder eine Liste (samt mitgelöschten Aufgaben) im
     /// Papierkorb jetzt endgültig löschen, mit Verlauf und Checklisten (ADR 0073 "wirklich löschen"; der Weg bei
-    /// `Restorable::Manual`). Nicht im Papierkorb: `Invalid`; aufbewahrt (`Held`): `Forbidden`.
+    /// `Restorable::Manual`). Nicht im Papierkorb: `Invalid`; aufbewahrt (`Held`): `Forbidden { trash.purge }`, nichts
+    /// wird gelöscht. LISTE (wie `appointments_v1`): `purge` und der Ablauf ihrer Frist nehmen auch die vorher einzeln
+    /// gelöschten Aufgaben der Liste mit (ohne Liste leben sie nicht; ihre eigene Frist endet damit). Liegt darin eine
+    /// aufbewahrte Aufgabe, ist `purge` der Liste `Forbidden { trash.purge }`, und die Liste bleibt im Papierkorb
+    /// (auch nach Ablauf ihrer Frist), bis die Aufbewahrung endet.
     async fn purge(&self, id: ObjectId) -> TaskResult<()>;
 
     /// `task.history`: typisiertes Protokoll einer Aufgabe, älteste zuerst.

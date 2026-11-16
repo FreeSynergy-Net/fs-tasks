@@ -35,8 +35,8 @@ pub struct Checked {
 }
 
 /// Eine Änderung der Checkliste (`Tasks::checklist`). `after: None` = ganz oben; ein unbekannter `key` ist `Invalid`
-/// (`checklist.key`), ein leerer Titel ebenso. Verlauf: `Add`/`Remove` (Feld `checklist`), `Update`
-/// (`checklist.title`, `checklist.done`), `Move` (`checklist.rank`).
+/// (`checklist.key`), ein leerer Titel ebenso, ein `Add` über [`CHECKLIST_MAX`] auch. Verlauf: `Add`/`Remove` (Feld
+/// `checklist`), `Update` (`checklist.title`, `checklist.done`), `Move` (`checklist.rank`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ChecklistChange {
     Add {
@@ -60,3 +60,7 @@ pub enum ChecklistChange {
         key: String,
     },
 }
+
+/// Höchstzahl der Punkte einer Checkliste; `Add` darüber und ein `TaskDraft::checklist` mit mehr Punkten sind
+/// `Invalid` (`checklist`); beim Import stehen überzählige Punkte in `lost`. Wer mehr braucht, legt Teilaufgaben an.
+pub const CHECKLIST_MAX: usize = 100;

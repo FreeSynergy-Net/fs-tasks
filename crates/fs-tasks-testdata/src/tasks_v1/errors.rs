@@ -8,7 +8,7 @@ use super::{Claim, Error, ObjectId};
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum TaskError {
-    /// Gemeinsame Fehler: `Unsupported`, `Changed`, `NotFound`, `Forbidden`, `Invalid`, `UnknownZone`, `Unavailable`.
+    /// Gemeinsame Fehler: `Unsupported`, `Changed`, `NotFound`, `Forbidden`, `Invalid` (auch Zonen), `Unavailable`.
     Common(Error),
     /// `parent` oder eine Abhängigkeit schlösse einen Kreis (`dependency.cycle-check`); die `uid`s des Kreises. Auch bei einem
     /// Kreis über `parent` stehen `uid`s hier (jede Aufgabe hat eine), nicht `ObjectId`s.

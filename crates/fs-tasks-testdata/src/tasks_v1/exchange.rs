@@ -77,6 +77,12 @@ pub struct ExportReport {
 /// Jede Methode ist Pflicht; ein Format ohne Import oder Export meldet es in `formats` (`Level::No`) und antwortet
 /// mit [`super::not_possible`]. Checkliste und `RepeatFrom::Completion` reisen als Erweiterung
 /// (`freesynergy.net:checklist`, `freesynergy.net:repeatFrom`; VTODO `X-FS-…`), sonst stehen sie in `lost`.
+///
+/// AB ERLEDIGUNG im Export: die erledigten (ausgelassenen) Vorkommen liegen unter alten Bezugspunkten, die nicht auf
+/// dem Raster der heutigen Regel liegen. JSCalendar-Task: als Schlüssel in `recurrenceOverrides` gültig (RFC 8984
+/// 4.3.5, Zusatz-Vorkommen). VTODO: je solches Vorkommen ein `RDATE` plus die Ausnahme mit `RECURRENCE-ID` (Stand
+/// `COMPLETED` usw.); kann das Ziel das nicht, stehen sie in `lost` (nie still weg). Verdichtete (nur noch im Verlauf,
+/// [`super::REPEAT_DONE_KEPT`]) gehören nicht mehr zur Aufgabe und werden nicht exportiert.
 #[async_trait]
 pub trait TaskExchange: Send + Sync {
     fn formats(&self) -> Vec<FormatSupport>;

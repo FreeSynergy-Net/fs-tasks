@@ -26,18 +26,28 @@ pub enum RepeatFrom {
     #[default]
     Schedule,
     /// Ab Erledigung (`from_completion`): erst das Erledigen legt das nächste Vorkommen fest. Regeln:
-    /// - FORM: genau eine `Recurrence::Rule` mit `frequency`, `interval`, `end` (sonst Vorgaben, keine `by_*`-Teile),
-    ///   keine `excluded_recurrence`; anderes ist `Invalid` (`recurrence`). Stunden-/Minutenregeln nur bei `Timed`.
+    /// - FORM: genau eine `Recurrence::Rule` mit `frequency`, `interval`, `end` (sonst Vorgaben, keine `by_*`-Teile,
+    ///   `skip` fehlt), keine `excluded_recurrence`; anderes ist `Invalid` (`recurrence`). `frequency` nur `Daily`,
+    ///   `Weekly`, `Monthly`, `Yearly`: `Hourly`, `Minutely`, `Secondly` sind `Invalid` (`recurrence.frequency`), denn
+    ///   das Zählen ab dem Tag des Erledigens ergibt für sie keinen Sinn (kein Vorbild braucht sie). `Count(0)` ist
+    ///   `Invalid` (`recurrence.end`).
     /// - ZÄHLEN: nächster Bezugspunkt = der lokale Tag des Erledigens + `interval` Schritte der `frequency` (Monat und
-    ///   Jahr: derselbe Tag, am Monatsende der letzte); die Uhrzeit des Bezugspunkts bleibt. Tag des Erledigens:
+    ///   Jahr: derselbe Tag; gibt es ihn nicht, der letzte des Monats, also `Skip::Backward` fest, obwohl `skip` fehlt
+    ///   und dort sonst `Omit` gälte); die Uhrzeit des Bezugspunkts bleibt. Tag des Erledigens:
     ///   bei `Timed` in dessen Zone, bei `Date`/`Floating` in der Zone der fragenden Person (Einstellung, sonst Gerät;
     ///   wie `ZoneSource`). Eine lokale Zeit, die es dort nicht gibt (Umstellung), rückt vor wie in der Engine. Hat
     ///   die Aufgabe `start` UND `due`, rücken beide um dasselbe; der Abstand bleibt.
     /// - ÜBERFÄLLIG oder VERFRÜHT: es zählt nur der Tag des Erledigens, nie die alte Fälligkeit (kein Stau
     ///   überfälliger Vorkommen; wer früher erledigt, ist früher wieder dran).
     /// - ENDE: `Count(n)` zählt die Erledigungen (der Anbieter schreibt beim Weiterrücken `Count(n - 1)`; die Regel
-    ///   beschreibt immer den Rest ab dem aktuellen Bezugspunkt); `Count(1)` erledigt = Serie fertig. `Until`: läge der
-    ///   nächste Bezugspunkt danach, ist die Serie fertig.
+    ///   beschreibt immer den Rest ab dem aktuellen Bezugspunkt). Das LETZTE Erledigen (`Count(1)`, oder der nächste
+    ///   Bezugspunkt läge nach `Until`) rückt nicht weiter und legt KEINE Ausnahme an: die Aufgabe wird `Completed` wie
+    ///   mit `Whole` (die Übernahme endet), `recurrence` bleibt unverändert stehen, die Serie ist fertig; `Count(0)`
+    ///   entsteht nie. Rückgängig dann mit `progress(NeedsAction, Whole)`.
+    /// - ABBRECHEN, SCHEITERN: `Cancelled`/`Failed` mit `This` rücken weiter wie Erledigen (Ausnahme `Changed` mit
+    ///   diesem Stand, `Count` − 1; am letzten Vorkommen endet die Serie mit diesem Stand wie unter ENDE); mit `Whole`
+    ///   beenden sie die Serie sofort (kein Weiterrücken, keine Ausnahme). `Completed` rückt mit `Whole` wie mit `This`
+    ///   weiter (der Haken in der Liste meint das aktuelle Vorkommen).
     /// - WEITERRÜCKEN = Fortsetzung DERSELBEN Aufgabe (gleiche `id`, gleiche `uid`, `sequence + 1`): `progress
     ///   (Completed)` am aktuellen Vorkommen (`Whole` oder `This`) legt eine Ausnahme `Changed { progress: Completed }`
     ///   unter dem alten Bezugspunkt an (Logbuch, Export als erledigtes Vorkommen), verschiebt `start`/`due`, setzt
@@ -46,12 +56,20 @@ pub enum RepeatFrom {
     ///   bleibt für `CalDAV`-Abgleich und Verweise (`dependencies`, Links) stabil, Zuständige und Checkliste
     ///   werden nicht kopiert.
     /// - RÜCKGÄNGIG: `progress(NeedsAction, This { alter Bezugspunkt })` an der JÜNGSTEN solchen Ausnahme setzt den
-    ///   Bezugspunkt zurück (`Count` + 1) und entfernt die Ausnahme; an älteren ist es `Invalid`.
+    ///   Bezugspunkt zurück (`Count` + 1) und entfernt die Ausnahme; an älteren ist es `Invalid`. Die beim Weiterrücken
+    ///   entfernten Haken der Checkliste und die beendete Übernahme kommen NICHT zurück.
     /// - SERIENFRAGE: `This` gilt nur dem aktuellen Vorkommen (`delete(This)` = auslassen: rückt weiter wie Erledigen,
     ///   Ausnahme `Excluded`); `ThisAndFollowing` am aktuellen Vorkommen ist `Whole`; künftige Vorkommen gibt es noch
     ///   nicht (`Invalid`). Wechsel zwischen `Schedule` und `Completion` nur mit `Whole` (`TaskPatch::repeat_from`).
+    /// - GRENZE: je Weiterrücken eine Ausnahme; der Anbieter hält davon höchstens [`REPEAT_DONE_KEPT`] (die jüngsten)
+    ///   in `Task::overrides`. Darüber verdichtet er im selben Aufruf: die älteste fällt aus `overrides` und steht nur
+    ///   noch im Verlauf (`history`); sie wird nicht mehr exportiert (kein Verlust der Aufgabe, nicht in `lost`).
     Completion,
 }
+
+/// Höchstzahl der beim Weiterrücken ab Erledigung entstandenen Ausnahmen, die eine Aufgabe in `overrides` behält
+/// (siehe [`RepeatFrom::Completion`], GRENZE; täglich erledigt etwa ein Vierteljahr). Ältere nur im Verlauf.
+pub const REPEAT_DONE_KEPT: usize = 100;
 
 /// Umfang einer Änderung an einer wiederholten Aufgabe (Serienfrage, wie Kalender A9/A10). Für Einzelaufgaben nur
 /// `Whole`. Das Vorkommen heißt nach seinem ursprünglichen lokalen Bezugspunkt (`start`, sonst `due`).

@@ -45,24 +45,34 @@
 //! gespeichert). Eine Gruppe antwortet nicht (`respond` gilt nur der eigenen Zeile einer Person); ein Mitglied
 //! übernimmt mit `claim`. claim-Regel: übernehmen darf, wer (a) selbst zuständig ist, (b) wirksames Mitglied einer
 //! zuständigen Gruppe ist, oder (c) bei einer Aufgabe ohne Zuständige Schreibrecht an der Liste hat; sonst
-//! `Forbidden { task.claim }`. Es hält immer höchstens EINE Person (mehrere Menschen: einzeln zuweisen oder
-//! Teilaufgaben); die Zuständigen ändern sich durch `claim` nicht. Die Übernahme endet mit `release`, mit `until`, mit
-//! `Completed`/`Cancelled`/`Failed` und beim Weiterrücken einer Serie. KI-Regeln (ADR 0054, Antwort 29): eine KI ist
-//! nie Mitglied einer Menschengruppe, übernimmt also nur, was ihr selbst, ihrer KI-Gruppe oder niemandem in einer
-//! Liste mit ihrem Schreibrecht gehört; "STOP KI" (Rechte entzogen) beendet alle ihre Übernahmen sofort (`Leave`).
+//! `Forbidden { task.claim }`. (b) prüft der Anbieter über `GroupMembers::memberships_of(asker)` geschnitten mit den
+//! zuständigen Gruppen, NIE über `members_of(gruppe)`: so gibt eine sensible Gruppe einer KI kein `NotFound` preis, die
+//! Antwort ist immer dasselbe `Forbidden { task.claim }`. Es hält immer höchstens EINE Person (mehrere Menschen:
+//! einzeln zuweisen oder Teilaufgaben); die Zuständigen ändern sich durch `claim` nicht. Die Übernahme endet mit
+//! `release`, mit `until`, mit `Completed`/`Cancelled`/`Failed` und beim Weiterrücken einer Serie. KI-Regeln (ADR 0054,
+//! Antwort 29): eine KI ist nie Mitglied einer Menschengruppe, übernimmt also nur, was ihr selbst, ihrer KI-Gruppe oder
+//! niemandem in einer Liste mit ihrem Schreibrecht gehört; "STOP KI" (Rechte entzogen) beendet alle ihre Übernahmen
+//! sofort (`Leave`).
 //!
 //! PAPIERKORB (ADR 0073 Nachtrag 2026-11-16): Löschen = Papierkorb mit Frist ([`Restorable`]); die Frist ist eine
 //! Pflicht-Einstellung des Programms (Standard 30 Tage, mindestens 1 Tag, "nie automatisch" erlaubt), keine
 //! Trait-Sache; eine Aufbewahrung (`keep_until`) geht vor; nach Ablauf oder `purge` geht das Objekt samt Verlauf und
-//! Checkliste (Kaskade).
+//! Checkliste (Kaskade). Eine Liste nimmt dabei auch ihre vorher einzeln gelöschten Aufgaben mit; eine aufbewahrte
+//! darin hält die Liste im Papierkorb (`purge` = `Forbidden`, wie `appointments_v1`, siehe `Tasks::purge`).
 //!
-//! TEILAUFGABEN SIND EIN BAUM (PLAN O18): eine Aufgabe hat höchstens EINE Eltern-Aufgabe (`parent`), nie zwei; ein
-//! Kind unter einem lebenden zweiten Elternteil gibt es darum nicht. `delete` nimmt genau die lebenden Teilaufgaben
+//! TEILAUFGABEN SIND EIN BAUM (PLAN O18): eine Aufgabe hat höchstens EINE Eltern-Aufgabe (`parent`), nie zwei; ein Kind
+//! unter einem lebenden zweiten Elternteil gibt es darum nicht. Höchstens [`SUBTASK_DEPTH_MAX`] Ebenen (die oberste
+//! Aufgabe ist Ebene 1): `create`, `update` (`parent`, `list`) und `restore`, die einen tieferen Baum ergäben, sind
+//! `Invalid` (`parent`); geprüft wird der ganze mitgenommene Teilbaum. `delete` nimmt genau die lebenden Teilaufgaben
 //! mit (`Deleted::with_subtasks`); nur sie gehen beim endgültigen Löschen des Elternteils mit. Eine schon vorher
 //! einzeln gelöschte oder aufbewahrte Teilaufgabe behält ihre eigene Frist: geht der Elternteil endgültig, wird ihr
-//! `parent` gelöst (oberste Aufgabe), sie wird nie mitgelöscht (Anbieter über fs-objects: vor `delete_final` in
-//! derselben Transaktion abhängen). `restore` einer Teilaufgabe, deren Elternteil im Papierkorb liegt, ist `Invalid`
-//! (`parent`): zuerst den Elternteil.
+//! `parent` gelöst (oberste Aufgabe), sie wird nicht mitgelöscht (geht ihre LISTE endgültig, geht sie mit; Anbieter
+//! über fs-objects: vor `delete_final` in derselben Transaktion abhängen). `restore` einer Teilaufgabe, deren
+//! Elternteil im Papierkorb liegt, ist `Invalid` (`parent`): zuerst den Elternteil.
+//!
+//! ERWEITERUNGEN (Namensliste für den Nachtrag zu ADR 0085; nichts doppelt erfinden): JSCalendar-Eigenschaften
+//! `freesynergy.net:floating`, `freesynergy.net:checklist`, `freesynergy.net:repeatFrom`; VTODO `X-FS-FLOATING`,
+//! `X-FS-CHECKLIST`, `X-FS-REPEAT-FROM` (Wert `COMPLETION`). Ein Ziel ohne sie bekommt den Verlust in `lost`.
 
 mod api;
 mod checklist;

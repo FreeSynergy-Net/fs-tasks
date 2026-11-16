@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=FreeSynergy.Tasks
+Comment=Plan and track tasks
+Exec=fs-tasks
+Icon=net.freesynergy.Tasks
+Terminal=false
+Categories=Office;ProjectManagement;

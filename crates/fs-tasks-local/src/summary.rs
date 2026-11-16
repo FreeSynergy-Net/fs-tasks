@@ -8,6 +8,7 @@ use fs_objects::v5;
 use fs_objects::v5::codec::id_value;
 use fs_tasks_testdata::tasks_v1::{ObjectId, Readiness, TaskResult, TaskSummary};
 
+use crate::graph::Graph;
 use crate::query::ALIVE;
 use crate::stored::{Stored, load_with, marks};
 use crate::words::is_done;
@@ -34,10 +35,21 @@ pub async fn counts_of(c: &v5::Conn<'_>, ids: &[ObjectId]) -> TaskResult<Counts>
     Ok(out)
 }
 
-/// The summary of one task. Without `dependency.evaluate` (not offered here) a task without dependencies is `Ready`,
-/// or `Done` once it is finished; this run stores no dependencies.
+/// The readiness of the given tasks (one judgement over the graph of the living tasks; no graph, no work).
+pub async fn readiness_of(
+    c: &v5::Conn<'_>,
+    rows: &[Stored],
+) -> TaskResult<BTreeMap<ObjectId, Readiness>> {
+    let graph = Graph::load(c, true).await?;
+    Ok(rows
+        .iter()
+        .map(|s| (s.task.id, graph.readiness(&s.task.uid, s.task.progress)))
+        .collect())
+}
+
+/// The summary of one task; `ready` has the readiness of every task of the page.
 #[must_use]
-pub fn summary(s: &Stored, counts: &Counts) -> TaskSummary {
+pub fn summary(s: &Stored, counts: &Counts, ready: &BTreeMap<ObjectId, Readiness>) -> TaskSummary {
     let t = &s.task;
     let (open, total) = counts.get(&t.id).copied().unwrap_or_default();
     TaskSummary {
@@ -56,11 +68,7 @@ pub fn summary(s: &Stored, counts: &Counts) -> TaskSummary {
         parent: t.parent,
         subtasks_open: open,
         subtasks_total: total,
-        readiness: if is_done(t.progress) {
-            Readiness::Done
-        } else {
-            Readiness::Ready
-        },
+        readiness: ready.get(&t.id).cloned().unwrap_or(Readiness::Ready),
         rank: t.rank.clone(),
         claimed_by: None,
         revision: t.revision,
@@ -68,8 +76,8 @@ pub fn summary(s: &Stored, counts: &Counts) -> TaskSummary {
         has_description: !t.description.is_empty(),
         percent_complete: t.percent_complete,
         estimated: t.estimated,
-        links: 0,
-        alerts: 0,
+        links: u32::try_from(t.links.len()).unwrap_or(u32::MAX),
+        alerts: u32::try_from(t.alerts.len()).unwrap_or(u32::MAX),
         checklist_open: u32::try_from(t.checklist.iter().filter(|i| i.done.is_none()).count())
             .unwrap_or(u32::MAX),
         checklist_total: u32::try_from(t.checklist.len()).unwrap_or(u32::MAX),

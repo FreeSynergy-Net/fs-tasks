@@ -23,6 +23,7 @@ use crate::tables::TASK;
 use crate::tree::Tree;
 use crate::who::Who;
 use crate::words::is_done;
+use crate::{alerts_rows, day, links_rows};
 
 /// A living task (not deleted, not with a parent, its list alive); `NotFound` otherwise.
 pub async fn live_task(c: &v5::Conn<'_>, id: ObjectId) -> TaskResult<Stored> {
@@ -92,7 +93,23 @@ pub async fn create(c: &v5::Conn<'_>, who: &Who, now: i64, d: TaskDraft) -> Task
         .map_err(adapt)?;
     write_labels(c, id, &t.labels).await?;
     create_items(c, id, &d.checklist).await?;
+    write_parts(c, &t, None).await?;
     Ok(load_one(c, id).await?.ok_or_else(|| gone(id))?.task)
+}
+
+/// The tables of a task that its fields feed: the alerts, the links and the derived day columns. Only what changed is
+/// written (`old` is `None` for a new task: everything).
+async fn write_parts(c: &v5::Conn<'_>, new: &Task, old: Option<&Task>) -> TaskResult<()> {
+    if old.is_none_or(|o| o.alerts != new.alerts) {
+        alerts_rows::write(c, new.id, &new.alerts).await?;
+    }
+    if old.is_none_or(|o| o.links != new.links) {
+        links_rows::write(c, new.id, &new.links).await?;
+    }
+    if old.is_none_or(|o| o.due != new.due || o.start != new.start) {
+        day::write(c, new).await?;
+    }
+    Ok(())
 }
 
 async fn uid_taken(c: &v5::Conn<'_>, uid: &str) -> TaskResult<bool> {
@@ -164,6 +181,7 @@ pub async fn update(
     if new.labels != old.labels {
         write_labels(c, id, &new.labels).await?;
     }
+    write_parts(c, &new, Some(&old)).await?;
     if list != old.list {
         for kid in old_tree.descendants(id) {
             c.exec(

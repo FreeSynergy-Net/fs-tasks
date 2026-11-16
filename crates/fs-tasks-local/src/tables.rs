@@ -1,6 +1,6 @@
 //! The domain tables `tasks_*` (PLAN section 3.1): lists, tasks, labels and the grants of lists. Every field has a typed
 //! column, no JSON and no blob; the checklist, assignees, alerts, links, rules, dependencies and the claim are the
-//! tables of run 2 (named in `stand.md`). `created` and `updated` are not repeated here: the envelope (`objects`)
+//! tables of run 2 (named in `stand.md`; the dependencies, alerts, links and day columns are in `tables_more`). `created` and `updated` are not repeated here: the envelope (`objects`)
 //! has them (`published`, `updated`), one source.
 //!
 //! Pattern: Value Object (const table specifications, one source for the `CREATE TABLE` text and the registry).
@@ -183,4 +183,15 @@ pub const STEP_3: [Table; 1] = [CHECKLIST];
 /// The tables of step 4 (run 2a rest, the key counter of the checklist).
 pub const STEP_4: [Table; 1] = [CHECKLIST_SEQ];
 /// All tables of the domain, in creation order (a table comes after the ones it points to).
-pub const ALL: [Table; 6] = [LIST, TASK, LABEL, GRANT, CHECKLIST, CHECKLIST_SEQ];
+pub const ALL: [Table; 10] = [
+    LIST,
+    TASK,
+    LABEL,
+    GRANT,
+    CHECKLIST,
+    CHECKLIST_SEQ,
+    crate::tables_more::DEPENDENCY,
+    crate::tables_more::ALERT,
+    crate::tables_more::LINK,
+    crate::tables_more::DAY,
+];

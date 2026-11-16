@@ -89,6 +89,7 @@ pub async fn load_with(
             .collect();
         s.task.checklist = items.remove(&s.task.id).unwrap_or_default();
     }
+    crate::parts::attach(c, &mut out).await?;
     Ok(out)
 }
 

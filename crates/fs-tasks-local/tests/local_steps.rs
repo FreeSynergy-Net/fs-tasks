@@ -1,4 +1,4 @@
-//! The steps of the schema (ADR 0086): a file made with step 1 only becomes the store of four steps with the same
+//! The steps of the schema (ADR 0086): a file made with step 1 only becomes the store of six steps with the same
 //! fingerprints, and every store (fresh or migrated) is read by standard SQLite and has no orphan autoindex (point 5).
 //! The keys of the checklist are never given twice, and a page size that is far too big is cut, not refused.
 //!
@@ -18,6 +18,7 @@ use fs_objects::v5::tables::ART;
 use fs_objects::v5::{Step, Store};
 use fs_tasks_local::registry::DOMAIN;
 use fs_tasks_local::tables::{STEP_1, STEP_2, STEP_3, STEP_4};
+use fs_tasks_local::tables_more::STEP_5;
 use fs_tasks_local::{Clock, LocalTasks};
 use fs_tasks_testdata::START_MS;
 use fs_tasks_testdata::tasks_v1::{
@@ -67,7 +68,7 @@ async fn conforms(fx: LocalFx, path: &str) {
 }
 
 #[tokio::test]
-async fn a_fresh_store_has_four_steps_and_is_standard_sqlite() {
+async fn a_fresh_store_has_six_steps_and_is_standard_sqlite() {
     let path = path_of("fresh");
     let now = Arc::new(AtomicI64::new(START_MS));
     let fx = LocalFx::open(&path, &now).await;
@@ -100,17 +101,24 @@ async fn a_file_with_step_1_only_is_migrated_with_the_same_fingerprints() {
             )
             .await
             .unwrap();
-        let want: Vec<String> = [&STEP_1[..], &STEP_2[..], &STEP_3[..], &STEP_4[..]]
-            .iter()
-            .map(|t| {
-                let s: &'static [_] = Box::leak(t.to_vec().into_boxed_slice());
-                Step::Create(s).fingerprint()
-            })
-            .collect();
+        let mut want: Vec<String> = [
+            &STEP_1[..],
+            &STEP_2[..],
+            &STEP_3[..],
+            &STEP_4[..],
+            &STEP_5[..],
+        ]
+        .iter()
+        .map(|t| {
+            let s: &'static [_] = Box::leak(t.to_vec().into_boxed_slice());
+            Step::Create(s).fingerprint()
+        })
+        .collect();
+        want.push(DOMAIN.steps[5].fingerprint());
         let got: Vec<String> = rows.iter().map(|r| get_text(r, 1).unwrap()).collect();
-        assert_eq!(rows.len(), 4);
+        assert_eq!(rows.len(), 6);
         assert_eq!(get_int(&rows[0], 0).unwrap(), 1);
-        assert_eq!(got, want, "the fingerprints of the four steps");
+        assert_eq!(got, want, "the fingerprints of the six steps");
     }
     fx.tasks
         .create(draft(list.id, "T", TaskPatch::default()))

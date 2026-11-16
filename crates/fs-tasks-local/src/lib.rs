@@ -13,17 +13,26 @@
 #![allow(clippy::missing_errors_doc, clippy::must_use_candidate)]
 
 pub mod access;
+pub mod alerts_rows;
 pub mod checklist;
 pub mod checklist_rows;
 pub mod clock;
+pub mod conditions;
 pub mod cur;
+pub mod day;
+pub mod deps;
+pub mod deps_rows;
 pub mod due;
+pub mod due_sql;
 pub mod error;
+pub mod graph;
 #[cfg(feature = "test-hooks")]
 pub mod hooks;
 pub mod labels;
+pub mod links_rows;
 pub mod lists;
 pub mod local;
+pub mod parts;
 pub mod patch;
 pub mod place;
 pub mod progress;
@@ -31,11 +40,13 @@ pub mod provider;
 pub mod query;
 pub mod rank;
 pub mod reads;
+pub mod ready_sql;
 pub mod registry;
 pub mod store;
 pub mod stored;
 pub mod summary;
 pub mod tables;
+pub mod tables_more;
 pub mod tasks_write;
 pub mod trash_ops;
 pub mod trash_state;

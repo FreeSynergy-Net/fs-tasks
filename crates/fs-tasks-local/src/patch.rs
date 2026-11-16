@@ -1,9 +1,12 @@
 //! The checks and the application of a `TaskPatch` for the fields this run stores.
 //!
 //! Pattern: Value object checks (every rule of the trait that says `Invalid` is one check here; `reason` is a code).
-//! A field the store does not hold yet (alerts, links, rules ...) is `Unsupported`, named: never dropped silently.
+//! A field the store does not hold yet (the series: rules, exclusions, repeat from completion) is `Unsupported`, named:
+//! never dropped silently.
 
-use fs_tasks_testdata::tasks_v1::{RepeatFrom, Task, TaskPatch, TaskResult};
+use std::collections::BTreeSet;
+
+use fs_tasks_testdata::tasks_v1::{Alert, Link, RepeatFrom, Task, TaskPatch, TaskResult};
 
 use crate::error::{bad, unsupported};
 use crate::zones::check_due;
@@ -31,18 +34,51 @@ pub fn check(p: &TaskPatch) -> TaskResult<()> {
     {
         return Err(bad("labels", "empty"));
     }
+    if let Some(a) = &p.alerts {
+        check_alerts(a)?;
+    }
+    if let Some(l) = &p.links {
+        check_links(l)?;
+    }
     refuse_unstored(p)
 }
 
-/// Fields of run 2: alerts, links and series (rules, exclusions, repeat from completion).
+/// Every key is given once and not empty (a map by key); `field` names where the problem is.
+fn keys_ok<'a>(keys: impl Iterator<Item = &'a str>, field: &str) -> TaskResult<()> {
+    let mut seen = BTreeSet::new();
+    for k in keys {
+        if k.is_empty() {
+            return Err(bad(field, "key-empty"));
+        }
+        if !seen.insert(k) {
+            return Err(bad(field, "key-twice"));
+        }
+    }
+    Ok(())
+}
+
+fn check_alerts(alerts: &[Alert]) -> TaskResult<()> {
+    keys_ok(alerts.iter().map(|a| a.key.as_str()), "alerts")
+}
+
+/// A link is an address or a file of ours (exactly one), and its size fits a signed number.
+fn check_links(links: &[Link]) -> TaskResult<()> {
+    keys_ok(links.iter().map(|l| l.key.as_str()), "links")?;
+    if links.iter().any(|l| l.href.is_some() == l.file.is_some()) {
+        return Err(bad("links", "href-or-file"));
+    }
+    if links
+        .iter()
+        .any(|l| l.size.is_some_and(|n| i64::try_from(n).is_err()))
+    {
+        return Err(bad("links", "size"));
+    }
+    Ok(())
+}
+
+/// Fields of the series (rules, exclusions, repeat from completion): they come with run 2a rest 3.
 fn refuse_unstored(p: &TaskPatch) -> TaskResult<()> {
     let later = |name: &str| unsupported("task.edit", &format!("{name} is stored in K1 run 2"));
-    if p.alerts.is_some() {
-        return Err(later("alerts"));
-    }
-    if p.links.is_some() {
-        return Err(later("links"));
-    }
     if p.recurrence.as_ref().is_some_and(|r| !r.is_empty())
         || p.excluded_recurrence
             .as_ref()
@@ -74,7 +110,9 @@ pub fn apply(t: &mut Task, p: TaskPatch) {
         estimated,
         percent_complete,
         priority,
-        color
+        color,
+        alerts,
+        links
     );
     if let Some(mut l) = p.labels {
         l.sort();

@@ -14,7 +14,9 @@ use fs_tasks_testdata::tasks_v1::{
 
 use crate::local::{LocalTasks, OFFERED};
 use crate::store::finish;
-use crate::{checklist, labels, lists, place, progress, query, reads, tasks_write, trash_ops};
+use crate::{
+    checklist, deps, labels, lists, place, progress, query, reads, tasks_write, trash_ops,
+};
 
 /// One unit of work: the deadline run, the time of the write, `begin`, the body, `finish`.
 macro_rules! write {
@@ -127,8 +129,8 @@ impl Tasks for LocalTasks {
         )
     }
 
-    async fn readiness(&self, _ids: &[ObjectId]) -> TaskResult<Vec<(ObjectId, Readiness)>> {
-        not_possible("dependency.evaluate")
+    async fn readiness(&self, ids: &[ObjectId]) -> TaskResult<Vec<(ObjectId, Readiness)>> {
+        read!(self, w, c, deps::readiness(&c, &w, ids))
     }
 
     async fn create(&self, draft: TaskDraft) -> TaskResult<Task> {
@@ -231,21 +233,33 @@ impl Tasks for LocalTasks {
 
     async fn relate(
         &self,
-        _id: ObjectId,
-        _expected: Revision,
-        _dependency: Dependency,
+        id: ObjectId,
+        expected: Revision,
+        dependency: Dependency,
     ) -> TaskResult<Task> {
-        not_possible("relation.create")
+        write!(
+            self,
+            w,
+            c,
+            now,
+            deps::relate(&c, &w, now, id, expected, dependency)
+        )
     }
 
     async fn unrelate(
         &self,
-        _id: ObjectId,
-        _expected: Revision,
-        _other_uid: &str,
-        _kind: DependencyKind,
+        id: ObjectId,
+        expected: Revision,
+        other_uid: &str,
+        kind: DependencyKind,
     ) -> TaskResult<Task> {
-        not_possible("relation.delete")
+        write!(
+            self,
+            w,
+            c,
+            now,
+            deps::unrelate(&c, &w, now, id, expected, other_uid, kind)
+        )
     }
 
     async fn claim(&self, _id: ObjectId, _expected: Revision, _until: Utc) -> TaskResult<Task> {

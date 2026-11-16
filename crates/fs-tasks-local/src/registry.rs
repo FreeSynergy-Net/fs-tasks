@@ -8,7 +8,9 @@ use fs_objects::v5::Step;
 use fs_objects::v5::envelope::Child;
 use fs_objects::v5::registry::Domain;
 
+use crate::day;
 use crate::tables::{ALL, PREFIX, STEP_1, STEP_2, STEP_3, STEP_4};
+use crate::tables_more::STEP_5;
 
 /// The channels `object_origin.channel` may hold (the same as the calendar's: file, `CalDAV`, closed accounts, `iTIP`, hub,
 /// subscription).
@@ -41,7 +43,7 @@ const CHILDREN: &[Child] = &[
 /// The domain of tasks.
 pub const DOMAIN: Domain = Domain {
     prefix: PREFIX,
-    about: "tasks: lists, tasks, labels, grants, checklists",
+    about: "tasks: lists, tasks, labels, grants, checklists, dependencies, alerts, links, day columns",
     tables: &ALL,
     channels: CHANNELS,
     children: CHILDREN,
@@ -51,5 +53,7 @@ pub const DOMAIN: Domain = Domain {
         Step::Create(&STEP_2),
         Step::Create(&STEP_3),
         Step::Create(&STEP_4),
+        Step::Create(&STEP_5),
+        Step::Code("tasks_day_fill", day::fill),
     ],
 };

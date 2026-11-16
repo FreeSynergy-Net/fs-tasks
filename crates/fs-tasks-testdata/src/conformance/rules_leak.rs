@@ -104,6 +104,7 @@ async fn after_list_purge(
         "leak: changes shows nobody (not the owner) what happened in a list that was purged",
     );
     if !fx.act_as(Some(agent.clone())).await {
+        cx.ensure(false, "leak setup: the fixture acts as the agent again");
         return;
     }
     let seen = cx.changes_since(Some(&start)).await;

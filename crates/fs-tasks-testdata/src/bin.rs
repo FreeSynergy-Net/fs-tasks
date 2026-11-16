@@ -39,6 +39,7 @@ impl State {
         Bin {
             until: self
                 .trash_days
+                .filter(|_| !self.mutated(Mutation::NoDeadline))
                 .map(|d| Utc::from_millis(from + i64::from(d) * 86_400_000)),
         }
     }

@@ -6,9 +6,9 @@ pub use super::cx::Report;
 use super::cx::{Cx, Options, is_unsupported};
 use super::{
     ConformanceFixture, rules_assign, rules_checklist, rules_claim, rules_claim_order, rules_feed,
-    rules_groups, rules_leak, rules_lists, rules_purge, rules_query, rules_rank, rules_readonly,
-    rules_ready, rules_repeat, rules_repeat_dates, rules_repeat_more, rules_series, rules_tasks,
-    rules_trash,
+    rules_groups, rules_labels, rules_leak, rules_lists, rules_off, rules_purge, rules_query,
+    rules_rank, rules_rank_top, rules_readonly, rules_ready, rules_repeat, rules_repeat_dates,
+    rules_repeat_more, rules_series, rules_tasks, rules_trash,
 };
 use crate::tasks_v1::{
     Answer, CAPABILITIES, Children, DependencyKind, Progress, SeriesScope, TaskDraft,
@@ -34,28 +34,64 @@ async fn base(cx: &mut Cx<'_>) {
     }
     rules_trash::rules(cx).await;
     rules_query::rules(cx).await;
-    if cx.needs("series", &["task.progress"]) {
+    if cx.needs("series", &["task.progress"]) && cx.needs_series("series").await {
         rules_series::rules(cx).await;
     }
     if cx.needs("ready", &["relation.create"]) {
         rules_ready::rules(cx).await;
     }
+    if cx.needs("labels", &["task.labels"]) {
+        rules_labels::rules(cx).await;
+    }
     if cx.needs("feed", &["task.changes"]) {
         rules_feed::rules(cx).await;
     }
-    if !cx.skip_rank && cx.needs("rank", &["task.place"]) {
-        rules_rank::rules(cx).await;
+    if !cx.skip_rank {
+        rules_rank_top::rules(cx).await;
+        if cx.needs("rank", &["task.place"]) {
+            rules_rank::rules(cx).await;
+        }
     }
     if cx.needs("checklist", &["task.checklist"]) {
         Box::pin(rules_checklist::rules(cx)).await;
     }
-    if cx.needs("repeat", &["task.progress"]) {
+    if cx.needs("repeat", &["task.progress"]) && cx.needs_series("repeat").await {
         rules_repeat::rules(cx).await;
     }
     if cx.needs("claim", &["task.claim"]) {
         Box::pin(rules_claim::rules(cx)).await;
     }
     rules_purge::rules(cx).await;
+    rules_off::rules(cx).await;
+}
+
+/// The two parts of the rank rules (they write thousands of tasks, so a slow provider runs them as tests of their own).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RankPart {
+    /// New tasks on top, the top edge and the spread on top: `create` only (no `place` needed).
+    Top,
+    /// Neighbours, the bottom edge and the spread by placing: needs `task.place`.
+    Place,
+}
+
+/// Only the rank rules of one part (`skip_rank` of `options` is ignored).
+pub async fn run_rank_conformance(dir: &dyn Tasks, part: RankPart, options: Options) -> Report {
+    let Some(mut cx) = Cx::new(dir, options) else {
+        return Report {
+            failures: vec!["setup: the zones UTC and Europe/Berlin".to_owned()],
+            skipped: Vec::new(),
+            checked: 0,
+        };
+    };
+    match part {
+        RankPart::Top => rules_rank_top::rules(&mut cx).await,
+        RankPart::Place => {
+            if cx.needs("rank", &["task.place"]) {
+                rules_rank::rules(&mut cx).await;
+            }
+        }
+    }
+    cx.report
 }
 
 /// Run every rule that needs only the trait against `dir` (data is seeded through `create_list` and `create`, so
@@ -95,7 +131,9 @@ pub async fn run_fixture_conformance_with(
     base(&mut cx).await;
     rules_trash::moves(fixture, &mut cx).await;
     rules_trash::deadline(fixture, &mut cx).await;
-    rules_repeat_more::kept(fixture, &mut cx).await;
+    if cx.needs_series("repeat kept").await {
+        rules_repeat_more::kept(fixture, &mut cx).await;
+    }
     rules_purge::states(fixture, &mut cx).await;
     rules_groups::rules(fixture, &mut cx).await;
     rules_assign::card_rules(fixture, &mut cx).await;
@@ -103,7 +141,9 @@ pub async fn run_fixture_conformance_with(
     rules_leak::restore_order(fixture, &mut cx).await;
     rules_readonly::rules(fixture, &mut cx).await;
     rules_claim_order::rules(fixture, &mut cx).await;
-    rules_repeat_dates::rules(fixture, &mut cx).await;
+    if cx.needs_series("repeat dates").await {
+        rules_repeat_dates::rules(fixture, &mut cx).await;
+    }
     cx.report
 }
 

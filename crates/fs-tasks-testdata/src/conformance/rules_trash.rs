@@ -165,7 +165,16 @@ pub(super) async fn moves(fx: &dyn ConformanceFixture, cx: &mut Cx<'_>) {
         (first_list.restorable, second_list.restorable, "a list"),
     ] {
         let (Some(Restorable::Until(x)), Some(Restorable::Until(y))) = (one, two) else {
-            cx.skip("delete: the deadline moves with the clock (the state is not `Until`)");
+            // Not `Until` here means the provider did not work out a deadline from the time of the delete: a failure
+            // for a full provider (Opus review K1-1, A5); a staged one names the skip.
+            let rule = format!(
+                "delete: the deadline of {what} is `Until` (the time of the delete plus the trash period)"
+            );
+            if cx.partial {
+                cx.skip(&rule);
+            } else {
+                cx.ensure(false, &rule);
+            }
             continue;
         };
         let gap = y.millis() - x.millis();

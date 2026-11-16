@@ -29,6 +29,8 @@ pub(crate) struct Cx<'a> {
     /// The provider offers only part of the capabilities (a staged build): a group of rules whose capability is off is
     /// skipped and listed in `Report::skipped`, never reported as failed and never as passed.
     pub partial: bool,
+    /// Whether the provider stores a series (a recurrence rule), found out once by a probe (`needs_series`).
+    series: Option<bool>,
 }
 
 /// Switches of a conformance run.
@@ -54,6 +56,7 @@ impl<'a> Cx<'a> {
             edge: if options.heavy { 6000 } else { 2000 },
             skip_rank: options.skip_rank,
             partial: options.partial,
+            series: None,
         })
     }
 
@@ -92,6 +95,35 @@ impl<'a> Cx<'a> {
                 false
             }
         }
+    }
+
+    /// Whether a group that needs a series runs: always for a full provider; a staged one is asked once with a task that
+    /// carries a recurrence rule, and one that answers `Unsupported` (it stores no series yet) skips the group, named.
+    pub(crate) async fn needs_series(&mut self, group: &str) -> bool {
+        if !self.partial {
+            return true;
+        }
+        if self.series.is_none() {
+            let found = match self.list("series probe").await {
+                Some(l) => {
+                    let rest = TaskPatch {
+                        recurrence: Some(vec![crate::tasks_v1::Recurrence::Original(
+                            "FREQ=DAILY".to_owned(),
+                        )]),
+                        ..TaskPatch::default()
+                    };
+                    let made = self.dir.create(draft(l.id, "series probe", rest)).await;
+                    !made.as_ref().err().is_some_and(is_unsupported)
+                }
+                None => false,
+            };
+            self.series = Some(found);
+        }
+        let ok = self.series == Some(true);
+        if !ok {
+            self.skip(&format!("{group}: the provider stores no series (partial)"));
+        }
+        ok
     }
 
     pub(crate) fn caps(&self, name: &str) -> bool {

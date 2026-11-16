@@ -47,32 +47,53 @@ pub(super) async fn rules(fx: &dyn ConformanceFixture, cx: &mut Cx<'_>) {
     let me2 = crate::ids::person(4242);
     let far = super::rules_claim::far(&t);
     let forbidden = [
-        ("create", dir.create(draft).await.map(|_| ())),
+        ("task.create", "create", dir.create(draft).await.map(|_| ())),
         (
+            "task.edit",
             "update",
             dir.update(t.id, t.revision, TaskPatch::default(), w)
                 .await
                 .map(|_| ()),
         ),
-        ("delete", dir.delete(t.id, t.revision, w).await.map(|_| ())),
         (
+            "task.delete",
+            "delete",
+            dir.delete(t.id, t.revision, w).await.map(|_| ()),
+        ),
+        (
+            "task.progress",
             "progress",
             dir.progress(t.id, t.revision, Progress::Completed, Children::Leave, w)
                 .await
                 .map(|_| ()),
         ),
         (
+            "task.assign",
             "assign",
             dir.assign(t.id, t.revision, &me2, w).await.map(|_| ()),
         ),
         (
+            "task.assign",
             "unassign",
             dir.unassign(t.id, t.revision, &me2, w).await.map(|_| ()),
         ),
-        ("claim", dir.claim(t.id, t.revision, far).await.map(|_| ())),
-        ("release", dir.release(t.id, t.revision).await.map(|_| ())),
-        ("place", dir.place(t.id, t.revision, None).await.map(|_| ())),
         (
+            "task.claim",
+            "claim",
+            dir.claim(t.id, t.revision, far).await.map(|_| ()),
+        ),
+        (
+            "task.claim",
+            "release",
+            dir.release(t.id, t.revision).await.map(|_| ()),
+        ),
+        (
+            "task.place",
+            "place",
+            dir.place(t.id, t.revision, None).await.map(|_| ()),
+        ),
+        (
+            "relation.create",
             "relate",
             dir.relate(
                 t.id,
@@ -87,6 +108,7 @@ pub(super) async fn rules(fx: &dyn ConformanceFixture, cx: &mut Cx<'_>) {
             .map(|_| ()),
         ),
         (
+            "task.checklist",
             "checklist",
             dir.checklist(
                 t.id,
@@ -100,7 +122,10 @@ pub(super) async fn rules(fx: &dyn ConformanceFixture, cx: &mut Cx<'_>) {
             .map(|_| ()),
         ),
     ];
-    for (what, answer) in forbidden {
+    for (cap, what, answer) in forbidden {
+        if cx.partial && !cx.caps(cap) {
+            continue; // a switched-off capability answers Unsupported: `rules_off` calls it
+        }
         cx.fails(
             &answer,
             &format!("read only: {what} is Forbidden"),

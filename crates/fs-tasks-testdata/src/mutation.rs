@@ -46,4 +46,10 @@ pub enum Mutation {
     RestoreNoDepth,
     /// The deadline of a deletion is a fixed date, not the time of the delete plus the trash period.
     FixedDeadline,
+    /// A delete has no deadline of its own: the state is `Manual`, not `Until` (the deadline rule must fail, not skip).
+    NoDeadline,
+    /// A rank that runs out on top is an error, not a spread.
+    TopNoSpread,
+    /// The spread of a column leaves the revisions of the tasks it rewrote as they were.
+    SpreadSilent,
 }

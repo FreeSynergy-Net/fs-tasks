@@ -64,6 +64,11 @@ pub trait Gate: Send + Sync {
         let _ = lists;
         self.pass(Op::List).await
     }
+
+    /// The capabilities shown (a staged provider switches some off; the default shows the inner ones).
+    fn capabilities(&self, inner: Capabilities) -> Capabilities {
+        inner
+    }
 }
 
 /// A provider with a gate in front.
@@ -81,7 +86,7 @@ impl<G: Gate> std::fmt::Debug for Decorated<G> {
 #[async_trait]
 impl<G: Gate> Tasks for Decorated<G> {
     fn capabilities(&self) -> Capabilities {
-        self.inner.capabilities()
+        self.gate.capabilities(self.inner.capabilities())
     }
     async fn asker(&self) -> TaskResult<PersonRef> {
         self.gate.pass(Op::Asker).await?;

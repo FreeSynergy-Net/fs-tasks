@@ -4,7 +4,9 @@
 mod common;
 
 use common::Fx;
-use fs_tasks_testdata::conformance::{Options, run_fixture_conformance_with};
+use fs_tasks_testdata::conformance::{
+    Options, RankPart, run_fixture_conformance_with, run_rank_conformance,
+};
 use fs_tasks_testdata::{FakeTasks, Mutation};
 
 /// Run the rules against a fake with `mutation`; the named rule must be among the failures (a part of its text).
@@ -201,5 +203,49 @@ async fn a_fixed_deadline_instead_of_the_time_of_the_delete_is_caught() {
         Mutation::FixedDeadline,
         "the deadline of a list is the time of the delete plus the trash period",
     )
+    .await;
+}
+
+/// A delete whose state is not `Until` is a failure for a full provider, not a skip (Opus review K1-1, A5).
+#[tokio::test]
+async fn a_delete_without_a_deadline_is_caught_in_the_strict_mode() {
+    caught(
+        Mutation::NoDeadline,
+        "is `Until` (the time of the delete plus the trash period)",
+    )
+    .await;
+}
+
+/// The rank rules that need only `create` (Opus review K1-1, A2) against the two mutants of the top.
+async fn caught_on_top(mutation: Mutation, rule: &str) {
+    let fake = FakeTasks::new().with_mutation(mutation);
+    let options = Options {
+        heavy: false,
+        skip_rank: false,
+        partial: false,
+    };
+    let report = run_rank_conformance(&fake, RankPart::Top, options).await;
+    assert!(
+        report.failures.iter().any(|f| f.contains(rule)),
+        "{mutation:?} was not caught by `{rule}`; failed rules: {:#?}",
+        report.failures
+    );
+}
+
+#[tokio::test]
+async fn a_top_that_does_not_spread_is_caught() {
+    Box::pin(caught_on_top(
+        Mutation::TopNoSpread,
+        "the spread on top is in the same transaction",
+    ))
+    .await;
+}
+
+#[tokio::test]
+async fn a_spread_that_leaves_the_revisions_is_caught() {
+    Box::pin(caught_on_top(
+        Mutation::SpreadSilent,
+        "the spread on top gives the tasks whose rank changed a new revision",
+    ))
     .await;
 }

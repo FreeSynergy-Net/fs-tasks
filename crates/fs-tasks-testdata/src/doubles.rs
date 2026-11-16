@@ -43,6 +43,14 @@ pub fn forbidden(capability: &str) -> TaskError {
     })
 }
 
+impl<G: Gate> Decorated<G> {
+    /// Wrap `inner` behind any gate.
+    #[must_use]
+    pub fn with_gate(inner: Arc<dyn Tasks>, gate: G) -> Self {
+        Self { inner, gate }
+    }
+}
+
 /// The gate of [`FailingTasks`].
 #[derive(Default)]
 pub struct FailGate {

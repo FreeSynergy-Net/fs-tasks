@@ -3,6 +3,7 @@
 //! Pattern: Strategy (the rule of `rank.rs` in the locked folder: `between`, and `spread` on `Exhausted`/`Equal`,
 //! in the same transaction, without `Changed` for the caller).
 
+use crate::mutation::Mutation;
 use crate::state::State;
 use crate::tasks_v1::{HistoryKind, ObjectId, Progress, Rank, RankError, Task, TaskResult};
 
@@ -48,10 +49,16 @@ impl State {
                 Ok(rank) => return Ok(rank),
                 Err(RankError::Swapped) => return Err(Self::bad("rank", "swapped")),
                 Err(RankError::Equal | RankError::Exhausted) => {
+                    if after.is_none() && self.mutated(Mutation::TopNoSpread) {
+                        return Err(Self::bad("rank", "exhausted"));
+                    }
                     let ids: Vec<ObjectId> = col.iter().map(|c| c.1).collect();
                     for (id, rank) in ids.into_iter().zip(Rank::spread(col.len())) {
                         if let Some(i) = self.at(id) {
                             self.rows[i].task.rank = rank;
+                            if self.mutated(Mutation::SpreadSilent) {
+                                continue;
+                            }
                             self.bump_quiet(i, HistoryKind::Move);
                         }
                     }

@@ -6,6 +6,7 @@ use super::{Claim, Error, ObjectId};
 
 /// Fehler einer Methode von `Tasks` oder `TaskExchange`.
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub enum TaskError {
     /// Gemeinsame Fehler: `Unsupported`, `Changed`, `NotFound`, `Forbidden`, `Invalid`, `UnknownZone`, `Unavailable`.
     Common(Error),
@@ -15,7 +16,8 @@ pub enum TaskError {
     /// `progress` mit `Children::Refuse`, aber Teilaufgaben sind offen; nichts geschrieben. Das Frontend fragt und ruft
     /// mit `Same` oder `Leave` erneut.
     OpenSubtasks(Vec<ObjectId>),
-    /// Eine andere Person hält die Übernahme noch (`claim`, `release`).
+    /// Eine andere Person hält die Übernahme noch (`claim`, `release`). Wer nach der claim-Regel gar nicht
+    /// übernehmen darf, bekommt `Common(Forbidden { task.claim })`, nicht diesen Fehler.
     Claimed(Claim),
 }
 
@@ -27,7 +29,8 @@ impl From<Error> for TaskError {
 
 pub type TaskResult<T> = std::result::Result<T, TaskError>;
 
-/// Das ausdrückliche "nicht möglich" einer nicht überschriebenen Methode.
+/// Das ausdrückliche "nicht möglich" eines Anbieters, der eine Fähigkeit nicht hat (er ruft es selbst auf; der Trait
+/// hat keine Standardmethoden, damit kein Anbieter eine Methode still vergisst).
 ///
 /// # Errors
 /// Immer `TaskError::Common(Error::Unsupported)` mit der Fähigkeitskennung.

@@ -13,6 +13,7 @@ pub use fs_types::{
 
 /// Fehler des Themas.
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub enum Error {
     /// Der Anbieter kann es ausdrücklich nicht (ADR 0045), mit Fähigkeitskennung.
     Unsupported {

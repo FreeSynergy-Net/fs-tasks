@@ -5,7 +5,7 @@
 
 use super::{
     AssigneeStatus, Date, Due, LocalDateTime, ObjectId, PersonRef, Progress, Rank, Reference,
-    Revision, SeriesScope, Span, Utc, Zone,
+    Restorable, Revision, SeriesScope, Span, Utc, Zone,
 };
 
 /// Welche Fälligkeit ein Bereich meint.
@@ -23,11 +23,14 @@ pub struct DueRange {
     pub from: Option<Date>,
     pub to: Option<Date>,
 }
-/// Wem zugewiesen. `Me` = die fragende Person (`asker`); `Nobody` = keiner.
+/// Wem zugewiesen. `Me` = die fragende Person (`asker`; Konto-Verweis UND Ich-Karte derselben Person); `Person` =
+/// genau dieser Verweis (auch eine Gruppe); `MyGroups` = einer Gruppe, in der die fragende Person jetzt wirksam
+/// Mitglied ist (`GroupMembers::memberships_of`; der Team-Eingang); `Nobody` = keiner.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AssigneeFilter {
     Me,
     Person(PersonRef),
+    MyGroups,
     Nobody,
 }
 /// Ebene: nur oberste Aufgaben, oder die Teilaufgaben einer Aufgabe.
@@ -47,7 +50,8 @@ pub enum Order {
     Finished,
 }
 
-/// Filter für `list`. Leere Listen = kein Filter. `view_zone` ist Pflicht (legt `Timed` auf einen Tag; eine eigene Zone
+/// Filter für `list` und `claim_next`. Leere Listen = kein Filter; `text` sucht in Titel, Beschreibung und
+/// Checklisten-Punkten. `view_zone` ist Pflicht (legt `Timed` auf einen Tag; eine eigene Zone
 /// `ZoneKind::Custom` ergibt `UnknownZone`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TaskQuery {
@@ -76,9 +80,9 @@ pub enum Trash {
     /// Nur lebende Aufgaben (bzw. Listen).
     #[default]
     Exclude,
-    /// Lebende und gelöschte gemischt; `restorable_until` unterscheidet sie.
+    /// Lebende und gelöschte gemischt; `trash` unterscheidet sie.
     Include,
-    /// Nur gelöschte (die Papierkorb-Ansicht), nach `restorable_until` ihrer Frist.
+    /// Nur gelöschte (die Papierkorb-Ansicht), nach ihrer Frist (Reihenfolge bei [`Restorable`]).
     Only,
 }
 
@@ -97,6 +101,7 @@ pub struct LabelCount {
 /// `readiness` selbst und `TaskQuery::ready = Some(_)` sind dann `Unsupported`. Gewählt statt "Pflicht für alle", weil ein
 /// Fremdanbieter die Abhängigkeiten nur speichern, aber nicht auswerten kann; die Abhängigkeiten (RFC 9253) bleiben in v1.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Readiness {
     Ready,
     /// Es gibt Abhängigkeiten, aber der Anbieter wertet sie nicht aus (siehe oben); ein Mensch sieht sie.
@@ -115,8 +120,9 @@ pub enum Readiness {
 
 /// Kurzform für Liste, Board und "Heute". Serien erscheinen einmal mit ihrem aktuellen Vorkommen (`occurrence`: das
 /// erste nicht erledigte, nicht ausgefallene; `due`/`progress`/`assignees` sind die dieses Vorkommens).
-/// `restorable_until`: `None` = nicht gelöscht, `Some` = im Papierkorb bis dahin (nur mit `Trash::Include`/`Only`). Die
-/// Kartenangaben (`has_description` .. `alerts`) genügen für Liste, Board-Karte und Zeile; mehr braucht `get`.
+/// `trash`: `None` = nicht gelöscht, `Some` = im Papierkorb mit Frist (nur mit `Trash::Include`/`Only`). Die
+/// Kartenangaben (`has_description` .. `checklist_total`) genügen für Liste, Board-Karte und Zeile; mehr braucht `get`.
+/// `assignees` enthält auch Gruppen (`PersonArt::Group`).
 #[derive(Clone, Debug, PartialEq)]
 pub struct TaskSummary {
     pub id: ObjectId,
@@ -138,7 +144,7 @@ pub struct TaskSummary {
     pub rank: Rank,
     pub claimed_by: Option<PersonRef>,
     pub revision: Revision,
-    pub restorable_until: Option<Utc>,
+    pub trash: Option<Restorable>,
     /// Notiz-Marke: die Beschreibung ist nicht leer.
     pub has_description: bool,
     pub percent_complete: Option<u8>,
@@ -146,21 +152,23 @@ pub struct TaskSummary {
     /// Anzahl `links` und `alerts` (Büroklammer und Glocke auf der Karte).
     pub links: u32,
     pub alerts: u32,
+    /// Checkliste "2/5": offene und alle Punkte.
+    pub checklist_open: u32,
+    pub checklist_total: u32,
 }
 
-/// Ergebnis eines Löschens (Papierkorb). Eine Aufgabe nimmt ihre Teilaufgaben mit (`with_subtasks`); `restore` mit
-/// demselben `scope` holt alle zurück, bis die Frist endet.
+/// Ergebnis eines Löschens (Papierkorb). Eine Aufgabe nimmt ihre lebenden Teilaufgaben mit (`with_subtasks`, siehe
+/// `mod.rs` TEILAUFGABEN); `restore` mit demselben `scope` holt alle zurück, solange `restorable` gilt.
 ///
-/// `restorable_until = None`: der Anbieter hat keinen Papierkorb, das Löschen ist endgültig und `restore` ergibt
-/// `NotFound`. Einen unbegrenzten Papierkorb gibt es nicht (jeder Papierkorb nennt eine Frist), damit `None` bei
-/// `TaskSummary` ("lebt") eindeutig bleibt. Bei einer Liste (`delete_list`) ist `with_subtasks` die Menge aller Aufgaben der
+/// `restorable = None`: der Anbieter hat keinen Papierkorb (z. B. ein Fremdkonto), das Löschen ist endgültig und
+/// `restore` ergibt `NotFound`; "nie automatisch löschen" ist dagegen `Some(Restorable::Manual)`. Bei einer Liste (`delete_list`) ist `with_subtasks` die Menge aller Aufgaben der
 /// Liste (auch Teilaufgaben) und `scope` immer `Whole`.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Deleted {
     pub id: ObjectId,
     pub scope: SeriesScope,
     pub with_subtasks: Vec<ObjectId>,
-    pub restorable_until: Option<Utc>,
+    pub restorable: Option<Restorable>,
 }
 
 /// Ein typisierter Eintrag im Aktivitätsprotokoll (ADR 0086 Punkt 2).
@@ -171,9 +179,11 @@ pub struct HistoryEntry {
     pub kind: HistoryKind,
     pub changes: Vec<FieldChange>,
 }
-/// Art der Aktivität (AS2-Name): `Add`/`Remove` = zuweisen/entfernen, `Accept`/`Reject` = Antwort der Person,
-/// `Move` = Reihenfolge, Liste oder Eltern, `Join`/`Leave` = übernehmen/zurückgeben, `Undo` = wiederherstellen.
+/// Art der Aktivität (AS2-Name): `Add`/`Remove` = zuweisen/entfernen bzw. Checklisten-Punkt (Feld `checklist`),
+/// `Accept`/`Reject` = Antwort der Person, `Move` = Reihenfolge, Liste oder Eltern, `Join`/`Leave` =
+/// übernehmen/zurückgeben (auch Ende durch Erledigen, Frist oder "STOP KI"), `Undo` = wiederherstellen.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum HistoryKind {
     Create,
     Update,
@@ -198,6 +208,7 @@ pub struct FieldChange {
 /// Typisierter Wert im Protokoll. `Object` = eigene Objekt-Id, `Reference` = fremder Verweis. Aufzählungen (`progress`,
 /// `due_kind` …) stehen als `Text` mit dem kanonischen `JSCalendar`- bzw. AS2-Wort.
 #[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
 pub enum Value {
     Int(i64),
     Real(f64),

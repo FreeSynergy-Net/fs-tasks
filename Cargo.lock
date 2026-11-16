@@ -1517,7 +1517,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks"
-version = "0.0.8"
+version = "0.0.9"
 dependencies = [
  "fs-interfaces 0.0.22",
  "fs-tasks-app",
@@ -1529,7 +1529,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-app"
-version = "0.0.8"
+version = "0.0.9"
 dependencies = [
  "async-trait",
  "fs-components-app",
@@ -1547,7 +1547,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-cli"
-version = "0.0.8"
+version = "0.0.9"
 dependencies = [
  "capnp",
  "chrono",
@@ -1562,7 +1562,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-core"
-version = "0.0.8"
+version = "0.0.9"
 dependencies = [
  "async-trait",
  "capnp",
@@ -1579,7 +1579,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-server"
-version = "0.0.8"
+version = "0.0.9"
 dependencies = [
  "async-trait",
  "capnp",
@@ -1591,6 +1591,18 @@ dependencies = [
  "tempfile",
  "tokio",
  "uuid",
+]
+
+[[package]]
+name = "fs-tasks-testdata"
+version = "0.0.9"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "chrono-tz",
+ "fs-jscalendar",
+ "fs-types",
+ "tokio",
 ]
 
 [[package]]

@@ -183,7 +183,10 @@ pub(super) async fn restore_depth(cx: &mut Cx<'_>, list: ObjectId) {
         parent: Some(Some(p)),
         ..TaskPatch::default()
     };
-    let Some(p0) = cx.task(list, "restore parent").await else {
+    let (Some(p0), Some(mut at)) = (
+        cx.task(list, "restore parent").await,
+        cx.task(list, "chain 1").await,
+    ) else {
         return;
     };
     let Some(x) = cx.task_with(list, "restore x", under(p0.id)).await else {
@@ -193,9 +196,7 @@ pub(super) async fn restore_depth(cx: &mut Cx<'_>, list: ObjectId) {
         return;
     }
     let Ok(gone) = dir.delete(x.id, x.revision, SeriesScope::Whole).await else {
-        return;
-    };
-    let Some(mut at) = cx.task(list, "chain 1").await else {
+        cx.ensure(false, "restore depth setup: delete the subtree");
         return;
     };
     for level in 2..SUBTASK_DEPTH_MAX {
@@ -206,10 +207,14 @@ pub(super) async fn restore_depth(cx: &mut Cx<'_>, list: ObjectId) {
                 under(at.id),
             ))
             .await;
-        let Ok(t) = made else { return };
+        let Ok(t) = made else {
+            cx.ensure(false, "restore depth setup: the chain of levels");
+            return;
+        };
         at = t;
     }
     let Some(p0) = cx.fresh(p0.id).await else {
+        cx.ensure(false, "restore depth setup: read the parent again");
         return;
     };
     let moved = dir

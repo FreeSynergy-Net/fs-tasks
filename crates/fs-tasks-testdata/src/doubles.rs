@@ -111,6 +111,11 @@ impl FailingTasks {
         self
     }
 
+    /// From now on the method `op` answers `error` (a failure that starts in the middle of a run).
+    pub fn set_failing(&self, op: Op, error: TaskError) {
+        locked(&self.gate.ops).insert(op, error);
+    }
+
     /// Everything works again (the service came back, Z5).
     pub fn heal(&self) {
         *locked(&self.gate.all) = None;

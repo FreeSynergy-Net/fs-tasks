@@ -80,6 +80,7 @@ async fn after_list_purge(
         return;
     }
     let Ok(list) = dir.create_list("Zzconf leak purged", None, None).await else {
+        cx.ensure(false, "leak setup: create_list for the purged list");
         return;
     };
     let Some(t) = cx.task(list.id, "in a purged list").await else {

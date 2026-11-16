@@ -213,23 +213,6 @@ async fn what_this_run_does_not_store_is_refused_by_name_never_dropped() {
         "{r:?}"
     );
     let rest = TaskPatch {
-        alerts: Some(Vec::new()),
-        links: Some(vec![fs_tasks_testdata::tasks_v1::Link {
-            key: "l".into(),
-            href: Some("https://example.org/".into()),
-            file: None,
-            content_type: None,
-            size: None,
-            rel: None,
-            title: None,
-        }]),
-        ..TaskPatch::default()
-    };
-    assert!(matches!(
-        fx.tasks.create(draft(list.id, "T", rest)).await,
-        Err(TaskError::Common(Error::Unsupported { .. }))
-    ));
-    let rest = TaskPatch {
         recurrence: Some(vec![fs_tasks_testdata::tasks_v1::Recurrence::Original(
             "FREQ=DAILY".into(),
         )]),

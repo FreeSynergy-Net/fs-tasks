@@ -43,7 +43,7 @@ pub fn check_actor(actor: &str, name: &str) -> Result<(), String> {
 pub enum ActorType {
     /// A person.
     Person,
-    /// A program (an LLM agent, a runner, fs-store).
+    /// A program (an LLM agent, a runner, fs-packages).
     Application,
     /// A machine or service (CI, a package manager, systemd).
     Service,

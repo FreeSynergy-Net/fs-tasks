@@ -1,6 +1,6 @@
 //! The [`TaskItems`] contract: what the tasks program offers to everyone else.
 //!
-//! Pattern: Repository (interface) + Null Object — callers (fs-calendar, the GUI, the hub, tests
+//! Pattern: Repository (interface) + Null Object — callers (fs-calendars, the GUI, the hub, tests
 //! with fakes) depend on this trait, never on the store-backed `TaskRepo`. Like a parent class
 //! (ADR 0045) every provider has every method of `Items` in `tasks.capnp` (fs-interfaces): a method
 //! it does not override answers an explicit [`Unsupported`], and `capabilities` reports the same.

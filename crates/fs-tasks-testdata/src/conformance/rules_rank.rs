@@ -10,15 +10,21 @@ async fn order(cx: &Cx<'_>, list: ObjectId) -> Vec<ObjectId> {
     cx.ids(&cx.query(&[list])).await
 }
 
-/// Ranks in the listing are strictly ascending and short enough.
-async fn ascending(cx: &Cx<'_>, list: ObjectId) -> bool {
+/// The longest rank an edge may reach after `n` insertions at the same edge: about 25 per character (the step of
+/// `Rank::between`), plus two. Halving at the edge would need 4 to 5 per character and fail this.
+fn edge_len(n: usize) -> usize {
+    n / 25 + 2
+}
+
+/// Ranks in the listing are strictly ascending and at most `max` characters long.
+async fn ascending(cx: &Cx<'_>, list: ObjectId, max: usize) -> bool {
     let ranks: Vec<Rank> = cx
         .all(&cx.query(&[list]))
         .await
         .into_iter()
         .map(|s| s.rank)
         .collect();
-    ranks.windows(2).all(|w| w[0] < w[1]) && ranks.iter().all(|r| r.as_str().len() <= Rank::MAX_LEN)
+    ranks.windows(2).all(|w| w[0] < w[1]) && ranks.iter().all(|r| r.as_str().len() <= max)
 }
 
 pub(super) async fn rules(cx: &mut Cx<'_>) {
@@ -76,6 +82,7 @@ pub(super) async fn rules(cx: &mut Cx<'_>) {
     let r = dir.place(a.id, a.revision, Some(a.id)).await;
     cx.fails(&r, "place: after itself is Invalid", is_invalid);
     appends(cx).await;
+    edges(cx).await;
     spread(cx).await;
 }
 
@@ -103,8 +110,8 @@ async fn appends(cx: &mut Cx<'_>) {
         }
     }
     cx.ensure(
-        ascending(cx, list.id).await,
-        "rank: 1000 appends at the top stay ascending and short",
+        ascending(cx, list.id, edge_len(1000)).await,
+        "rank: 1000 appends at the top stay ascending and at most 1000/25 + 2 characters long",
     );
     cx.ensure(
         cx.fresh(first.id)
@@ -138,13 +145,59 @@ async fn appends(cx: &mut Cx<'_>) {
         last = p.id;
     }
     cx.ensure(
-        ascending(cx, list.id).await,
-        "rank: 1000 appends at the bottom stay ascending and short",
+        ascending(cx, list.id, edge_len(1000)).await,
+        "rank: 1000 appends at the bottom stay ascending and at most 1000/25 + 2 characters long",
     );
     cx.ensure(
         order(cx, list.id).await.last() == Some(&last),
         "rank: the last appended task is last",
     );
+}
+
+/// 6000 insertions at the top and 6000 at the bottom: no spread (no `Move` in `changes`), ranks within the edge bound.
+async fn edges(cx: &mut Cx<'_>) {
+    const N: usize = 6000;
+    let dir = cx.dir;
+    for (name, top) in [("rank edge top", true), ("rank edge bottom", false)] {
+        let Some(list) = cx.list(name).await else {
+            return;
+        };
+        let Some(anchor) = cx.task(list.id, "anchor").await else {
+            return;
+        };
+        let Ok(start) = dir.changes(None, 0).await else {
+            return;
+        };
+        let mut last = anchor.id;
+        for i in 0..N {
+            let draft = super::cx::draft(list.id, &format!("e{i}"), TaskPatch::default());
+            let Ok(t) = dir.create(draft).await else {
+                cx.ensure(false, "create: 6000 insertions at the edge");
+                return;
+            };
+            if !top {
+                let Ok(p) = dir.place(t.id, t.revision, Some(last)).await else {
+                    cx.ensure(false, "place: 6000 insertions at the bottom");
+                    return;
+                };
+                last = p.id;
+            }
+        }
+        cx.ensure(
+            ascending(cx, list.id, edge_len(N)).await,
+            "rank: 6000 insertions at one edge stay ascending and at most 6000/25 + 2 characters long",
+        );
+        let moves = dir
+            .changes(start.next.as_ref(), 100_000)
+            .await
+            .map(|p| p.items)
+            .unwrap_or_default();
+        let moved = moves.iter().filter(|c| c.kind == HistoryKind::Move).count();
+        cx.ensure(
+            moved == if top { 0 } else { N },
+            "rank: 6000 insertions at one edge spread nothing (a Move only for each placed task)",
+        );
+    }
 }
 
 /// Always into the same gap, alternately above the lower and below the upper neighbour, until the rank runs out: the provider spreads once, in the same transaction.
@@ -193,7 +246,7 @@ async fn spread(cx: &mut Cx<'_>) {
         "place: the spread is in the same transaction, no Changed for the caller",
     );
     cx.ensure(
-        ascending(cx, list.id).await,
+        ascending(cx, list.id, Rank::MAX_LEN).await,
         "rank: after the spread the order is ascending",
     );
     let (Some(l), Some(h)) = (cx.fresh(low.id).await, cx.fresh(high.id).await) else {

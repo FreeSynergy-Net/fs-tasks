@@ -1516,6 +1516,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs-people-directory"
+version = "0.0.13"
+source = "git+https://github.com/FreeSynergy/fs-people?rev=358a8145b08dbea73dac040de69207f3ef90ad33#358a8145b08dbea73dac040de69207f3ef90ad33"
+dependencies = [
+ "async-trait",
+ "fs-types",
+]
+
+[[package]]
 name = "fs-tasks"
 version = "0.0.9"
 dependencies = [
@@ -1601,6 +1610,7 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "fs-jscalendar",
+ "fs-people-directory",
  "fs-types",
  "tokio",
 ]

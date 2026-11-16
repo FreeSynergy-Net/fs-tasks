@@ -21,13 +21,20 @@ pub fn object_number(id: ObjectId) -> u64 {
     u64::from_be_bytes(tail)
 }
 
+/// A reference from text, `None` when `text` is not an absolute IRI.
+#[must_use]
+pub fn try_reference(text: &str) -> Option<Reference> {
+    Reference::parse(text).ok()
+}
+
 /// A reference from text.
 ///
 /// # Panics
-/// When `text` is not an absolute IRI (a mistake in the test data, never input of a provider).
+/// When `text` is not an absolute IRI (a mistake in the test data, never input of a provider); [`try_reference`]
+/// does not panic.
 #[must_use]
 pub fn reference(text: &str) -> Reference {
-    Reference::parse(text).expect("a reference of the test data")
+    try_reference(text).expect("a reference of the test data")
 }
 
 /// A reference to the person with the number `n` (kind `Person`, no excerpt).

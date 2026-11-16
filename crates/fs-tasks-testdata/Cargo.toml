@@ -14,6 +14,8 @@ chrono-tz = "0.10"
 # Same pins as the locked trait folder (tasks_v1): fs-types v0.0.22 = fs-interfaces 7743056, fs-jscalendar v0.0.2 = f3d651b.
 fs-types = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.22" }
 fs-jscalendar = { git = "https://github.com/FreeSynergy/fs-jscalendar", tag = "v0.0.2" }
+# FakePeople = the FakeDirectory of the locked person_directory_v1: fs-people main 358a814 (no tag yet; lift to a tag when one exists).
+fs-people-directory = { git = "https://github.com/FreeSynergy/fs-people", rev = "358a8145b08dbea73dac040de69207f3ef90ad33" }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

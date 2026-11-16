@@ -29,11 +29,11 @@ async fn all(fake: &impl Tasks) -> Page<fs_tasks_testdata::tasks_v1::TaskSummary
 }
 
 #[test]
-fn the_sample_has_about_forty_tasks_in_four_lists_with_unique_ids() {
+fn the_sample_has_about_ninety_tasks_in_five_lists_with_unique_ids() {
     let s = sample();
-    assert_eq!(s.lists.len(), 4);
+    assert_eq!(s.lists.len(), 5);
     assert!(
-        (40..=50).contains(&s.tasks.len()),
+        (80..=100).contains(&s.tasks.len()),
         "{} tasks",
         s.tasks.len()
     );

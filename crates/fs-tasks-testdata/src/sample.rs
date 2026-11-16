@@ -18,7 +18,8 @@ use fs_types::BasicValue;
 /// The whole sample.
 #[derive(Clone, Debug)]
 pub struct Sample {
-    /// Four lists: "Umzug Hafenstraße" (1), "Website-Relaunch" (2), "Alltag" (3), "Verein Beispielhausen" (4).
+    /// Five lists: "Umzug Hafenstraße" (1), "Website-Relaunch" (2), "Alltag" (3), "Verein Beispielhausen" (4),
+    /// "Lange Liste" (5, one column of 40 tasks).
     pub lists: Vec<TaskList>,
     /// Six invented people: the acting person (1), colleagues (2 to 5), a group (6).
     pub people: Vec<Known>,
@@ -29,16 +30,20 @@ pub struct Sample {
 }
 
 impl Sample {
+    /// The task with this slug, `None` when the sample has none.
+    #[must_use]
+    pub fn try_get(&self, slug: &str) -> Option<&Task> {
+        self.tasks.iter().find(|(s, _)| *s == slug).map(|(_, t)| t)
+    }
+
     /// The task with this slug.
     ///
     /// # Panics
-    /// If the slug is not in the sample (a typo in a test).
+    /// If the slug is not in the sample (a typo in a test); [`Sample::try_get`] does not panic.
     #[must_use]
     pub fn get(&self, slug: &str) -> &Task {
-        self.tasks
-            .iter()
-            .find(|(s, _)| *s == slug)
-            .map_or_else(|| panic!("no sample task `{slug}`"), |(_, t)| t)
+        self.try_get(slug)
+            .unwrap_or_else(|| panic!("no sample task `{slug}`"))
     }
 
     /// A [`FakeTasks`] loaded with the sample (the account is person 1).
@@ -223,6 +228,7 @@ pub fn sample() -> Sample {
             list(2, "Website-Relaunch", "#10b981"),
             list(3, "Alltag", "#f59e0b"),
             list(4, "Verein Beispielhausen", "#8b5cf6"),
+            list(5, "Lange Liste", "#ef4444"),
         ],
         people: KNOWN.to_vec(),
         tasks,

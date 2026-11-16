@@ -5,7 +5,7 @@
 //!
 //! * [`tasks_v1`]: the LOCKED trait folder (SHA-256 66c7cf13...aed085); never edit it, a change is `tasks_v2`.
 //! * [`FakeTasks`]: in memory, every method and rule; [`EmptyTasks`] is the empty one; [`FakeExchange`] the boundary.
-//! * [`sample`]: the fixed set (about 40 tasks in 4 lists, every case of the plan).
+//! * [`sample`]: the fixed set (about 90 tasks in 5 lists, every case of the plan).
 //! * [`conformance`]: rules any provider must pass (`run_conformance`, later also for `LocalTasks`).
 
 // Test support: the conformance rules and the sample read as one story each, so long functions and short names
@@ -34,6 +34,8 @@ pub mod tasks_v1;
 mod blank;
 mod clock;
 pub mod conformance;
+mod decorate;
+mod doubles;
 mod exchange;
 mod fake;
 mod fake_impl;
@@ -45,10 +47,12 @@ mod ops_relate;
 mod ops_task;
 mod ops_trash;
 mod patch;
+mod people;
 mod ranking;
 mod ready;
 mod sample;
 mod sample_data;
+mod sample_extra;
 mod sample_more;
 mod sample_people;
 mod scope;
@@ -58,8 +62,11 @@ mod state;
 mod view;
 
 pub use blank::blank_task;
+pub use decorate::{Decorated, Gate, Op};
+pub use doubles::{Clock, FailGate, FailingTasks, SlowGate, SlowTasks, forbidden, unavailable};
 pub use exchange::{FakeExchange, MEDIA_TYPES};
 pub use fake::{DECISIONS, EmptyTasks, FakeTasks, START_MS};
-pub use ids::{object_id, object_number, person, reference};
+pub use ids::{object_id, object_number, person, reference, try_reference};
+pub use people::FakePeople;
 pub use sample::{Sample, id_of, occurrence, sample};
 pub use sample_people::{KNOWN, Known};

@@ -5,6 +5,7 @@
 
 use crate::clock::{day_in, instant, tz};
 use crate::ids::invalid;
+use crate::mutation::Mutation;
 use crate::series::{Cur, current};
 use crate::state::State;
 use crate::tasks_v1::{
@@ -218,7 +219,10 @@ impl State {
         after: Option<&Place>,
         size: usize,
     ) -> TaskResult<Page<HistoryEntry>> {
-        self.at(id).ok_or(crate::tasks_v1::Error::NotFound(id))?;
+        // Reading a list covers its log: whoever may not see the list gets `NotFound`, as for `get`.
+        self.at(id)
+            .filter(|&i| self.sees_task(i) || self.mutated(Mutation::LeakTrash))
+            .ok_or(crate::tasks_v1::Error::NotFound(id))?;
         let entries = self
             .history
             .iter()
@@ -241,8 +245,14 @@ impl State {
         if from > self.changes.len() {
             return Err(invalid("since", "cursor"));
         }
-        let items: Vec<Change> = self.changes.iter().skip(from).take(size).cloned().collect();
-        let next = Place((from + items.len()).to_string());
+        // The cursor counts what was read; what the asker may not see is left out of the page, not of the count.
+        let window: Vec<&Change> = self.changes.iter().skip(from).take(size).collect();
+        let next = Place((from + window.len()).to_string());
+        let items: Vec<Change> = window
+            .into_iter()
+            .filter(|c| self.sees_list_id(c.list) || self.mutated(Mutation::LeakTrash))
+            .cloned()
+            .collect();
         Ok(Page {
             items,
             next: Some(next),

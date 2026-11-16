@@ -180,6 +180,7 @@ pub(super) async fn states(fx: &dyn ConformanceFixture, cx: &mut Cx<'_>) {
     } else {
         cx.skip("trash: Manual (the fixture cannot change the trash setting)");
     }
+    super::rules_purge_kept::rules(fx, cx).await;
     held_rules(fx, cx, l.id, &held).await;
 }
 

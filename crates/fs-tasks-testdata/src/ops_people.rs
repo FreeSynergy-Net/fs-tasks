@@ -5,7 +5,7 @@
 
 use crate::scope::{Target, changed};
 use crate::series::override_of;
-use crate::state::State;
+use crate::state::{State, check};
 use crate::tasks_v1::{
     Answer, Assignee, AssigneeStatus, Error, FieldChange, HistoryKind, ObjectId, OverrideChange,
     PersonRef, Revision, SeriesScope, Task, TaskResult, Value,
@@ -35,7 +35,12 @@ impl State {
         edit: impl FnOnce(&mut Vec<Assignee>) -> TaskResult<Edit>,
     ) -> TaskResult<Task> {
         self.expire();
-        let i = self.live_expected(id, expected)?;
+        let i = self.live(id)?;
+        // Answering is the right of the assigned person themselves; every other change needs the right to write.
+        if capability != "task.respond" {
+            self.need_write(self.rows[i].task.list, capability)?;
+        }
+        check(self.rows[i].task.revision, expected)?;
         self.atomic(|s| {
             let (j, rid) = match s.target(i, scope, capability)? {
                 Target::Whole(j) => (j, None),

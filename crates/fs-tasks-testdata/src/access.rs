@@ -49,13 +49,18 @@ impl State {
         } else {
             None
         };
-        base.map(|a| {
+        let capped = base.map(|a| {
             if self.asker_is_ai() {
                 a.min(ListAccess::Write)
             } else {
                 a
             }
-        })
+        });
+        let only = self
+            .read_only
+            .iter()
+            .any(|(who, l)| who.id == asker.id && *l == list.id);
+        capped.map(|a| if only { a.min(ListAccess::Read) } else { a })
     }
 
     pub(crate) fn sees(&self, list: &TaskList) -> bool {
@@ -64,8 +69,12 @@ impl State {
 
     /// Whether the asking person may see the list of the task at row `i`.
     pub(crate) fn sees_task(&self, i: usize) -> bool {
-        self.list_at(self.rows[i].task.list)
-            .is_none_or(|l| self.sees(&self.lists[l]))
+        self.sees_list_id(self.rows[i].task.list) || self.mutated(Mutation::SeesAll)
+    }
+
+    /// Whether the asking person may see the list `id` (a list that is gone shows nobody anything to hide).
+    pub(crate) fn sees_list_id(&self, id: ObjectId) -> bool {
+        self.list_at(id).is_none_or(|l| self.sees(&self.lists[l]))
     }
 
     /// The access to the list `id` of the asking person; `NotFound` when they may not see it.

@@ -5,9 +5,10 @@
 pub use super::cx::Report;
 use super::cx::{Cx, Options, is_unsupported};
 use super::{
-    ConformanceFixture, rules_assign, rules_checklist, rules_claim, rules_feed, rules_groups,
-    rules_lists, rules_purge, rules_query, rules_rank, rules_ready, rules_repeat,
-    rules_repeat_more, rules_series, rules_tasks, rules_trash,
+    ConformanceFixture, rules_assign, rules_checklist, rules_claim, rules_claim_order, rules_feed,
+    rules_groups, rules_leak, rules_lists, rules_purge, rules_query, rules_rank, rules_readonly,
+    rules_ready, rules_repeat, rules_repeat_dates, rules_repeat_more, rules_series, rules_tasks,
+    rules_trash,
 };
 use crate::tasks_v1::{
     Answer, CAPABILITIES, Children, DependencyKind, Progress, SeriesScope, TaskDraft,
@@ -79,6 +80,11 @@ pub async fn run_fixture_conformance_with(
     rules_purge::states(fixture, &mut cx).await;
     rules_groups::rules(fixture, &mut cx).await;
     rules_assign::card_rules(fixture, &mut cx).await;
+    rules_leak::rules(fixture, &mut cx).await;
+    rules_leak::restore_order(fixture, &mut cx).await;
+    rules_readonly::rules(fixture, &mut cx).await;
+    rules_claim_order::rules(fixture, &mut cx).await;
+    rules_repeat_dates::rules(fixture, &mut cx).await;
     cx.report
 }
 

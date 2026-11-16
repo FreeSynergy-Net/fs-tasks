@@ -58,6 +58,11 @@ pub trait ConformanceFixture: Send + Sync {
         false
     }
 
+    /// `who` may only read the list from now on (access `Read`: seeing, not writing). `true` when done.
+    async fn read_only(&self, _who: &PersonRef, _list: ObjectId) -> bool {
+        false
+    }
+
     /// The trash setting: days until the automatic purge, `None` = never automatically. `true` when done.
     async fn set_trash_days(&self, _days: Option<u32>) -> bool {
         false

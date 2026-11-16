@@ -7,7 +7,7 @@ use crate::ops_repeat::is_completion;
 use crate::patch::diff;
 use crate::ready::is_done;
 use crate::scope::{Target, changed, series_done};
-use crate::state::State;
+use crate::state::{State, check};
 use crate::tasks_v1::{
     Children, HistoryKind, LocalDateTime, ObjectId, Progress, Revision, SeriesScope, Task,
     TaskError, TaskResult,
@@ -23,7 +23,9 @@ impl State {
         scope: SeriesScope,
     ) -> TaskResult<Task> {
         self.expire();
-        let i = self.live_expected(id, expected)?;
+        let i = self.live(id)?;
+        self.need_write(self.rows[i].task.list, "task.progress")?;
+        check(self.rows[i].task.revision, expected)?;
         self.atomic(|s| {
             if is_completion(&s.rows[i].task) {
                 return match s.completion_progress(i, to, children, scope)? {

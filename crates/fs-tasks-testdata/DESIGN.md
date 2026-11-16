@@ -101,3 +101,23 @@ as a thin facade); `sample*.rs`; `conformance/`. Every file has at most 300 line
 
 `FakeExchange` has no real format adapter (K3); `LocalTasks` (K1, fs-objects v0.0.3, typed tables) is not written; `ThisAndFollowing` for series with `by_*` parts and
 the Loro-style concurrent spread of two replicas are out of scope (v2, PLAN section 11).
+
+## Reading covers the log, the feed and `purge` (K0c fix)
+
+Reading a list (`ListAccess::Read`) covers `list`, `get`, `history` and `changes`: whoever may not see the list gets
+`NotFound` from `history` and `purge` (never `Ok`, never `Invalid` first) and finds nothing in `changes`; `restore` asks
+`NotFound`, then `Forbidden`, then `Invalid` and checks the depth. `purge` of a parent detaches a kept subtask (and what
+hangs below it) instead of deleting it, as `expire` does. The change of a purged list is not hidden (the list is gone, so
+there is nothing left to ask). Rules: `rules_leak.rs`, `rules_readonly.rs`, `rules_purge_kept.rs`, `rules_claim_order.rs`,
+`rules_repeat_dates.rs`; mutations `LeakTrash`, `SeesAll`, `PurgeTakesKept`, `ClaimedFirst`, `ReleaseOpen`, `UndoAny`,
+`NextIgnoresReady`, `RestoreInvalidFirst`. The fixture offers `read_only(who, list)` for the access `Read`.
+
+## For K1 (`LocalTasks`, two runs, not one)
+
+- `restorable_until` of fs-objects joins "kept" and "never automatically" to `Never` and reports a keep with an end as
+  `Until`: do not use it for `Restorable`; compute it from `held_until`, `is_held` and `trash_auto` (Held before Until;
+  Manual only when the automatic purge is off).
+- `delete_final` follows every `parent` row: before it, in the same transaction, detach the subtasks deleted on their
+  own and the kept ones; check a list purge for a kept task first.
+- Open for the next trait text: N6 (finishing the same occurrence twice on one day: `Count` and the undo), and what
+  deleting a future occurrence of a plan series does to its tick and claim (A4, A6 of the review).

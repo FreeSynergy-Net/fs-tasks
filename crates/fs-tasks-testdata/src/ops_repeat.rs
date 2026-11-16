@@ -222,7 +222,7 @@ impl State {
             .iter()
             .position(|o| o.recurrence_id == *rid)
             .ok_or_else(|| Self::bad("recurrence_id", "unknown-occurrence"))?;
-        if at + 1 != t.overrides.len() {
+        if at + 1 != t.overrides.len() && !self.mutated(Mutation::UndoAny) {
             return Err(Self::bad("recurrence_id", "not-newest"));
         }
         let is_excluded = matches!(t.overrides[at].change, OverrideChange::Excluded);

@@ -49,6 +49,10 @@ impl ConformanceFixture for Fx {
         self.0.set_trash_days(days);
         true
     }
+    async fn read_only(&self, who: &PersonRef, list: ObjectId) -> bool {
+        self.0.set_read_only(who, list);
+        true
+    }
     async fn keep(&self, id: ObjectId, until: Option<Utc>) -> bool {
         self.0.keep(id, until);
         true

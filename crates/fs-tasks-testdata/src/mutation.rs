@@ -26,4 +26,20 @@ pub enum Mutation {
     OrphansStay,
     /// No limit of `SUBTASK_DEPTH_MAX` levels.
     NoDepthLimit,
+    /// `history`, `changes` and `purge` ignore whether the asker may see the list (a leak towards an AI).
+    LeakTrash,
+    /// Everybody sees the tasks of every list.
+    SeesAll,
+    /// `purge` of a parent also deletes a kept subtask that went with it.
+    PurgeTakesKept,
+    /// `claim` answers `Claimed` before it checks the claim rule (tells an outsider who holds a task).
+    ClaimedFirst,
+    /// `release` of an expired claim skips the claim rule.
+    ReleaseOpen,
+    /// A completion may be undone at any exception, not only at the latest one.
+    UndoAny,
+    /// `claim_next` does not ask whether a task is ready.
+    NextIgnoresReady,
+    /// `restore` says `Invalid` before it asks for the right to write.
+    RestoreInvalidFirst,
 }

@@ -173,6 +173,11 @@ impl FakeTasks {
         self.lock().keeps.insert(id, until);
     }
 
+    /// `who` may only read the list from now on (`Read`: seeing, no writing), whatever the list gave them before.
+    pub fn set_read_only(&self, who: &PersonRef, list: ObjectId) {
+        self.lock().read_only.push((who.clone(), list));
+    }
+
     /// The trash setting: days until the automatic purge (at least 1), `None` = never automatically.
     pub fn set_trash_days(&self, days: Option<u32>) {
         self.lock().trash_days = days.map(|d| d.max(1));

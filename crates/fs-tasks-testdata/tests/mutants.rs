@@ -91,3 +91,77 @@ async fn a_list_purge_that_leaves_tasks_behind_is_caught() {
 async fn a_subtask_tree_without_a_depth_limit_is_caught() {
     caught(Mutation::NoDepthLimit, "SUBTASK_DEPTH_MAX + 1 is Invalid").await;
 }
+
+#[tokio::test]
+async fn a_leak_of_history_changes_and_purge_is_caught() {
+    caught(
+        Mutation::LeakTrash,
+        "leak: history of a task in an invisible list is NotFound",
+    )
+    .await;
+    caught(
+        Mutation::LeakTrash,
+        "leak: changes leaves out what happened",
+    )
+    .await;
+    caught(
+        Mutation::LeakTrash,
+        "leak: purge of a task in an invisible list is NotFound",
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn tasks_everybody_sees_are_caught() {
+    caught(
+        Mutation::SeesAll,
+        "leak: get of a task in an invisible list is None",
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn a_purge_that_takes_the_kept_subtask_along_is_caught() {
+    caught(
+        Mutation::PurgeTakesKept,
+        "a kept subtask that went with the parent is detached",
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn a_claim_that_says_claimed_before_forbidden_is_caught() {
+    caught(Mutation::ClaimedFirst, "Forbidden comes before Claimed").await;
+}
+
+#[tokio::test]
+async fn a_release_of_an_expired_claim_that_skips_the_rule_is_caught() {
+    caught(Mutation::ReleaseOpen, "an outsider gets Forbidden").await;
+}
+
+#[tokio::test]
+async fn an_undo_at_any_exception_is_caught() {
+    caught(
+        Mutation::UndoAny,
+        "undo of an older exception than the newest is Invalid",
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn a_claim_next_that_ignores_readiness_is_caught() {
+    caught(
+        Mutation::NextIgnoresReady,
+        "a task with dependencies that is not ready is skipped",
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn a_restore_that_says_invalid_before_forbidden_is_caught() {
+    caught(
+        Mutation::RestoreInvalidFirst,
+        "without the right to write it is Forbidden, before Invalid",
+    )
+    .await;
+}

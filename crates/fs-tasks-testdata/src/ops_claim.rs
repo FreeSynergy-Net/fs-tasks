@@ -44,6 +44,11 @@ impl State {
     ) -> TaskResult<Task> {
         self.expire();
         let i = self.live(id)?;
+        if self.mutated(Mutation::ClaimedFirst)
+            && let Some(c) = self.held_by_other(i)
+        {
+            return Err(TaskError::Claimed(c));
+        }
         if !self.may_claim(&self.rows[i].task) {
             return Err(forbidden());
         }
@@ -69,7 +74,8 @@ impl State {
             .claim
             .as_ref()
             .is_some_and(|c| c.by.id == self.asker().id);
-        if !mine && !self.may_claim(&self.rows[i].task) {
+        let open = self.mutated(Mutation::ReleaseOpen) && self.held_by_other(i).is_none();
+        if !mine && !open && !self.may_claim(&self.rows[i].task) {
             return Err(forbidden());
         }
         check(self.rows[i].task.revision, expected)?;
@@ -99,7 +105,9 @@ impl State {
                 current(t).progress,
                 Progress::NeedsAction | Progress::InProcess
             );
-            let ready = if self.evaluate {
+            let ready = if self.mutated(Mutation::NextIgnoresReady) {
+                true
+            } else if self.evaluate {
                 self.readiness_of(i) == Readiness::Ready
             } else {
                 t.dependencies.is_empty()

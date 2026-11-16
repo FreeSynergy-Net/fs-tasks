@@ -51,6 +51,8 @@ pub(crate) struct State {
     pub list_bins: BTreeMap<ObjectId, Bin>,
     /// Keeps (`keep_until`) of tasks and lists: `None` = without an end.
     pub keeps: BTreeMap<ObjectId, Option<Utc>>,
+    /// Lists a person may only read (person, list): the fixture's way to a `Read` access.
+    pub read_only: Vec<(PersonRef, ObjectId)>,
     /// The trash setting: days until the automatic purge, `None` = never ("nie automatisch löschen").
     pub trash_days: Option<u32>,
     pub groups: Arc<dyn GroupMembers>,
@@ -96,6 +98,7 @@ impl State {
             cuts: Vec::new(),
             list_bins: BTreeMap::new(),
             keeps: BTreeMap::new(),
+            read_only: Vec::new(),
             trash_days: Some(TRASH_DAYS),
             groups,
             zone: chrono_tz::Europe::Berlin,

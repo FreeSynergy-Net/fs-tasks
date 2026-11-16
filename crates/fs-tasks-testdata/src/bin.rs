@@ -156,7 +156,14 @@ impl State {
             self.drop_list(id);
             return Ok(());
         }
-        let i = self.at(id).ok_or(Error::NotFound(id))?;
+        // NotFound (also for what the asker may not see), then Forbidden, then Invalid: nothing is given away.
+        let i = self
+            .at(id)
+            .filter(|&i| self.sees_task(i) || self.mutated(Mutation::LeakTrash))
+            .ok_or(Error::NotFound(id))?;
+        if !self.mutated(Mutation::LeakTrash) {
+            self.need_write(self.rows[i].task.list, "trash.purge")?;
+        }
         if self.rows[i].deleted.is_none() {
             return Err(Self::bad("id", "not-in-trash"));
         }
@@ -167,13 +174,43 @@ impl State {
             return Err(forbidden().into());
         }
         let mut ids = vec![id];
-        ids.extend(
-            self.rows
-                .iter()
-                .filter(|r| r.deleted_with == Some(id))
-                .map(|r| r.task.id),
-        );
+        ids.extend(self.rows_going_with(id));
         self.drop_rows(&ids);
         Ok(())
+    }
+
+    /// The subtasks that go with the purge of `id`: those deleted with it, but not a kept one (it stays in the trash
+    /// on its own, as `expire` does it) and not the subtasks below a kept one (they stay with it).
+    fn rows_going_with(&mut self, id: ObjectId) -> Vec<ObjectId> {
+        let with: Vec<ObjectId> = self
+            .rows
+            .iter()
+            .filter(|r| r.deleted_with == Some(id))
+            .map(|r| r.task.id)
+            .collect();
+        if self.mutated(Mutation::PurgeTakesKept) {
+            return with;
+        }
+        let mut stay: Vec<ObjectId> = Vec::new();
+        for &k in &with {
+            let mut up = Some(k);
+            while let Some(c) = up.filter(|c| *c != id) {
+                if self.is_held(c) {
+                    stay.push(k);
+                    if c != k {
+                        let to = c;
+                        self.rows
+                            .iter_mut()
+                            .filter(|r| r.task.id == k)
+                            .for_each(|r| {
+                                r.deleted_with = Some(to);
+                            });
+                    }
+                    break;
+                }
+                up = self.at(c).and_then(|i| self.rows[i].task.parent);
+            }
+        }
+        with.into_iter().filter(|k| !stay.contains(k)).collect()
     }
 }

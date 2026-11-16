@@ -5,7 +5,7 @@
 //! `row_key` is the key of the item. A change that changes nothing writes nothing.
 
 use crate::mutation::Mutation;
-use crate::state::State;
+use crate::state::{State, check};
 use crate::tasks_v1::{
     CHECKLIST_MAX, Checked, ChecklistChange, ChecklistItem, FieldChange, HistoryKind, ObjectId,
     Rank, RankError, Revision, Task, TaskResult, Value,
@@ -99,7 +99,9 @@ impl State {
         change: ChecklistChange,
     ) -> TaskResult<Task> {
         self.expire();
-        let i = self.live_expected(id, expected)?;
+        let i = self.live(id)?;
+        self.need_write(self.rows[i].task.list, "task.checklist")?;
+        check(self.rows[i].task.revision, expected)?;
         let mut items = self.rows[i].task.checklist.clone();
         let (kind, fields) = match change {
             ChecklistChange::Add { title, after } => {

@@ -5,12 +5,13 @@
 //! if nobody changed the series since, else `Changed`).
 
 use crate::clock::{local, naive};
+use crate::mutation::Mutation;
 use crate::ops_repeat::is_completion;
 use crate::series::{base, rule};
 use crate::state::{Cut, State};
 use crate::tasks_v1::{
     Deleted, Error, HistoryKind, LocalDateTime, ObjectId, Override, OverrideChange, Recurrence,
-    RecurrenceRule, Revision, RuleEnd, SeriesScope, Task, TaskResult, Utc,
+    RecurrenceRule, Revision, RuleEnd, SUBTASK_DEPTH_MAX, SeriesScope, Task, TaskResult, Utc,
 };
 use chrono::Duration;
 
@@ -177,7 +178,15 @@ impl State {
     }
 
     fn restore_whole(&mut self, id: ObjectId) -> TaskResult<Task> {
-        let i = self.at(id).ok_or(Error::NotFound(id))?;
+        // NotFound (also for what the asker may not see), then Forbidden, then Invalid: nothing is given away.
+        let i = self
+            .at(id)
+            .filter(|&i| self.sees_task(i))
+            .ok_or(Error::NotFound(id))?;
+        let invalid_first = self.mutated(Mutation::RestoreInvalidFirst);
+        if !invalid_first {
+            self.need_write(self.rows[i].task.list, "task.restore")?;
+        }
         if self.rows[i].deleted.is_none() {
             return Err(Self::bad(
                 "task",
@@ -199,7 +208,12 @@ impl State {
         {
             return Err(Self::bad("parent", "in-trash"));
         }
-        self.need_write(self.rows[i].task.list, "task.restore")?;
+        if self.levels_after_restore(i) > SUBTASK_DEPTH_MAX {
+            return Err(Self::bad("parent", "too-deep"));
+        }
+        if invalid_first {
+            self.need_write(self.rows[i].task.list, "task.restore")?;
+        }
         for k in 0..self.rows.len() {
             if self.rows[k].deleted_with == Some(id) {
                 self.rows[k].deleted = None;
@@ -211,6 +225,21 @@ impl State {
         self.rows[i].deleted = None;
         self.bump(i, HistoryKind::Undo, Vec::new());
         Ok(self.rows[i].task.clone())
+    }
+
+    /// The levels of the tree once the task at row `i` is back with the subtasks that were deleted with it (its
+    /// parent may have moved deeper meanwhile).
+    fn levels_after_restore(&self, i: usize) -> usize {
+        let t = &self.rows[i].task;
+        let above = t.parent.map_or(0, |p| self.depth_of(p));
+        let below = self
+            .rows
+            .iter()
+            .filter(|r| r.deleted_with == Some(t.id))
+            .map(|r| self.depth_of(r.task.id) - self.depth_of(t.id))
+            .max()
+            .unwrap_or(0);
+        above + 1 + below
     }
 
     fn restore_cut(

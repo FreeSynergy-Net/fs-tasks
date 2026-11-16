@@ -169,7 +169,7 @@ impl State {
     }
 
     /// The level of a task in its tree (a top-level task is level 1).
-    fn depth_of(&self, id: ObjectId) -> usize {
+    pub(crate) fn depth_of(&self, id: ObjectId) -> usize {
         let mut n = 0;
         let mut at = Some(id);
         while let Some(i) = at {

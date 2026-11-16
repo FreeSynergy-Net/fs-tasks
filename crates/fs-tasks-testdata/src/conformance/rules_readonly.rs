@@ -6,7 +6,8 @@
 use super::ConformanceFixture;
 use super::cx::{Cx, is_forbidden};
 use crate::tasks_v1::{
-    ChecklistChange, Children, ListAccess, Progress, SeriesScope, TaskDraft, TaskPatch, Trash,
+    ChecklistChange, Children, Dependency, DependencyKind, ListAccess, Progress, SeriesScope,
+    TaskDraft, TaskPatch, Trash,
 };
 
 pub(super) async fn rules(fx: &dyn ConformanceFixture, cx: &mut Cx<'_>) {
@@ -44,6 +45,7 @@ pub(super) async fn rules(fx: &dyn ConformanceFixture, cx: &mut Cx<'_>) {
         rest: TaskPatch::default(),
     };
     let me2 = crate::ids::person(4242);
+    let far = super::rules_claim::far(&t);
     let forbidden = [
         ("create", dir.create(draft).await.map(|_| ())),
         (
@@ -62,6 +64,27 @@ pub(super) async fn rules(fx: &dyn ConformanceFixture, cx: &mut Cx<'_>) {
         (
             "assign",
             dir.assign(t.id, t.revision, &me2, w).await.map(|_| ()),
+        ),
+        (
+            "unassign",
+            dir.unassign(t.id, t.revision, &me2, w).await.map(|_| ()),
+        ),
+        ("claim", dir.claim(t.id, t.revision, far).await.map(|_| ())),
+        ("release", dir.release(t.id, t.revision).await.map(|_| ())),
+        ("place", dir.place(t.id, t.revision, None).await.map(|_| ())),
+        (
+            "relate",
+            dir.relate(
+                t.id,
+                t.revision,
+                Dependency {
+                    other_uid: "zzconf-other".to_owned(),
+                    kind: DependencyKind::DependsOn,
+                    gap: None,
+                },
+            )
+            .await
+            .map(|_| ()),
         ),
         (
             "checklist",

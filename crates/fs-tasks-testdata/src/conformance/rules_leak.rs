@@ -50,18 +50,66 @@ pub(super) async fn rules(fx: &dyn ConformanceFixture, cx: &mut Cx<'_>) {
         deleted.is_ok() && seen.iter().any(|c| c.task == gone.id),
         "leak setup: the group sees the deletion in its own feed",
     );
-    if !fx.act_as(Some(agent)).await {
+    if !fx.act_as(Some(agent.clone())).await {
         cx.skip("leak: the fixture cannot act as the agent");
         fx.act_as(None).await;
         return;
     }
     asking(cx, &list.id, &gone.id, &living.id).await;
-    fx.act_as(Some(colleague)).await;
+    fx.act_as(Some(colleague.clone())).await;
     cx.ensure(
         dir.purge(gone.id).await.is_ok(),
         "purge: the group itself still may (the AI's try changed nothing)",
     );
+    after_list_purge(fx, cx, &colleague, &agent).await;
     fx.act_as(None).await;
+}
+
+/// A list that is purged takes its feed with it, for everybody: the AI, who never saw it, learns nothing afterwards
+/// (ids, the list, create/add/delete, times), and the owner sees nothing of it either (purge makes no entry, so
+/// hiding costs nobody anything).
+async fn after_list_purge(
+    fx: &dyn ConformanceFixture,
+    cx: &mut Cx<'_>,
+    colleague: &crate::tasks_v1::PersonRef,
+    agent: &crate::tasks_v1::PersonRef,
+) {
+    let dir = cx.dir;
+    if !fx.act_as(Some(colleague.clone())).await {
+        cx.ensure(false, "leak setup: the fixture acts as the colleague again");
+        return;
+    }
+    let Ok(list) = dir.create_list("Zzconf leak purged", None, None).await else {
+        return;
+    };
+    let Some(t) = cx.task(list.id, "in a purged list").await else {
+        return;
+    };
+    let rev = cx.fresh_list(list.id).await.unwrap_or(list.revision);
+    let deleted = dir.delete_list(list.id, rev).await;
+    cx.ensure(
+        deleted.is_ok(),
+        "leak setup: the colleague deletes the list",
+    );
+    let Ok(dl) = deleted else { return };
+    cx.ensure(
+        dir.purge(dl.id).await.is_ok(),
+        "leak setup: the colleague purges the list",
+    );
+    let start = Place("0".to_owned());
+    let own = cx.changes_since(Some(&start)).await;
+    cx.ensure(
+        !own.iter().any(|c| c.task == t.id || c.list == list.id),
+        "leak: changes shows nobody (not the owner) what happened in a list that was purged",
+    );
+    if !fx.act_as(Some(agent.clone())).await {
+        return;
+    }
+    let seen = cx.changes_since(Some(&start)).await;
+    cx.ensure(
+        !seen.iter().any(|c| c.task == t.id || c.list == list.id),
+        "leak: changes shows the AI nothing of a list that was purged",
+    );
 }
 
 /// What the AI, who does not see the list, gets from each way of asking.
@@ -100,6 +148,11 @@ async fn asking(
     cx.fails(
         &dir.purge(*gone).await,
         "leak: purge of a task in an invisible list is NotFound",
+        is_not_found,
+    );
+    cx.fails(
+        &dir.restore(*gone, SeriesScope::Whole).await,
+        "restore: a deleted task in an invisible list is NotFound, not Invalid",
         is_not_found,
     );
     cx.fails(

@@ -208,7 +208,9 @@ impl State {
         {
             return Err(Self::bad("parent", "in-trash"));
         }
-        if self.levels_after_restore(i) > SUBTASK_DEPTH_MAX {
+        if self.levels_after_restore(i) > SUBTASK_DEPTH_MAX
+            && !self.mutated(Mutation::RestoreNoDepth)
+        {
             return Err(Self::bad("parent", "too-deep"));
         }
         if invalid_first {

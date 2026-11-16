@@ -18,6 +18,7 @@ impl State {
     ) -> TaskResult<Task> {
         self.expire();
         let i = self.live_expected(id, expected)?;
+        self.need_write(self.rows[i].task.list, "relation.create")?;
         if dep.kind == DependencyKind::DependsOn && dep.gap.is_some() {
             return Err(Self::bad("gap", "not-with-depends-on"));
         }
@@ -53,6 +54,7 @@ impl State {
     ) -> TaskResult<Task> {
         self.expire();
         let i = self.live_expected(id, expected)?;
+        self.need_write(self.rows[i].task.list, "relation.delete")?;
         let deps = &mut self.rows[i].task.dependencies;
         let before = deps.len();
         deps.retain(|d| !(d.other_uid == other_uid && d.kind == kind));

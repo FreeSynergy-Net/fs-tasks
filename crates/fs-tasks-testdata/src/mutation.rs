@@ -42,4 +42,6 @@ pub enum Mutation {
     NextIgnoresReady,
     /// `restore` says `Invalid` before it asks for the right to write.
     RestoreInvalidFirst,
+    /// `restore` does not check the depth of the tree it brings back.
+    RestoreNoDepth,
 }

@@ -134,6 +134,7 @@ impl State {
     ) -> TaskResult<Task> {
         self.expire();
         let i = self.live_expected(id, expected)?;
+        self.need_write(self.rows[i].task.list, "task.place")?;
         if after == Some(id) {
             return Err(Self::bad("after", "itself"));
         }

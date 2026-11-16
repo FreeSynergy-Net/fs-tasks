@@ -245,17 +245,20 @@ impl State {
         if from > self.changes.len() {
             return Err(invalid("since", "cursor"));
         }
-        // The cursor counts what was read; what the asker may not see is left out of the page, not of the count.
-        let window: Vec<&Change> = self.changes.iter().skip(from).take(size).collect();
-        let next = Place((from + window.len()).to_string());
-        let items: Vec<Change> = window
-            .into_iter()
-            .filter(|c| self.sees_list_id(c.list) || self.mutated(Mutation::LeakTrash))
-            .cloned()
-            .collect();
+        // What the asker may not see is left out, and the page is filled from what follows: a page is empty only at
+        // the end of the feed (the cursor counts what was read, not what was shown).
+        let mut items: Vec<Change> = Vec::new();
+        let mut at = from;
+        while at < self.changes.len() && items.len() < size {
+            let c = &self.changes[at];
+            if self.sees_feed_of(c.list) || self.mutated(Mutation::LeakTrash) {
+                items.push(c.clone());
+            }
+            at += 1;
+        }
         Ok(Page {
             items,
-            next: Some(next),
+            next: Some(Place(at.to_string())),
         })
     }
 }

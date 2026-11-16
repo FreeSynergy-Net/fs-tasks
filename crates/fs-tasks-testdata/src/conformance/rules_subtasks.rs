@@ -174,3 +174,55 @@ pub(super) async fn depth(cx: &mut Cx<'_>, list: ObjectId) {
     );
     let _ = lone_kid;
 }
+
+/// `restore` checks the depth of the tree it brings back: the parent moved deeper meanwhile, so the task and the
+/// subtask that went with it no longer fit (`Invalid`, `parent`), and nothing was restored.
+pub(super) async fn restore_depth(cx: &mut Cx<'_>, list: ObjectId) {
+    let dir = cx.dir;
+    let under = |p: ObjectId| TaskPatch {
+        parent: Some(Some(p)),
+        ..TaskPatch::default()
+    };
+    let Some(p0) = cx.task(list, "restore parent").await else {
+        return;
+    };
+    let Some(x) = cx.task_with(list, "restore x", under(p0.id)).await else {
+        return;
+    };
+    if cx.task_with(list, "restore y", under(x.id)).await.is_none() {
+        return;
+    }
+    let Ok(gone) = dir.delete(x.id, x.revision, SeriesScope::Whole).await else {
+        return;
+    };
+    let Some(mut at) = cx.task(list, "chain 1").await else {
+        return;
+    };
+    for level in 2..SUBTASK_DEPTH_MAX {
+        let made = dir
+            .create(super::cx::draft(
+                list,
+                &format!("chain {level}"),
+                under(at.id),
+            ))
+            .await;
+        let Ok(t) = made else { return };
+        at = t;
+    }
+    let Some(p0) = cx.fresh(p0.id).await else {
+        return;
+    };
+    let moved = dir
+        .update(p0.id, p0.revision, under(at.id), SeriesScope::Whole)
+        .await;
+    cx.ensure(
+        moved.is_ok(),
+        "restore depth setup: the parent moves to the last level",
+    );
+    let back = dir.restore(gone.id, SeriesScope::Whole).await;
+    cx.fails(
+        &back,
+        "restore: a task whose tree would be deeper than SUBTASK_DEPTH_MAX is Invalid",
+        is_invalid,
+    );
+}

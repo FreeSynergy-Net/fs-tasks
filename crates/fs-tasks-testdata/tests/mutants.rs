@@ -112,6 +112,29 @@ async fn a_leak_of_history_changes_and_purge_is_caught() {
 }
 
 #[tokio::test]
+async fn a_feed_of_a_purged_list_that_shows_is_caught() {
+    caught(
+        Mutation::LeakTrash,
+        "leak: changes shows the AI nothing of a list that was purged",
+    )
+    .await;
+    caught(
+        Mutation::LeakTrash,
+        "leak: changes shows nobody (not the owner)",
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn a_restore_without_the_depth_check_is_caught() {
+    caught(
+        Mutation::RestoreNoDepth,
+        "restore: a task whose tree would be deeper than SUBTASK_DEPTH_MAX is Invalid",
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn tasks_everybody_sees_are_caught() {
     caught(
         Mutation::SeesAll,

@@ -77,6 +77,12 @@ impl State {
         self.list_at(id).is_none_or(|l| self.sees(&self.lists[l]))
     }
 
+    /// Whether the feed may show what happened in the list `id`: a list that is gone (purged, expired) is seen by
+    /// nobody, so what the feed holds of it stays hidden from everybody, its owner included.
+    pub(crate) fn sees_feed_of(&self, id: ObjectId) -> bool {
+        self.list_at(id).is_some_and(|l| self.sees(&self.lists[l]))
+    }
+
     /// The access to the list `id` of the asking person; `NotFound` when they may not see it.
     pub(crate) fn access_to(&self, id: ObjectId) -> TaskResult<ListAccess> {
         self.list_at(id)

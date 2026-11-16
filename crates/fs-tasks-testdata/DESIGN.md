@@ -107,10 +107,13 @@ the Loro-style concurrent spread of two replicas are out of scope (v2, PLAN sect
 Reading a list (`ListAccess::Read`) covers `list`, `get`, `history` and `changes`: whoever may not see the list gets
 `NotFound` from `history` and `purge` (never `Ok`, never `Invalid` first) and finds nothing in `changes`; `restore` asks
 `NotFound`, then `Forbidden`, then `Invalid` and checks the depth. `purge` of a parent detaches a kept subtask (and what
-hangs below it) instead of deleting it, as `expire` does. The change of a purged list is not hidden (the list is gone, so
-there is nothing left to ask). Rules: `rules_leak.rs`, `rules_readonly.rs`, `rules_purge_kept.rs`, `rules_claim_order.rs`,
+hangs below it) instead of deleting it, as `expire` does. What the feed holds of a list that is gone (purged, expired) is hidden from everybody, its
+owner included: purge makes no feed entry, so hiding costs nobody anything, while showing it would give the AI
+afterwards what it never saw (ids, the list, create/add/delete, times). `changes` fills its page from what follows
+(a page is empty only at the end of the feed); whether the trait text should say that an empty page may not mean
+the end is a question for the next round (the fake never gives such a page). Rules: `rules_leak.rs`, `rules_readonly.rs`, `rules_purge_kept.rs`, `rules_claim_order.rs`,
 `rules_repeat_dates.rs`; mutations `LeakTrash`, `SeesAll`, `PurgeTakesKept`, `ClaimedFirst`, `ReleaseOpen`, `UndoAny`,
-`NextIgnoresReady`, `RestoreInvalidFirst`. The fixture offers `read_only(who, list)` for the access `Read`.
+`NextIgnoresReady`, `RestoreInvalidFirst`, `RestoreNoDepth`. The fixture offers `read_only(who, list)` for the access `Read`.
 
 ## For K1 (`LocalTasks`, two runs, not one)
 

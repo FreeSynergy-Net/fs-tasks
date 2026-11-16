@@ -1,0 +1,24 @@
+[package]
+name = "fs-tasks-local"
+description = "LocalTasks: the first provider of the Tasks trait (tasks_v1), over typed fs-objects v5 tables (ADR 0086); pilot programm-grundgeruest, core step K1 run 1"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+# The fixed trait folder (tasks_v1, hash de4618e1...d46) and the zone-free helpers of the pilot live in the testdata crate.
+fs-tasks-testdata = { path = "../fs-tasks-testdata" }
+# The v5 layer (store, ids, envelope, trash, purge), at the pin of the tagged fs-objects (v0.0.2; no lift to v0.0.3, no hold yet).
+fs-objects = { git = "https://github.com/FreeSynergy/fs-objects", tag = "v0.0.2", features = ["v5"] }
+# The shared types the layer and the trait speak (same tag as fs-tasks-testdata).
+fs-types = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.22" }
+# The same engine and exact pin as fs-objects (rows are `turso::Value`).
+turso = { version = "=0.8.3", default-features = false }
+async-trait = "0.1"
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+chrono-tz = "0.10"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }

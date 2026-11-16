@@ -44,4 +44,6 @@ pub enum Mutation {
     RestoreInvalidFirst,
     /// `restore` does not check the depth of the tree it brings back.
     RestoreNoDepth,
+    /// The deadline of a deletion is a fixed date, not the time of the delete plus the trash period.
+    FixedDeadline,
 }

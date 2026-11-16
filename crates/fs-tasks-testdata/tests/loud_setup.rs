@@ -83,6 +83,7 @@ async fn failures(fx: &Loud) -> Vec<String> {
     let options = Options {
         heavy: false,
         skip_rank: true,
+        partial: false,
     };
     Box::pin(run_fixture_conformance_with(fx, options))
         .await

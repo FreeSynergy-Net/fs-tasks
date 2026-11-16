@@ -13,6 +13,7 @@ async fn caught(mutation: Mutation, rule: &str) {
     let options = Options {
         heavy: false,
         skip_rank: true,
+        partial: false,
     };
     let report = Box::pin(run_fixture_conformance_with(&fx, options)).await;
     assert!(
@@ -185,6 +186,20 @@ async fn a_restore_that_says_invalid_before_forbidden_is_caught() {
     caught(
         Mutation::RestoreInvalidFirst,
         "without the right to write it is Forbidden, before Invalid",
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn a_fixed_deadline_instead_of_the_time_of_the_delete_is_caught() {
+    caught(
+        Mutation::FixedDeadline,
+        "the deadline of a task is the time of the delete plus the trash period",
+    )
+    .await;
+    caught(
+        Mutation::FixedDeadline,
+        "the deadline of a list is the time of the delete plus the trash period",
     )
     .await;
 }

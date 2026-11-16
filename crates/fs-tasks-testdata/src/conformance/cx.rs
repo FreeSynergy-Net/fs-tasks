@@ -26,6 +26,9 @@ pub(crate) struct Cx<'a> {
     /// Insertions at one edge of a rank sequence (2000; 6000 with [`Options::heavy`]).
     pub edge: usize,
     pub skip_rank: bool,
+    /// The provider offers only part of the capabilities (a staged build): a group of rules whose capability is off is
+    /// skipped and listed in `Report::skipped`, never reported as failed and never as passed.
+    pub partial: bool,
 }
 
 /// Switches of a conformance run.
@@ -36,6 +39,10 @@ pub struct Options {
     pub heavy: bool,
     /// Leave out the rank rules (they write thousands of tasks): for the quick runs against mutations.
     pub skip_rank: bool,
+    /// A provider that offers only part of the capabilities (a staged build such as `LocalTasks` run 1): a rule group
+    /// whose capability is off is skipped and reported in `Report::skipped`, not as a failure. Off (the default) a
+    /// missing capability is a failure: a full provider must offer all of them.
+    pub partial: bool,
 }
 
 impl<'a> Cx<'a> {
@@ -46,6 +53,7 @@ impl<'a> Cx<'a> {
             berlin: Zone::iana("Europe/Berlin").ok()?,
             edge: if options.heavy { 6000 } else { 2000 },
             skip_rank: options.skip_rank,
+            partial: options.partial,
         })
     }
 
@@ -69,6 +77,21 @@ impl<'a> Cx<'a> {
     ) {
         let ok = result.as_ref().err().is_some_and(want);
         self.ensure(ok, rule);
+    }
+
+    /// Whether a group of rules runs: always for a full provider; for a partial one only when it offers every capability
+    /// the group needs (else the group is skipped, with the missing capability named).
+    pub(crate) fn needs(&mut self, group: &str, caps: &[&str]) -> bool {
+        if !self.partial {
+            return true;
+        }
+        match caps.iter().find(|c| !self.caps(c)) {
+            None => true,
+            Some(missing) => {
+                self.skip(&format!("{group}: the provider lacks {missing} (partial)"));
+                false
+            }
+        }
     }
 
     pub(crate) fn caps(&self, name: &str) -> bool {

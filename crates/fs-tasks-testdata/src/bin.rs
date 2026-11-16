@@ -31,10 +31,15 @@ pub(crate) fn restorable(bin: Bin, keep: Option<Option<Utc>>, now: Utc) -> Resto
 impl State {
     /// A new bin with the deadline of the setting.
     pub(crate) fn new_bin(&self) -> Bin {
+        let from = if self.mutated(Mutation::FixedDeadline) {
+            crate::fake::START_MS
+        } else {
+            self.now.millis()
+        };
         Bin {
             until: self
                 .trash_days
-                .map(|d| Utc::from_millis(self.now.millis() + i64::from(d) * 86_400_000)),
+                .map(|d| Utc::from_millis(from + i64::from(d) * 86_400_000)),
         }
     }
 

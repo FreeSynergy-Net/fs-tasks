@@ -18,6 +18,10 @@ use crate::tasks_v1::{
 async fn base(cx: &mut Cx<'_>) {
     for cap in CAPABILITIES {
         let on = cx.caps(cap);
+        if cx.partial && !on {
+            cx.skip(&format!("capabilities: {cap} is not offered (partial)"));
+            continue;
+        }
         cx.ensure(
             on || cap == "dependency.evaluate",
             &format!("capabilities: {cap} is offered"),
@@ -25,18 +29,32 @@ async fn base(cx: &mut Cx<'_>) {
     }
     rules_lists::rules(cx).await;
     rules_tasks::rules(cx).await;
-    rules_assign::rules(cx).await;
+    if cx.needs("assign", &["task.assign"]) {
+        rules_assign::rules(cx).await;
+    }
     rules_trash::rules(cx).await;
     rules_query::rules(cx).await;
-    rules_series::rules(cx).await;
-    rules_ready::rules(cx).await;
-    rules_feed::rules(cx).await;
-    if !cx.skip_rank {
+    if cx.needs("series", &["task.progress"]) {
+        rules_series::rules(cx).await;
+    }
+    if cx.needs("ready", &["relation.create"]) {
+        rules_ready::rules(cx).await;
+    }
+    if cx.needs("feed", &["task.changes"]) {
+        rules_feed::rules(cx).await;
+    }
+    if !cx.skip_rank && cx.needs("rank", &["task.place"]) {
         rules_rank::rules(cx).await;
     }
-    Box::pin(rules_checklist::rules(cx)).await;
-    rules_repeat::rules(cx).await;
-    Box::pin(rules_claim::rules(cx)).await;
+    if cx.needs("checklist", &["task.checklist"]) {
+        Box::pin(rules_checklist::rules(cx)).await;
+    }
+    if cx.needs("repeat", &["task.progress"]) {
+        rules_repeat::rules(cx).await;
+    }
+    if cx.needs("claim", &["task.claim"]) {
+        Box::pin(rules_claim::rules(cx)).await;
+    }
     rules_purge::rules(cx).await;
 }
 
@@ -75,6 +93,7 @@ pub async fn run_fixture_conformance_with(
         };
     };
     base(&mut cx).await;
+    rules_trash::moves(fixture, &mut cx).await;
     rules_trash::deadline(fixture, &mut cx).await;
     rules_repeat_more::kept(fixture, &mut cx).await;
     rules_purge::states(fixture, &mut cx).await;

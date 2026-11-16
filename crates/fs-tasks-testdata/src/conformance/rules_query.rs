@@ -142,27 +142,33 @@ async fn filters(cx: &mut Cx<'_>, list: ObjectId, [t1, t2, t3, t4, t5]: [ObjectI
         "list: text is found in the title, whatever the case",
     );
     q.text = None;
-    let Some(done) = cx.fresh(t4).await else {
-        return;
-    };
-    let _ = cx.set_progress(&done, Progress::Completed).await;
-    let Some(done2) = cx.fresh(t2).await else {
-        return;
-    };
-    let _ = cx.set_progress(&done2, Progress::Completed).await;
-    q.progress = vec![Progress::Completed];
-    q.order = Order::Finished;
-    cx.ensure(
-        cx.ids(&q).await == [t2, t4],
-        "list: Finished = last finished first",
-    );
-    q.progress = vec![Progress::NeedsAction];
+    if cx.needs(
+        "list: Finished order and the progress filter",
+        &["task.progress"],
+    ) {
+        let Some(done) = cx.fresh(t4).await else {
+            return;
+        };
+        let _ = cx.set_progress(&done, Progress::Completed).await;
+        let Some(done2) = cx.fresh(t2).await else {
+            return;
+        };
+        let _ = cx.set_progress(&done2, Progress::Completed).await;
+        q.progress = vec![Progress::Completed];
+        q.order = Order::Finished;
+        cx.ensure(
+            cx.ids(&q).await == [t2, t4],
+            "list: Finished = last finished first",
+        );
+        q.progress = vec![Progress::NeedsAction];
+        q.order = Order::Updated;
+        let open = cx.ids(&q).await;
+        cx.ensure(
+            open.len() == 3 && !open.contains(&t2) && !open.contains(&t4),
+            "list: progress filter",
+        );
+    }
     q.order = Order::Updated;
-    let open = cx.ids(&q).await;
-    cx.ensure(
-        open.len() == 3 && !open.contains(&t2) && !open.contains(&t4),
-        "list: progress filter",
-    );
     let Some(three) = cx.fresh(t3).await else {
         return;
     };

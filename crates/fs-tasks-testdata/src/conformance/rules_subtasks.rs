@@ -44,6 +44,9 @@ pub(super) async fn rules(cx: &mut Cx<'_>, list: crate::tasks_v1::ObjectId) {
         s.is_some_and(|s| s.subtasks_total == 2 && s.subtasks_open == 2),
         "list: subtask counts",
     );
+    if !cx.needs("subtasks and progress", &["task.progress"]) {
+        return;
+    }
 
     let refused = dir
         .progress(

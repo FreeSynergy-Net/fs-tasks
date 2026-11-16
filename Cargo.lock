@@ -1471,7 +1471,7 @@ dependencies = [
  "capnp",
  "capnp-rpc",
  "chrono",
- "fs-objects",
+ "fs-objects 0.0.1",
  "futures",
  "idna",
  "rustix 1.1.6",
@@ -1516,6 +1516,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs-objects"
+version = "0.0.2"
+source = "git+https://github.com/FreeSynergy/fs-objects?tag=v0.0.2#cad3c46f436489712aa90c3268b3008ce43e8a2e"
+dependencies = [
+ "async-trait",
+ "base64",
+ "chrono",
+ "fs-types",
+ "getrandom 0.3.4",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.21",
+ "tokio",
+ "turso",
+ "unicode-normalization",
+ "uuid",
+]
+
+[[package]]
 name = "fs-people-directory"
 version = "0.0.13"
 source = "git+https://github.com/FreeSynergy/fs-people?rev=358a8145b08dbea73dac040de69207f3ef90ad33#358a8145b08dbea73dac040de69207f3ef90ad33"
@@ -1546,7 +1566,7 @@ dependencies = [
  "fs-components-widgets",
  "fs-components-workbenches",
  "fs-interfaces 0.0.22",
- "fs-objects",
+ "fs-objects 0.0.1",
  "fs-tasks-core",
  "fs-tasks-server",
  "serde_json",
@@ -1561,7 +1581,7 @@ dependencies = [
  "capnp",
  "chrono",
  "fs-interfaces 0.0.22",
- "fs-objects",
+ "fs-objects 0.0.1",
  "fs-tasks-core",
  "fs-tasks-server",
  "serde_json",
@@ -1578,12 +1598,26 @@ dependencies = [
  "chrono",
  "fs-interfaces 0.0.22",
  "fs-jscalendar",
- "fs-objects",
+ "fs-objects 0.0.1",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror 2.0.21",
  "tokio",
+]
+
+[[package]]
+name = "fs-tasks-local"
+version = "0.0.9"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "chrono-tz",
+ "fs-objects 0.0.2",
+ "fs-tasks-testdata",
+ "fs-types",
+ "tokio",
+ "turso",
 ]
 
 [[package]]
@@ -1594,7 +1628,7 @@ dependencies = [
  "capnp",
  "capnp-rpc",
  "fs-interfaces 0.0.22",
- "fs-objects",
+ "fs-objects 0.0.1",
  "fs-tasks-core",
  "serde_json",
  "tempfile",

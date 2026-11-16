@@ -4,7 +4,7 @@
 
 use super::ConformanceFixture;
 use super::cx::{Cx, is_changed, is_invalid, is_not_found};
-use crate::tasks_v1::{SeriesScope, TaskPatch, Trash};
+use crate::tasks_v1::{Restorable, SeriesScope, TaskPatch, Trash};
 
 pub(super) async fn rules(cx: &mut Cx<'_>) {
     let dir = cx.dir;
@@ -121,4 +121,59 @@ pub(super) async fn deadline(fx: &dyn ConformanceFixture, cx: &mut Cx<'_>) {
         cx.all(&q).await.is_empty(),
         "list(Only): nothing after the deadline",
     );
+}
+
+const HOUR: i64 = 3_600_000;
+
+/// The deadline is worked out at the time of the delete (its time plus the trash period), not a fixed date: two deletes
+/// an hour apart have deadlines an hour apart (a provider that ticks its clock on every write is a few ms off, the fake
+/// a few seconds; a minute either way is fine), for a task and for a
+/// list. Opus review K0c-3: a provider that has no `restorable_until` of its own computes this itself.
+pub(super) async fn moves(fx: &dyn ConformanceFixture, cx: &mut Cx<'_>) {
+    let dir = cx.dir;
+    let Some(list) = cx.list("deadline moves").await else {
+        return;
+    };
+    let (Some(a), Some(b)) = (
+        cx.task(list.id, "first deleted").await,
+        cx.task(list.id, "second deleted").await,
+    ) else {
+        return;
+    };
+    let (Some(l1), Some(l2)) = (
+        cx.list("deadline list one").await,
+        cx.list("deadline list two").await,
+    ) else {
+        return;
+    };
+    let first = dir.delete(a.id, a.revision, SeriesScope::Whole).await;
+    let first_list = dir.delete_list(l1.id, l1.revision).await;
+    if !fx.advance_clock(HOUR).await {
+        cx.skip("delete: the deadline moves with the clock (the fixture cannot move the clock)");
+        return;
+    }
+    let second = dir.delete(b.id, b.revision, SeriesScope::Whole).await;
+    let second_list = dir.delete_list(l2.id, l2.revision).await;
+    let (Ok(first), Ok(second), Ok(first_list), Ok(second_list)) =
+        (first, second, first_list, second_list)
+    else {
+        cx.ensure(false, "deadline setup: delete two tasks and two lists");
+        return;
+    };
+    for (one, two, what) in [
+        (first.restorable, second.restorable, "a task"),
+        (first_list.restorable, second_list.restorable, "a list"),
+    ] {
+        let (Some(Restorable::Until(x)), Some(Restorable::Until(y))) = (one, two) else {
+            cx.skip("delete: the deadline moves with the clock (the state is not `Until`)");
+            continue;
+        };
+        let gap = y.millis() - x.millis();
+        cx.ensure(
+            (HOUR - 60_000..HOUR + 60_000).contains(&gap),
+            &format!(
+                "delete: the deadline of {what} is the time of the delete plus the trash period (an hour later, an hour later)"
+            ),
+        );
+    }
 }

@@ -5,6 +5,7 @@
 //! under its old reference point; the last one finishes the task like `Whole`. One call, one transaction, one `Update`.
 
 use crate::clock::{local, naive, shift, tz, wall};
+use crate::mutation::Mutation;
 use crate::series::base;
 use crate::state::State;
 use crate::tasks_v1::{
@@ -43,7 +44,7 @@ impl State {
         let Some(Recurrence::Rule(r)) = t.recurrence.first() else {
             return None;
         };
-        if matches!(r.end, RuleEnd::Count(c) if c <= 1) {
+        if matches!(r.end, RuleEnd::Count(c) if c <= 1) && !self.mutated(Mutation::NoLastStop) {
             return None;
         }
         let basis = t.start.as_ref().or(t.due.as_ref());
@@ -51,9 +52,13 @@ impl State {
             Some(Due::Timed { zone, .. }) => tz(zone).unwrap_or(self.zone),
             _ => self.zone,
         };
-        let today = chrono::DateTime::from_timestamp_millis(self.now.millis())?
-            .with_timezone(&zone)
-            .date_naive();
+        let today = if self.mutated(Mutation::RepeatFromDue) {
+            b.date()
+        } else {
+            chrono::DateTime::from_timestamp_millis(self.now.millis())?
+                .with_timezone(&zone)
+                .date_naive()
+        };
         let n = r.interval.max(1);
         let day = match r.frequency {
             Frequency::Daily => today.checked_add_signed(Duration::days(i64::from(n)))?,
@@ -83,6 +88,7 @@ impl State {
             return self.finish_series(i, outcome);
         };
         let now = self.now;
+        let stay = self.mutated(Mutation::TicksStay);
         let mut fields = Vec::new();
         let t = &mut self.rows[i].task;
         for (name, due) in [("start", &mut t.start), ("due", &mut t.due)] {
@@ -97,7 +103,7 @@ impl State {
         if let Some(Recurrence::Rule(r)) = t.recurrence.first_mut()
             && let RuleEnd::Count(c) = &mut r.end
         {
-            *c -= 1;
+            *c = c.saturating_sub(1);
         }
         let change = match outcome {
             Outcome::Done(p) => OverrideChange::Changed {
@@ -123,8 +129,8 @@ impl State {
         t.progress = Progress::NeedsAction;
         t.progress_updated = Some(now);
         t.claim = None;
-        for item in &mut t.checklist {
-            item.done = None;
+        if !stay {
+            t.checklist.iter_mut().for_each(|c| c.done = None);
         }
         self.bump(i, HistoryKind::Update, fields);
         Ok(())
@@ -154,6 +160,15 @@ impl State {
             SeriesScope::This { recurrence_id }
             | SeriesScope::ThisAndFollowing { recurrence_id } => Some(recurrence_id),
         };
+        let newest = self.rows[i].task.overrides.last().map(|o| o.recurrence_id);
+        if to == Progress::NeedsAction
+            && let SeriesScope::This { recurrence_id } = scope
+            && newest == Some(recurrence_id)
+        {
+            // Completing twice on one day leaves the new reference point equal to the finished one: the newest
+            // exception is still the one to take back.
+            return self.undo_completion(i, &recurrence_id, false).map(Some);
+        }
         let old = rid.filter(|r| Some(*r) != current);
         if let Some(r) = old {
             return if to == Progress::NeedsAction && matches!(scope, SeriesScope::This { .. }) {

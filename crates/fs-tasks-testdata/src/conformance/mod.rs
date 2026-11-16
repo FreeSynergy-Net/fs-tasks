@@ -11,16 +11,29 @@
 mod cx;
 mod fixture;
 mod rules_assign;
+mod rules_checklist;
+mod rules_checklist_more;
+mod rules_claim;
 mod rules_feed;
+mod rules_groups;
 mod rules_lists;
+mod rules_purge;
 mod rules_query;
 mod rules_rank;
 mod rules_ready;
+mod rules_repeat;
+mod rules_repeat_ends;
+mod rules_repeat_more;
+mod rules_repeat_undo;
 mod rules_series;
 mod rules_subtasks;
 mod rules_tasks;
 mod rules_trash;
 mod run;
 
+pub use cx::Options;
 pub use fixture::ConformanceFixture;
-pub use run::{Report, run_conformance, run_fixture_conformance, run_unsupported};
+pub use run::{
+    Report, run_conformance, run_conformance_with, run_fixture_conformance,
+    run_fixture_conformance_with, run_unsupported,
+};

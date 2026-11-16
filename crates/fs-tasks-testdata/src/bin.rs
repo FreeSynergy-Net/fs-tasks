@@ -4,6 +4,7 @@
 //! Pattern: State (a [`Bin`] is a deletion; whether it is `Until`, `Held` or `Manual` is computed from the clock and
 //! the keeps at every question, never stored, so a clock that moves changes the answer by itself).
 
+use crate::mutation::Mutation;
 use crate::state::State;
 use crate::tasks_v1::{Error, ObjectId, Restorable, TaskResult, Utc};
 
@@ -61,7 +62,7 @@ impl State {
         }
         let mut latest: Option<Option<Utc>> = None;
         for r in self.rows.iter().filter(|r| r.task.list == id) {
-            if r.deleted.is_some() && self.is_held(r.task.id) {
+            if self.is_held(r.task.id) {
                 let k = self.keeps.get(&r.task.id).copied().flatten();
                 latest = Some(match (latest, k) {
                     (Some(None), _) | (_, None) => None,
@@ -98,10 +99,11 @@ impl State {
     }
 
     fn drop_list(&mut self, id: ObjectId) {
+        let stay = self.mutated(Mutation::OrphansStay);
         let ids: Vec<ObjectId> = self
             .rows
             .iter()
-            .filter(|r| r.task.list == id)
+            .filter(|r| r.task.list == id && !(r.deleted.is_some() && stay))
             .map(|r| r.task.id)
             .collect();
         self.drop_rows(&ids);
@@ -147,8 +149,8 @@ impl State {
             let kept = self
                 .rows
                 .iter()
-                .any(|r| r.task.list == id && self.is_held(r.task.id) && r.deleted.is_some());
-            if self.is_held(id) || kept {
+                .any(|r| r.task.list == id && self.is_held(r.task.id));
+            if (self.is_held(id) || kept) && !self.mutated(Mutation::PurgeHeld) {
                 return Err(forbidden().into());
             }
             self.drop_list(id);
@@ -161,7 +163,7 @@ impl State {
         if self.rows[i].deleted_with.is_some() {
             return Err(Self::bad("id", "deleted-with-parent"));
         }
-        if self.is_held(id) {
+        if self.is_held(id) && !self.mutated(Mutation::PurgeHeld) {
             return Err(forbidden().into());
         }
         let mut ids = vec![id];

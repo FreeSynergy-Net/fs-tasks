@@ -3,6 +3,7 @@
 //! Pattern: Policy (small questions of the state, each one a rule of `tasks_v1/mod.rs`: EIGENTUM, ZUSTÄNDIGE UND
 //! ÜBERNAHME). The groups are asked at the time of the question (`GroupMembers::memberships_of`), never stored.
 
+use crate::mutation::Mutation;
 use crate::state::State;
 use crate::tasks_v1::{
     Error, ListAccess, ObjectId, PersonArt, PersonRef, Task, TaskList, TaskResult,
@@ -34,6 +35,9 @@ impl State {
         let asker = self.asker();
         let base = if self.is_me(&list.owner) || list.owner.id == asker.id {
             Some(ListAccess::Manage)
+        } else if self.acting.is_some() && list.owner == self.account {
+            // Somebody acting (a colleague, an AI) works in the lists of the account with `Write`.
+            Some(ListAccess::Write)
         } else if is_group(&list.owner) {
             if self.groups.manages(&asker, &list.owner) {
                 Some(ListAccess::Manage)
@@ -93,19 +97,18 @@ impl State {
     /// Who may own a list (EIGENTUM): the asking person themselves, or a group they are in; a group needs a
     /// member, another person is `Invalid`, an AI or an AI group is `Forbidden`.
     pub(crate) fn check_owner(&self, owner: &PersonRef, capability: &str) -> TaskResult<()> {
-        if self.groups.is_agent(owner) || self.asker_is_ai() {
+        if (self.groups.is_agent(owner) || self.asker_is_ai()) && !self.mutated(Mutation::AiOwns) {
             return Err(forbidden(capability).into());
         }
-        let asker = self.asker();
         if is_group(owner) {
             let member = self.my_groups().iter().any(|g| g.id == owner.id);
-            return if member || self.groups.manages(&asker, owner) {
+            return if member || self.groups.manages(&self.asker(), owner) {
                 Ok(())
             } else {
                 Err(forbidden(capability).into())
             };
         }
-        if owner.id == asker.id || self.is_me(owner) {
+        if owner.id == self.asker().id || self.is_me(owner) {
             Ok(())
         } else {
             Err(Self::bad("owner", "other-person"))
@@ -115,18 +118,14 @@ impl State {
     /// The claim rule: the asking person may take the task when they are assigned, when they are in an assigned
     /// group (asked through `memberships_of`, never `members_of`), or when nobody is assigned and they may write.
     pub(crate) fn may_claim(&self, t: &Task) -> bool {
-        let asker = self.asker();
-        if t.assignees
-            .iter()
-            .any(|a| a.who.id == asker.id || self.is_me(&a.who))
-        {
+        if t.assignees.iter().any(|a| self.is_me(&a.who)) {
             return true;
         }
         let mine = self.my_groups();
-        if t.assignees
-            .iter()
-            .any(|a| is_group(&a.who) && mine.iter().any(|g| g.id == a.who.id))
-        {
+        if t.assignees.iter().any(|a| {
+            is_group(&a.who)
+                && (mine.iter().any(|g| g.id == a.who.id) || self.mutated(Mutation::GroupOpen))
+        }) {
             return true;
         }
         t.assignees.is_empty() && self.access_to(t.list).is_ok_and(|a| a >= ListAccess::Write)

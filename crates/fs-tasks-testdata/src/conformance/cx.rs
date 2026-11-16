@@ -3,8 +3,8 @@
 //! Pattern: Test helper (plain functions; a setup that fails is a failure of the rule "setup", never a panic).
 
 use crate::tasks_v1::{
-    Error, ObjectId, Order, Progress, Task, TaskDraft, TaskError, TaskList, TaskPatch, TaskQuery,
-    TaskResult, TaskSummary, Tasks, Trash, Zone,
+    Change, Error, ObjectId, Order, Place, Progress, Task, TaskDraft, TaskError, TaskList,
+    TaskPatch, TaskQuery, TaskResult, TaskSummary, Tasks, Trash, Zone,
 };
 
 /// The failed and the skipped rules of a run; empty `failures` means conformant.
@@ -23,14 +23,29 @@ pub(crate) struct Cx<'a> {
     pub dir: &'a dyn Tasks,
     pub report: Report,
     pub berlin: Zone,
+    /// Insertions at one edge of a rank sequence (2000; 6000 with [`Options::heavy`]).
+    pub edge: usize,
+    pub skip_rank: bool,
+}
+
+/// Switches of a conformance run.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Options {
+    /// The night run: 6000 insertions at each rank edge instead of 2000 (a provider that writes to a file takes
+    /// minutes for the long run; the short one proves the same bound).
+    pub heavy: bool,
+    /// Leave out the rank rules (they write thousands of tasks): for the quick runs against mutations.
+    pub skip_rank: bool,
 }
 
 impl<'a> Cx<'a> {
-    pub(crate) fn new(dir: &'a dyn Tasks) -> Option<Self> {
+    pub(crate) fn new(dir: &'a dyn Tasks, options: Options) -> Option<Self> {
         Some(Self {
             dir,
             report: Report::default(),
             berlin: Zone::iana("Europe/Berlin").ok()?,
+            edge: if options.heavy { 6000 } else { 2000 },
+            skip_rank: options.skip_rank,
         })
     }
 
@@ -111,13 +126,34 @@ impl<'a> Cx<'a> {
         }
     }
 
-    /// All summaries of a query (one big page).
+    /// All summaries of a query, page by page (a provider may cap the page size).
     pub(crate) async fn all(&self, q: &TaskQuery) -> Vec<TaskSummary> {
-        self.dir
-            .list(q, None, 100_000)
-            .await
-            .map(|p| p.items)
-            .unwrap_or_default()
+        let mut out = Vec::new();
+        let mut after = None;
+        while let Ok(page) = self.dir.list(q, after.as_ref(), 500).await {
+            let more = page.next.is_some() && !page.items.is_empty();
+            out.extend(page.items);
+            after = page.next;
+            if !more {
+                break;
+            }
+        }
+        out
+    }
+
+    /// The changes since `start`, page by page.
+    pub(crate) async fn changes_since(&self, start: Option<&Place>) -> Vec<Change> {
+        let mut out = Vec::new();
+        let mut at = start.cloned();
+        while let Ok(page) = self.dir.changes(at.as_ref(), 500).await {
+            let empty = page.items.is_empty();
+            out.extend(page.items);
+            at = page.next;
+            if empty || at.is_none() {
+                break;
+            }
+        }
+        out
     }
 
     pub(crate) async fn ids(&self, q: &TaskQuery) -> Vec<ObjectId> {
@@ -129,6 +165,17 @@ impl<'a> Cx<'a> {
             .await
             .into_iter()
             .find(|s| s.id == id)
+    }
+
+    /// The revision of a list as stored now (`None` when it is not in the listing).
+    pub(crate) async fn fresh_list(&self, id: ObjectId) -> Option<crate::tasks_v1::Revision> {
+        let all = self.dir.lists(Trash::Include).await.ok()?;
+        all.into_iter().find(|l| l.id == id).map(|l| l.revision)
+    }
+
+    /// The summary with `id` among the answers of an arbitrary query.
+    pub(crate) async fn summary_in(&self, q: &TaskQuery, id: ObjectId) -> Option<TaskSummary> {
+        self.all(q).await.into_iter().find(|s| s.id == id)
     }
 
     pub(crate) async fn set_progress(&mut self, t: &Task, to: Progress) -> Option<Task> {

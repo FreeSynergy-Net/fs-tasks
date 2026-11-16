@@ -2,9 +2,7 @@
 //! `Unsupported` rules against a provider that only has the required methods.
 
 use async_trait::async_trait;
-use fs_tasks_testdata::conformance::{
-    ConformanceFixture, run_conformance, run_fixture_conformance, run_unsupported,
-};
+use fs_tasks_testdata::conformance::{run_conformance, run_fixture_conformance, run_unsupported};
 use fs_tasks_testdata::tasks_v1::{
     Answer, CAPABILITIES, Capabilities, Change, ChecklistChange, Children, Deleted, Dependency,
     DependencyKind, Error, HistoryEntry, LabelCount, ObjectId, Page, PersonRef, Place, Progress,
@@ -13,27 +11,8 @@ use fs_tasks_testdata::tasks_v1::{
 };
 use fs_tasks_testdata::{FakeTasks, sample};
 
-/// The fixture of the fake: its clock and its "I" card.
-struct Fx(FakeTasks);
-
-#[async_trait]
-impl ConformanceFixture for Fx {
-    fn tasks(&self) -> &dyn Tasks {
-        &self.0
-    }
-    async fn advance_clock(&self, millis: i64) -> bool {
-        self.0
-            .set_now(Utc::from_millis(self.0.now().millis() + millis));
-        true
-    }
-    async fn set_me_card(&self, card: Option<PersonRef>) -> bool {
-        self.0.set_me_card(card);
-        true
-    }
-    async fn account(&self) -> Option<PersonRef> {
-        Some(self.0.account())
-    }
-}
+mod common;
+use common::Fx;
 
 #[tokio::test]
 async fn the_fake_passes_every_rule() {

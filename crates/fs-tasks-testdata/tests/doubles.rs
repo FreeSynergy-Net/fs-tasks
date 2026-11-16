@@ -1,11 +1,12 @@
-//! `FailingTasks`, `SlowTasks`, `FakePeople` and the additions of the sample (PLAN section 10).
+//! `FailingTasks`, `SlowTasks`, `HeldTasks`, `FakePeople` and the additions of the sample (PLAN section 10).
 
 use fs_tasks_testdata::tasks_v1::{
     Date, DateField, DueRange, Error, Order, Progress, Task, TaskDraft, TaskError, TaskPatch,
     TaskQuery, Tasks, Trash, Zone,
 };
 use fs_tasks_testdata::{
-    FailingTasks, FakePeople, FakeTasks, Op, SlowTasks, forbidden, sample, unavailable,
+    FailingTasks, FakePeople, FakeTasks, HeldTasks, KNOWN, Op, SlowTasks, forbidden, sample,
+    unavailable,
 };
 use fs_types::BasicValue;
 use std::sync::Arc;
@@ -74,6 +75,72 @@ async fn a_slow_provider_moves_the_fake_clock_and_never_sleeps() {
     assert_eq!(slow.waited_ms(), 4000);
     assert_eq!(fake.now().millis() - start.millis(), 4000);
     assert!(t.elapsed().as_secs() < 2, "no real sleep");
+}
+
+#[tokio::test]
+async fn a_broken_list_breaks_the_query_for_all_lists_too() {
+    // Z4: a query without lists means "all lists", so the broken one is among them.
+    let s = sample();
+    let broken = s.lists[1].id;
+    let f =
+        FailingTasks::new(Arc::new(s.fake())).failing_list(broken, unavailable("list unreadable"));
+    assert!(f.list(&query(Vec::new()), None, 10).await.is_err());
+    assert!(f.list(&query(vec![s.lists[0].id]), None, 10).await.is_ok());
+}
+
+#[tokio::test]
+async fn a_held_call_stays_open_until_release_so_a_frontend_can_show_loading() {
+    let held = Arc::new(HeldTasks::new(Arc::new(sample().fake())));
+    held.hold();
+    let call = {
+        let h = held.clone();
+        tokio::spawn(async move { h.lists(Trash::Exclude).await })
+    };
+    for _ in 0..20 {
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(held.waiting(), 1, "the call waits");
+    assert!(!call.is_finished(), "and is not answered");
+    held.release();
+    let lists = call.await.unwrap().unwrap();
+    assert_eq!(lists.len(), 6);
+    assert_eq!(held.waiting(), 0);
+    // Open gate: calls pass at once.
+    assert!(held.asker().await.is_ok());
+}
+
+#[tokio::test]
+async fn a_dropped_held_call_is_not_counted_any_more() {
+    let held = Arc::new(HeldTasks::new(Arc::new(sample().fake())));
+    held.hold();
+    let call = {
+        let h = held.clone();
+        tokio::spawn(async move { h.asker().await })
+    };
+    for _ in 0..20 {
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(held.waiting(), 1);
+    call.abort();
+    let _ = call.await;
+    assert_eq!(held.waiting(), 0);
+}
+
+#[tokio::test]
+async fn the_people_are_the_ones_of_the_sample_with_their_names_and_kinds() {
+    use fs_people_directory::PersonDirectory;
+    let people = FakePeople::new();
+    for k in KNOWN {
+        let r = people.resolve(&k.person()).await.unwrap();
+        assert!(
+            format!("{r:?}").contains(k.display),
+            "{} is not shown as {}",
+            k.number,
+            k.display
+        );
+    }
+    let me = people.asker().await.unwrap();
+    assert_eq!(me, Some(KNOWN[0].person()));
 }
 
 #[tokio::test]

@@ -48,6 +48,13 @@ impl FakeTasks {
         Self::with_groups(FakeGroupMembers::sample().shared())
     }
 
+    /// The fake with one deliberately wrong behaviour (to prove that a conformance rule can fail).
+    #[must_use]
+    pub fn with_mutation(self, mutation: crate::Mutation) -> Self {
+        self.lock().mutation = Some(mutation);
+        self
+    }
+
     /// Like [`FakeTasks::new`] with the groups the provider asks (its constructor argument, as `LocalTasks` gets it).
     #[must_use]
     pub fn with_groups(groups: Arc<dyn GroupMembers>) -> Self {
@@ -95,6 +102,11 @@ impl FakeTasks {
     /// Set or remove the "I" card of the asking person.
     pub fn set_me_card(&self, card: Option<PersonRef>) {
         self.lock().me_card = card;
+    }
+
+    /// Somebody else asks (`Some`: a colleague or an AI of the groups fake) or the account asks again (`None`).
+    pub fn act_as(&self, who: Option<PersonRef>) {
+        self.lock().acting = who;
     }
 
     /// The account of the provider.

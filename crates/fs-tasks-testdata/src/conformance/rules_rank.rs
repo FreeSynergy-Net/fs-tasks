@@ -154,9 +154,11 @@ async fn appends(cx: &mut Cx<'_>) {
     );
 }
 
-/// 6000 insertions at the top and 6000 at the bottom: no spread (no `Move` in `changes`), ranks within the edge bound.
+/// `Cx::edge` insertions (2000; 6000 with the `heavy` switch of the night run) at the top and as many at the bottom: no
+/// spread (no `Move` in `changes`), ranks within the edge bound. 2000 is enough: the bound for 2000 is 82 characters,
+/// and halving at the edge (about 4.7 insertions per character) would need about 425, far over 255.
 async fn edges(cx: &mut Cx<'_>) {
-    const N: usize = 6000;
+    let n = cx.edge;
     let dir = cx.dir;
     for (name, top) in [("rank edge top", true), ("rank edge bottom", false)] {
         let Some(list) = cx.list(name).await else {
@@ -169,33 +171,31 @@ async fn edges(cx: &mut Cx<'_>) {
             return;
         };
         let mut last = anchor.id;
-        for i in 0..N {
+        for i in 0..n {
             let draft = super::cx::draft(list.id, &format!("e{i}"), TaskPatch::default());
             let Ok(t) = dir.create(draft).await else {
-                cx.ensure(false, "create: 6000 insertions at the edge");
+                cx.ensure(false, &format!("create: {n} insertions at the edge"));
                 return;
             };
             if !top {
                 let Ok(p) = dir.place(t.id, t.revision, Some(last)).await else {
-                    cx.ensure(false, "place: 6000 insertions at the bottom");
+                    cx.ensure(false, &format!("place: {n} insertions at the bottom"));
                     return;
                 };
                 last = p.id;
             }
         }
         cx.ensure(
-            ascending(cx, list.id, edge_len(N)).await,
-            "rank: 6000 insertions at one edge stay ascending and at most 6000/25 + 2 characters long",
+            ascending(cx, list.id, edge_len(n)).await,
+            &format!("rank: {n} insertions at one edge stay ascending and at most {n}/25 + 2 characters long"),
         );
-        let moves = dir
-            .changes(start.next.as_ref(), 100_000)
-            .await
-            .map(|p| p.items)
-            .unwrap_or_default();
+        let moves = cx.changes_since(start.next.as_ref()).await;
         let moved = moves.iter().filter(|c| c.kind == HistoryKind::Move).count();
         cx.ensure(
-            moved == if top { 0 } else { N },
-            "rank: 6000 insertions at one edge spread nothing (a Move only for each placed task)",
+            moved == if top { 0 } else { n },
+            &format!(
+                "rank: {n} insertions at one edge spread nothing (a Move only for each placed task)"
+            ),
         );
     }
 }
@@ -256,11 +256,7 @@ async fn spread(cx: &mut Cx<'_>) {
         l.revision > low.revision || h.revision > high.revision,
         "rank: the spread gives the tasks whose rank changed a new revision",
     );
-    let moves = dir
-        .changes(start.next.as_ref(), 100_000)
-        .await
-        .map(|p| p.items)
-        .unwrap_or_default();
+    let moves = cx.changes_since(start.next.as_ref()).await;
     let by_spread = moves
         .iter()
         .filter(|c| c.kind == HistoryKind::Move && (c.task == low.id || c.task == high.id))

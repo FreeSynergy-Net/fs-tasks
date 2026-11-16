@@ -4,6 +4,7 @@
 //! then the claim rule `Forbidden { task.claim }`, then the holder `Claimed`; an expired claim holds nobody. One
 //! person holds at most; the assignees never change through a claim.
 
+use crate::mutation::Mutation;
 use crate::ready::is_done;
 use crate::series::current;
 use crate::state::{State, check};
@@ -23,7 +24,8 @@ impl State {
     /// The claim that still holds another person (an expired one holds nobody).
     pub(crate) fn held_by_other(&self, i: usize) -> Option<Claim> {
         let c = self.rows[i].task.claim.clone()?;
-        (c.until > self.now && c.by.id != self.asker().id).then_some(c)
+        ((c.until > self.now || self.mutated(Mutation::ExpiredHolds)) && c.by.id != self.asker().id)
+            .then_some(c)
     }
 
     fn take(&mut self, i: usize, until: Utc) {

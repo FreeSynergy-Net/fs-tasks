@@ -3,7 +3,7 @@
 //! Pattern: Strategy / Test fixture (the rules are written once; each provider says how to move its clock or set
 //! the "I" card, so the same rules run against the fake and later against `LocalTasks`).
 
-use crate::tasks_v1::{PersonRef, Tasks};
+use crate::tasks_v1::{ObjectId, PersonRef, Tasks, Utc};
 use async_trait::async_trait;
 
 /// The provider under test plus the mutators behind it. A mutator the provider cannot offer keeps its default
@@ -23,8 +23,48 @@ pub trait ConformanceFixture: Send + Sync {
         false
     }
 
+    /// Somebody else asks from now on (`Some`: a colleague, an AI; `None`: the account again). `true` when done.
+    async fn act_as(&self, _who: Option<PersonRef>) -> bool {
+        false
+    }
+
     /// The account (Konto-Verweis) of the provider: who asks when there is no "I" card.
     async fn account(&self) -> Option<PersonRef> {
         None
+    }
+
+    /// A group the asking person is an effective member of (for the claim rule and `AssigneeFilter::MyGroups`).
+    async fn my_group(&self) -> Option<PersonRef> {
+        None
+    }
+
+    /// A group the asking person is NOT in (the claim rule says `Forbidden`).
+    async fn foreign_group(&self) -> Option<PersonRef> {
+        None
+    }
+
+    /// Another human the provider knows (act as them with `set_me_card`; they hold a claim the asker meets).
+    async fn colleague(&self) -> Option<PersonRef> {
+        None
+    }
+
+    /// An AI the provider knows as AI (act as it with `set_me_card`: no list ownership, no human groups).
+    async fn agent(&self) -> Option<PersonRef> {
+        None
+    }
+
+    /// "STOP KI": the rights of the AI are withdrawn; every claim of it ends at once. `true` when done.
+    async fn stop_agent(&self, _agent: &PersonRef) -> bool {
+        false
+    }
+
+    /// The trash setting: days until the automatic purge, `None` = never automatically. `true` when done.
+    async fn set_trash_days(&self, _days: Option<u32>) -> bool {
+        false
+    }
+
+    /// Keep a task or list (`keep_until`; `None` = without an end). `true` when done.
+    async fn keep(&self, _id: ObjectId, _until: Option<Utc>) -> bool {
+        false
     }
 }

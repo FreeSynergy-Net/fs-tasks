@@ -4,6 +4,7 @@
 //! object: it has no revision of its own, every change bumps the revision of the task and writes one log entry whose
 //! `row_key` is the key of the item. A change that changes nothing writes nothing.
 
+use crate::mutation::Mutation;
 use crate::state::State;
 use crate::tasks_v1::{
     CHECKLIST_MAX, Checked, ChecklistChange, ChecklistItem, FieldChange, HistoryKind, ObjectId,
@@ -105,7 +106,7 @@ impl State {
                 if title.trim().is_empty() {
                     return Err(Self::bad("checklist.title", "empty"));
                 }
-                if items.len() >= CHECKLIST_MAX {
+                if items.len() >= CHECKLIST_MAX && !self.mutated(Mutation::ChecklistNoLimit) {
                     return Err(Self::bad("checklist", "too-many"));
                 }
                 let rank = rank_between(&mut items, after.as_deref(), None)?;

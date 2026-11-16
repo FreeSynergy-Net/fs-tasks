@@ -2,8 +2,10 @@
 //!
 //! Pattern: Template method (rules as plain checks collected in the report).
 
-use super::cx::{Cx, is_cycle};
-use crate::tasks_v1::{Children, Progress, SeriesScope, TaskError, TaskPatch};
+use super::cx::{Cx, is_cycle, is_invalid};
+use crate::tasks_v1::{
+    Children, ObjectId, Progress, SUBTASK_DEPTH_MAX, SeriesScope, TaskError, TaskPatch,
+};
 
 /// Subtasks: parent cycles, and what `progress` does with open subtasks.
 pub(super) async fn rules(cx: &mut Cx<'_>, list: crate::tasks_v1::ObjectId) {
@@ -112,4 +114,63 @@ pub(super) async fn rules(cx: &mut Cx<'_>, list: crate::tasks_v1::ObjectId) {
             .is_some_and(|k| k.progress == Progress::Cancelled),
         "progress: Same gives the open subtasks the same state",
     );
+}
+
+/// A chain of `SUBTASK_DEPTH_MAX` levels fits; a deeper one is `Invalid` (`parent`), also by moving a whole subtree.
+pub(super) async fn depth(cx: &mut Cx<'_>, list: ObjectId) {
+    let dir = cx.dir;
+    let under = |p: ObjectId| TaskPatch {
+        parent: Some(Some(p)),
+        ..TaskPatch::default()
+    };
+    let Some(top) = cx.task(list, "level 1").await else {
+        return;
+    };
+    let mut at = top.id;
+    for level in 2..=SUBTASK_DEPTH_MAX {
+        let made = dir
+            .create(super::cx::draft(list, &format!("level {level}"), under(at)))
+            .await;
+        let Ok(t) = made else {
+            cx.ensure(
+                false,
+                "create: a subtask chain up to SUBTASK_DEPTH_MAX levels",
+            );
+            return;
+        };
+        at = t.id;
+    }
+    let deeper = dir
+        .create(super::cx::draft(list, "too deep", under(at)))
+        .await;
+    cx.fails(
+        &deeper,
+        "create: a subtask on level SUBTASK_DEPTH_MAX + 1 is Invalid",
+        is_invalid,
+    );
+    let (Some(lone), Some(lone_kid)) =
+        (cx.task(list, "lone").await, cx.task(list, "lone kid").await)
+    else {
+        return;
+    };
+    let Ok(lone_kid) = dir
+        .update(
+            lone_kid.id,
+            lone_kid.revision,
+            under(lone.id),
+            SeriesScope::Whole,
+        )
+        .await
+    else {
+        return;
+    };
+    let moved = dir
+        .update(lone.id, lone.revision, under(at), SeriesScope::Whole)
+        .await;
+    cx.fails(
+        &moved,
+        "update: moving a task with subtasks so the tree gets deeper than SUBTASK_DEPTH_MAX is Invalid (the whole subtree is checked)",
+        is_invalid,
+    );
+    let _ = lone_kid;
 }

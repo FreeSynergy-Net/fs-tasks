@@ -56,10 +56,14 @@ pub(crate) struct State {
     pub groups: Arc<dyn GroupMembers>,
     /// The zone setting of the asking person (days of `Date` and floating values in "from completion").
     pub zone: chrono_tz::Tz,
+    /// A deliberately wrong behaviour (tests of the rules only).
+    pub mutation: Option<crate::mutation::Mutation>,
     pub n: u64,
     pub now: Utc,
     pub account: PersonRef,
     pub me_card: Option<PersonRef>,
+    /// Somebody else asks (a colleague, an AI): replaces the account and the "I" card as the asking person.
+    pub acting: Option<PersonRef>,
     pub evaluate: bool,
 }
 
@@ -73,6 +77,11 @@ pub(crate) fn check(current: Revision, expected: Revision) -> TaskResult<()> {
 }
 
 impl State {
+    /// Whether the fake runs with this mutation (never, outside the tests of the rules).
+    pub(crate) fn mutated(&self, m: crate::mutation::Mutation) -> bool {
+        self.mutation == Some(m)
+    }
+
     pub(crate) fn new(
         account: PersonRef,
         now: Utc,
@@ -90,22 +99,31 @@ impl State {
             trash_days: Some(TRASH_DAYS),
             groups,
             zone: chrono_tz::Europe::Berlin,
+            mutation: None,
             n: 0,
             now,
             account,
             me_card: None,
+            acting: None,
             evaluate,
         }
     }
 
-    /// The asking person: the "I" card if there is one, else the account of the provider (never an error).
+    /// The asking person: somebody acting, else the "I" card if there is one, else the account of the provider (never
+    /// an error).
     pub(crate) fn asker(&self) -> PersonRef {
-        self.me_card.clone().unwrap_or_else(|| self.account.clone())
+        self.acting
+            .clone()
+            .or_else(|| self.me_card.clone())
+            .unwrap_or_else(|| self.account.clone())
     }
 
-    /// Whether `who` is the asking person (account or "I" card).
+    /// Whether `who` is the asking person (account or "I" card; somebody acting is only themselves).
     pub(crate) fn is_me(&self, who: &PersonRef) -> bool {
-        *who == self.account || self.me_card.as_ref() == Some(who)
+        match &self.acting {
+            Some(a) => a.id == who.id,
+            None => *who == self.account || self.me_card.as_ref() == Some(who),
+        }
     }
 
     /// One second later; returns the new time.

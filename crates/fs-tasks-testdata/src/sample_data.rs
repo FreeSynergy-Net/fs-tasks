@@ -26,6 +26,7 @@ pub(crate) fn tasks() -> (Vec<Pair>, Pair) {
     crate::sample_more::alltag(&mut v);
     crate::sample_more::verein(&mut v);
     crate::sample_extra::more(&mut v);
+    crate::sample_delta::delta(&mut v);
     let gone = task(399, 3, "altes-abo", "Altes Zeitschriften-Abo kündigen")
         .due("2026-11-30")
         .labels(&["geld"]);

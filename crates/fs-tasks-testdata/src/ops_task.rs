@@ -4,6 +4,7 @@
 
 use crate::blank::blank_task;
 use crate::ids::object_number;
+use crate::mutation::Mutation;
 use crate::ops_checklist::items_of;
 use crate::patch::{apply, check_patch, check_task, cycle, diff};
 use crate::ready::is_done;
@@ -31,7 +32,7 @@ impl State {
             if self.rows[k].task.list != d.list {
                 return Err(Self::bad("parent", "other-list"));
             }
-            if self.depth_of(p) + 1 > SUBTASK_DEPTH_MAX {
+            if self.depth_of(p) + 1 > SUBTASK_DEPTH_MAX && !self.mutated(Mutation::NoDepthLimit) {
                 return Err(Self::bad("parent", "too-deep"));
             }
         }

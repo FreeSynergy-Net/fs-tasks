@@ -3,9 +3,12 @@
 //!
 //! Pattern: Fake behind a locked Repository trait (the trait is the folder [`tasks_v1`], byte for byte the locked one).
 //!
-//! * [`tasks_v1`]: the LOCKED trait folder (SHA-256 66c7cf13...aed085); never edit it, a change is `tasks_v2`.
-//! * [`FakeTasks`]: in memory, every method and rule; [`EmptyTasks`] is the empty one; [`FakeExchange`] the boundary.
-//! * [`sample`]: the fixed set (about 90 tasks in 5 lists, every case of the plan).
+//! * [`tasks_v1`]: the trait folder, byte for byte the FIXED one (SHA-256 de4618e1...d46, work fixpoint after the delta
+//!   "repeat from completion, checklists, group as assignee and owner, trash period"); never edit it here.
+//! * [`FakeTasks`]: in memory, every method and rule; [`EmptyTasks`] is the empty one; [`FakeExchange`] the boundary;
+//!   [`FakeGroupMembers`] the groups it is built with; [`HeldTasks`] a provider whose calls stay open.
+//! * [`sample`]: the fixed set (about 100 tasks in 6 lists, every case of the plan and of the delta: a list owned by a
+//!   group, group assignees, a claim, checklists, series from completion, the trash states `Manual` and `Held`).
 //! * [`conformance`]: rules any provider must pass (`run_conformance`, later also for `LocalTasks`).
 
 // Test support: the conformance rules and the sample read as one story each, so long functions and short names
@@ -17,7 +20,7 @@
     clippy::trivially_copy_pass_by_ref
 )]
 
-// The locked folder: byte for byte the lock (`.scratch/sperren/tasks_v1.sha256`). It was written for the Rust 2021
+// The fixed folder: byte for byte the fixpoint (`.scratch/sperren/tasks_v1.sha256`, hash de4618e1...d46). It was written for the Rust 2021
 // probe and compiled with pedantic lints there; the allows below are the ones the 2024 workspace needs, outside it.
 #[rustfmt::skip]
 #[allow(
@@ -44,6 +47,7 @@ mod fake_impl;
 mod groups;
 mod hold;
 mod ids;
+mod mutation;
 mod ops_checklist;
 mod ops_claim;
 mod ops_list;
@@ -59,6 +63,7 @@ mod ranking;
 mod ready;
 mod sample;
 mod sample_data;
+mod sample_delta;
 mod sample_extra;
 mod sample_more;
 mod sample_people;
@@ -76,6 +81,7 @@ pub use fake::{DECISIONS, EmptyTasks, FakeTasks, START_MS};
 pub use groups::{FakeGroupMembers, GroupMembers};
 pub use hold::{HeldTasks, HoldGate};
 pub use ids::{object_id, object_number, person, reference, try_reference};
+pub use mutation::Mutation;
 pub use people::FakePeople;
 pub use sample::{Sample, id_of, occurrence, sample};
 pub use sample_people::{KNOWN, Known};

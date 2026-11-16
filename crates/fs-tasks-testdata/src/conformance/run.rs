@@ -3,10 +3,11 @@
 //! Pattern: Template method (a fixed list of rules, each one checked against the provider under test).
 
 pub use super::cx::Report;
-use super::cx::{Cx, is_unsupported};
+use super::cx::{Cx, Options, is_unsupported};
 use super::{
-    ConformanceFixture, rules_assign, rules_feed, rules_lists, rules_query, rules_rank,
-    rules_ready, rules_series, rules_tasks, rules_trash,
+    ConformanceFixture, rules_assign, rules_checklist, rules_claim, rules_feed, rules_groups,
+    rules_lists, rules_purge, rules_query, rules_rank, rules_ready, rules_repeat,
+    rules_repeat_more, rules_series, rules_tasks, rules_trash,
 };
 use crate::tasks_v1::{
     Answer, CAPABILITIES, Children, DependencyKind, Progress, SeriesScope, TaskDraft,
@@ -29,14 +30,25 @@ async fn base(cx: &mut Cx<'_>) {
     rules_series::rules(cx).await;
     rules_ready::rules(cx).await;
     rules_feed::rules(cx).await;
-    rules_rank::rules(cx).await;
+    if !cx.skip_rank {
+        rules_rank::rules(cx).await;
+    }
+    Box::pin(rules_checklist::rules(cx)).await;
+    rules_repeat::rules(cx).await;
+    Box::pin(rules_claim::rules(cx)).await;
+    rules_purge::rules(cx).await;
 }
 
 /// Run every rule that needs only the trait against `dir` (data is seeded through `create_list` and `create`, so
 /// the provider needs `list.create` and `task.create`). A provider without `dependency.evaluate` gets the rules for
 /// that case instead. Returns the failed rules (empty = conformant).
 pub async fn run_conformance(dir: &dyn Tasks) -> Vec<String> {
-    let Some(mut cx) = Cx::new(dir) else {
+    run_conformance_with(dir, Options::default()).await
+}
+
+/// [`run_conformance`] with switches (`heavy` for the night run).
+pub async fn run_conformance_with(dir: &dyn Tasks, options: Options) -> Vec<String> {
+    let Some(mut cx) = Cx::new(dir, options) else {
         return vec!["setup: the zones UTC and Europe/Berlin".to_owned()];
     };
     base(&mut cx).await;
@@ -46,7 +58,15 @@ pub async fn run_conformance(dir: &dyn Tasks) -> Vec<String> {
 /// All rules: those of [`run_conformance`] plus the ones that need a state the fixture sets up (a clock past the
 /// trash deadline, the "I" card and the account).
 pub async fn run_fixture_conformance(fixture: &dyn ConformanceFixture) -> Report {
-    let Some(mut cx) = Cx::new(fixture.tasks()) else {
+    run_fixture_conformance_with(fixture, Options::default()).await
+}
+
+/// [`run_fixture_conformance`] with switches (`heavy` for the night run).
+pub async fn run_fixture_conformance_with(
+    fixture: &dyn ConformanceFixture,
+    options: Options,
+) -> Report {
+    let Some(mut cx) = Cx::new(fixture.tasks(), options) else {
         return Report {
             failures: vec!["setup: the zones UTC and Europe/Berlin".to_owned()],
             skipped: Vec::new(),
@@ -55,6 +75,9 @@ pub async fn run_fixture_conformance(fixture: &dyn ConformanceFixture) -> Report
     };
     base(&mut cx).await;
     rules_trash::deadline(fixture, &mut cx).await;
+    rules_repeat_more::kept(fixture, &mut cx).await;
+    rules_purge::states(fixture, &mut cx).await;
+    rules_groups::rules(fixture, &mut cx).await;
     rules_assign::card_rules(fixture, &mut cx).await;
     cx.report
 }
@@ -62,7 +85,7 @@ pub async fn run_fixture_conformance(fixture: &dyn ConformanceFixture) -> Report
 /// Rules for a provider WITHOUT the write capabilities: every method with a standard answer says `Unsupported`
 /// (Null Object), and `capabilities` says the same.
 pub async fn run_unsupported(dir: &dyn Tasks) -> Vec<String> {
-    let Some(mut cx) = Cx::new(dir) else {
+    let Some(mut cx) = Cx::new(dir, Options::default()) else {
         return vec!["setup: the zones UTC and Europe/Berlin".to_owned()];
     };
     let id = crate::ids::object_id(1);
@@ -164,6 +187,25 @@ pub async fn run_unsupported(dir: &dyn Tasks) -> Vec<String> {
             "dependency.evaluate",
             is_unsupported_of(&dir.readiness(&[id]).await),
         ),
+        (
+            "task.checklist",
+            is_unsupported_of(
+                &dir.checklist(
+                    id,
+                    rev,
+                    crate::tasks_v1::ChecklistChange::Remove { key: "k".into() },
+                )
+                .await,
+            ),
+        ),
+        (
+            "task.claim",
+            is_unsupported_of(
+                &dir.claim_next(&cx.query(&[]), crate::tasks_v1::Utc::from_millis(1))
+                    .await,
+            ),
+        ),
+        ("trash.purge", is_unsupported_of(&dir.purge(id).await)),
     ];
     for (cap, unsupported) in more {
         cx.ensure(

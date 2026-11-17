@@ -5,6 +5,8 @@
 //!
 //! * [`tasks_v1`]: the trait folder, byte for byte the FIXED one (SHA-256 de4618e1...d46, work fixpoint after the delta
 //!   "repeat from completion, checklists, group as assignee and owner, trash period"); never edit it here.
+//! * [`draft`]: the unlocked trait delta `tasks_v2` (D1: stage, columns, note, live feed) and its conformance skeleton
+//!   (probe, no lock).
 //! * [`FakeTasks`]: in memory, every method and rule; [`EmptyTasks`] is the empty one; [`FakeExchange`] the boundary;
 //!   [`FakeGroupMembers`] the groups it is built with; [`HeldTasks`] a provider whose calls stay open.
 //! * [`sample`]: the fixed set (about 100 tasks in 6 lists, every case of the plan and of the delta: a list owned by a
@@ -41,6 +43,7 @@ mod clock;
 pub mod conformance;
 mod decorate;
 mod doubles;
+pub mod draft;
 mod exchange;
 mod fake;
 mod fake_impl;

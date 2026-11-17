@@ -246,6 +246,6 @@ column -> status mapping and ordering arrives with boards.
 * **Open: boards have no limits** on the number of columns (a sensible bound would be 32), the cards in `order` per place, or the length of names and uids; `board_layout_inner` is O(placed cards × tasks). Order is a vector index, no fractional index. To be added with constants and tests before boards go onto the wire.
 * The settings file is synced to disk before it replaces the old one; a relative `$XDG_DATA_HOME` is ignored (`frontend.rs`, `data_dir_in`).
 
-## New task takes the view's filter (0.0.11)
+## New task takes the view's filter (0.0.10)
 
 `plan_view/defaults.rs` is the one rule "view to defaults" (`defaults_for(View, today)`, `fits`, `landing`; pure functions): the board gives the chosen label and the column's `progress`, Today the day, Upcoming tomorrow, a project list its label. `enter.rs` makes the task from it for both screens (Command) and returns what the screen must tell; `notice.rs` is the catalog (`Notice` = code + parameters, `notice_text(Notice, Lang)` German or English). A refused create, move or tick is shown (board: heading of the side list; day list: note), never swallowed. Limit: the entry widget of `fs-components` v0.0.13 clears the typed text before the program is called and cannot be set, so a refused text is kept in the message.

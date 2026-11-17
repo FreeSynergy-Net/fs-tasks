@@ -33,7 +33,7 @@ fs-tasks status <id> done --note 'built' --report out.md --cost 0.42
 
 `claim`, `release`, `note`, `check`, `list --project --status`, `add --objective CMD`: see `docs/worker-protocol.md` (EN + DE). A check command is code: it runs only for tasks made on this machine by a trusted actor, for allowed programs, without a shell. One process (the server) holds the store; the command line, the window and workers are all its clients, so they work together while the window is open.
 
-## Notes for 0.0.11
+## Notes for 0.0.10
 
 A task typed in the entry line of the Board or the Day list takes the project, status or day of the view you typed it in, so it stays in view. If the view cannot hold it (Someday, Logbook) or the store refuses it, the screen says so; nothing vanishes silently.
 

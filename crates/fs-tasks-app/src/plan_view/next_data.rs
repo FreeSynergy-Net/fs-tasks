@@ -54,27 +54,10 @@ pub const LISTS: [(&str, &str, &str, &str); 6] = [
     ),
 ];
 
-fn is_inbox(e: &TaskEntry, st: Standing) -> bool {
-    st != Standing::Finished
-        && e.task.due.is_none()
-        && label_list(&e.task).is_empty()
-        && people(&e.task).is_empty()
-}
-
 fn in_list(snapshot: &Snapshot, e: &TaskEntry, list: &str) -> bool {
     let st = standing(snapshot, e);
     let due = urgency(&e.task, snapshot.today);
-    match list {
-        "inbox" => is_inbox(e, st),
-        "today" => st == Standing::Today,
-        "upcoming" => st == Standing::Ready && due == Some(Urgency::Later),
-        "anytime" => st == Standing::Ready && due.is_none(),
-        "someday" => st == Standing::Blocked,
-        "logbook" => st == Standing::Finished,
-        other => other.strip_prefix("label:").is_some_and(|l| {
-            label_list(&e.task).iter().any(|x| x == l) && st != Standing::Finished
-        }),
-    }
+    fs_tasks_core::lists::in_list(&e.task, st, due, list)
 }
 
 /// The lists of the side with their counts, then the projects (labels); `chosen` is the key of the list shown.

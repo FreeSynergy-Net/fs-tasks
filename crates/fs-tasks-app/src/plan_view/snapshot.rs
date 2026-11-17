@@ -9,7 +9,7 @@ use std::sync::Arc;
 use fs_tasks_core::plan::Readiness;
 use fs_tasks_core::{Error, TaskEntry, TaskItems};
 
-use crate::day::Day;
+use fs_tasks_core::Day;
 
 /// All tasks, their readiness (judged against the same set), and what a person needs to name them.
 pub struct Snapshot {

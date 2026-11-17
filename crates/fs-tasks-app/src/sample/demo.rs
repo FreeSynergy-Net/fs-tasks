@@ -3,7 +3,7 @@
 //! Pattern: Builder data — a table of parts, written by the shared `push`.
 
 use super::parts::{HEAD, Part, push};
-use crate::day::Day;
+use fs_tasks_core::Day;
 
 /// Titles of the small errands.
 const ERRANDS: [&str; 12] = [

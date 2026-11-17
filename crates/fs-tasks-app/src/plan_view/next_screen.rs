@@ -19,8 +19,8 @@ use super::enter::{change_failed, create_task};
 use super::mode::Mode;
 use super::next_data::{heading, sections, side};
 use super::notice::{Notice, notice_text};
-use crate::day::Day;
 use crate::source::{TaskAdapter, row_of};
+use fs_tasks_core::Day;
 
 struct State {
     chosen: String,

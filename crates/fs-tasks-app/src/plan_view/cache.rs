@@ -13,7 +13,7 @@ use fs_tasks_core::TaskItems;
 use tokio::runtime::Handle;
 
 use super::snapshot::Snapshot;
-use crate::day::Day;
+use fs_tasks_core::Day;
 
 /// Up to this many tasks an own change reloads the picture before the list is drawn again.
 const RELOAD_AT_ONCE: usize = 600;

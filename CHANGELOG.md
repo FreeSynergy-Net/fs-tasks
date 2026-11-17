@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Sorted, not compiled (run S2b): the list rules (`standing_of`, `urgency`, `in_list`, `is_inbox`, `is_open`, `label_list`, `people_of`), the defaults of a new task (`defaults_for`, `fits`, `landing`) and `Day` moved from `fs-tasks-app` to `fs-tasks-core` (`lists/`, `day.rs`); the app calls them. No logic changed. Settings table in `DESIGN.md`.
+- Sortiert, nicht kompiliert (Lauf S2b): die Listenregeln, die Standardwerte einer neuen Aufgabe und `Day` sind von `fs-tasks-app` nach `fs-tasks-core` gewandert (`lists/`, `day.rs`); die App ruft sie auf. Keine Logik geändert. Einstellungs-Tabelle in `DESIGN.md`.
 - check_lock_sources: `fs-objects` has two sources (0.0.1 in core/server/app, 0.0.2 in fs-tasks-local) until the lift run; `fs-interfaces` already had two on main (via fs-components-primitives).
 
 ### English

@@ -4,7 +4,7 @@
 
 use std::fmt::Write;
 
-use crate::day::Day;
+use fs_tasks_core::Day;
 
 pub(super) const HEAD: &str =
     "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//FreeSynergy//tasks sample//EN\r\n";

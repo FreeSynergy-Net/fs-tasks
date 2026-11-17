@@ -19,9 +19,9 @@ use super::defaults::View;
 use super::enter::{change_failed, create_task};
 use super::notice::{Notice, notice_text};
 use super::snapshot::Snapshot;
-use crate::day::Day;
 use crate::source::{TaskAdapter, label_list};
 use crate::words::progress_title;
+use fs_tasks_core::Day;
 
 #[derive(Default)]
 struct State {

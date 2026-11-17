@@ -11,10 +11,15 @@ use fs_components_app::{Element, Surface};
 use fs_components_widgets::plan::{BoardView, Column, Entry, Events, SideItem, Tab};
 use fs_components_workbenches::tasks::TaskSource;
 use fs_tasks_core::validate::PROGRESS;
+use fs_tasks_server::Lang;
 
 use super::cache::Cache;
 use super::cards::{card, panel};
+use super::defaults::View;
+use super::enter::{change_failed, create_task};
+use super::notice::{Notice, notice_text};
 use super::snapshot::Snapshot;
+use crate::day::Day;
 use crate::source::{TaskAdapter, label_list};
 use crate::words::progress_title;
 
@@ -23,6 +28,35 @@ struct State {
     selected: Option<String>,
     creating: Option<String>,
     label: Option<String>,
+    notice: Option<Notice>,
+}
+
+/// The columns of the board over `snapshot`: the cards of `label` (all when `None`), by `progress`.
+#[must_use]
+pub fn board_columns(
+    snapshot: &Snapshot,
+    label: Option<&str>,
+    selected: Option<&str>,
+) -> Vec<Column> {
+    let mut columns: Vec<Column> = PROGRESS
+        .iter()
+        .map(|p| Column::new(p, progress_title(p)))
+        .collect();
+    for e in &snapshot.entries {
+        if label.is_some_and(|l| !label_list(&e.task).iter().any(|x| x == l)) {
+            continue;
+        }
+        let id = e.id.to_string();
+        let at = PROGRESS
+            .iter()
+            .position(|p| *p == e.task.effective_progress());
+        if let Some(i) = at {
+            columns[i]
+                .cards
+                .push(card(snapshot, e, selected == Some(id.as_str())));
+        }
+    }
+    columns
 }
 
 /// The board screen.
@@ -32,6 +66,7 @@ pub struct BoardScreen {
     state: Arc<Mutex<State>>,
     entry: Entry,
     events: Events,
+    lang: Lang,
 }
 
 fn held(s: &Mutex<State>) -> std::sync::MutexGuard<'_, State> {
@@ -59,14 +94,14 @@ impl BoardScreen {
                 mode.set_list(true);
             }
         }));
-        let (a, c) = (Arc::clone(&adapter), Arc::clone(&cache));
+        let (a, c, st) = (Arc::clone(&adapter), Arc::clone(&cache), Arc::clone(&state));
         events.act = Some(Arc::new(move |key, to| {
             let Some(entry) = c.current().and_then(|p| p.entry(key).cloned()) else {
                 return;
             };
-            if a.move_to(key, to, crate::source::row_of(&entry).revision.as_deref())
-                .is_ok()
-            {
+            let moved = a.move_to(key, to, crate::source::row_of(&entry).revision.as_deref());
+            held(&st).notice = moved.as_ref().err().map(change_failed);
+            if moved.is_ok() {
                 c.changed();
             }
         }));
@@ -76,20 +111,9 @@ impl BoardScreen {
         events.create = Some(Arc::new(move |col| {
             held(&s).creating = Some(col.to_string());
         }));
-        let (a, c) = (Arc::clone(&adapter), Arc::clone(&cache));
+        let (a, c, st) = (Arc::clone(&adapter), Arc::clone(&cache), Arc::clone(&state));
         events.enter = Some(Arc::new(move |col, text| {
-            if let Ok(mut draft) = a.blank() {
-                for f in &mut draft.fields {
-                    match f.key.as_str() {
-                        "title" => f.value = text.to_string(),
-                        "progress" => f.value = col.to_string(),
-                        _ => {}
-                    }
-                }
-                if a.create(&draft).is_ok() {
-                    c.changed();
-                }
-            }
+            enter_in(&a, &c, &st, col, text);
         }));
         Self {
             adapter,
@@ -97,7 +121,33 @@ impl BoardScreen {
             state,
             entry: Entry::new("What needs to be done?"),
             events,
+            lang: Lang::from_env(),
         }
+    }
+
+    /// Typed `text` in the entry line of the column `column` (what Enter does).
+    pub fn submit(&self, column: &str, text: &str) {
+        enter_in(&self.adapter, &self.cache, &self.state, column, text);
+    }
+
+    /// Choose the project (label) shown on the left; `None` shows all tasks.
+    pub fn show_label(&self, label: Option<&str>) {
+        held(&self.state).label = label.map(str::to_string);
+    }
+
+    /// The message shown now, as a sentence in the language of the person, if there is one.
+    #[must_use]
+    pub fn notice(&self) -> Option<String> {
+        held(&self.state)
+            .notice
+            .as_ref()
+            .map(|n| notice_text(n, self.lang))
+    }
+
+    /// The message shown now as data (code and parameters).
+    #[must_use]
+    pub fn notice_data(&self) -> Option<Notice> {
+        held(&self.state).notice.clone()
     }
 
     /// Choose the task whose title holds `part` (for a picture of the open panel).
@@ -151,27 +201,7 @@ impl Surface for BoardScreen {
             let st = held(&self.state);
             (st.selected.clone(), st.creating.clone(), st.label.clone())
         };
-        let mut columns: Vec<Column> = PROGRESS
-            .iter()
-            .map(|p| Column::new(p, progress_title(p)))
-            .collect();
-        for e in &snapshot.entries {
-            if label
-                .as_ref()
-                .is_some_and(|l| !label_list(&e.task).contains(l))
-            {
-                continue;
-            }
-            let id = e.id.to_string();
-            let at = PROGRESS
-                .iter()
-                .position(|p| *p == e.task.effective_progress());
-            if let Some(i) = at {
-                columns[i]
-                    .cards
-                    .push(card(&snapshot, e, selected.as_deref() == Some(id.as_str())));
-            }
-        }
+        let columns = board_columns(&snapshot, label.as_deref(), selected.as_deref());
         let panel = selected
             .as_deref()
             .and_then(|k| snapshot.entry(k))
@@ -182,7 +212,10 @@ impl Surface for BoardScreen {
             Tab::new("calendar", "Calendar").locked(),
             Tab::new("timeline", "Timeline").locked(),
         ];
-        let projects = Self::projects(&snapshot, label.as_deref());
+        let mut projects = Self::projects(&snapshot, label.as_deref());
+        if let Some(n) = held(&self.state).notice.as_ref() {
+            projects.insert(0, SideItem::heading(&notice_text(n, self.lang)));
+        }
         let view = BoardView {
             tabs: &tabs,
             active: "board",
@@ -196,7 +229,6 @@ impl Surface for BoardScreen {
             close: "Close",
             events: &self.events,
         };
-        let _ = &self.adapter;
         Box::new(view.build("fs-plan-board", width, height))
     }
 
@@ -206,5 +238,22 @@ impl Surface for BoardScreen {
 
     fn status_line(&self) -> bool {
         false
+    }
+}
+
+/// Enter in the entry line of `column`: the task takes what the view gives it; a refusal or a task the view does not
+/// show becomes the message of the screen.
+fn enter_in(a: &TaskAdapter, c: &Arc<Cache>, st: &Mutex<State>, column: &str, text: &str) {
+    let label = held(st).label.clone();
+    let view = View::Board {
+        label: label.as_deref(),
+        column,
+    };
+    let today = c.current().map_or_else(Day::today, |p| p.today);
+    let outcome = create_task(a, &view, today, text);
+    let ok = outcome.is_ok();
+    held(st).notice = outcome.unwrap_or_else(Some);
+    if ok {
+        c.changed();
     }
 }

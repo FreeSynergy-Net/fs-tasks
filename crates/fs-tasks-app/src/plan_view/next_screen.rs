@@ -2,31 +2,40 @@
 //!
 //! Pattern: Adapter (a `Surface`) + Facade (`PlanSurface` picks the screen by the shared mode). State lives here:
 //! the list chosen, the lines opened; the widgets only draw and report. Ticking a box finishes (or reopens) the
-//! task through the adapter; Enter in the entry line makes a task and renews the picture.
+//! task through the adapter; Enter in the entry line makes a task (with what the list gives it) and renews the
+//! picture; a refusal or a task the list does not show is told in the note of the list.
 
 use std::sync::{Arc, Mutex, PoisonError};
 
 use fs_components_app::{Element, Surface};
 use fs_components_widgets::plan::{Entry, Events, ListScreen};
 use fs_components_workbenches::tasks::TaskSource;
+use fs_tasks_server::Lang;
 
 use super::board_screen::BoardScreen;
 use super::cache::Cache;
+use super::defaults::View;
+use super::enter::{change_failed, create_task};
 use super::mode::Mode;
 use super::next_data::{heading, sections, side};
+use super::notice::{Notice, notice_text};
+use crate::day::Day;
 use crate::source::{TaskAdapter, row_of};
 
 struct State {
     chosen: String,
     opened: Vec<String>,
+    notice: Option<Notice>,
 }
 
 /// The day list.
 pub struct NextScreen {
+    adapter: Arc<TaskAdapter>,
     cache: Arc<Cache>,
     state: Arc<Mutex<State>>,
     entry: Entry,
     events: Events,
+    lang: Lang,
 }
 
 fn held(s: &Mutex<State>) -> std::sync::MutexGuard<'_, State> {
@@ -39,6 +48,7 @@ impl NextScreen {
         let state = Arc::new(Mutex::new(State {
             chosen: "today".into(),
             opened: Vec::new(),
+            notice: None,
         }));
         let mut events = Events::default();
         let (s, m) = (Arc::clone(&state), mode);
@@ -46,7 +56,9 @@ impl NextScreen {
             if key == "view:board" {
                 m.set_list(false);
             } else {
-                held(&s).chosen = key.to_string();
+                let mut st = held(&s);
+                st.chosen = key.to_string();
+                st.notice = None;
             }
         }));
         let s = Arc::clone(&state);
@@ -59,7 +71,7 @@ impl NextScreen {
                 None => st.opened.push(key.to_string()),
             }
         }));
-        let (a, c) = (Arc::clone(&adapter), Arc::clone(&cache));
+        let (a, c, st) = (Arc::clone(&adapter), Arc::clone(&cache), Arc::clone(&state));
         events.tick = Some(Arc::new(move |key| {
             let Some(entry) = c.current().and_then(|p| p.entry(key).cloned()) else {
                 return;
@@ -70,42 +82,36 @@ impl NextScreen {
             } else {
                 "completed"
             };
-            if a.move_to(key, to, row_of(&entry).revision.as_deref())
-                .is_ok()
-            {
+            let moved = a.move_to(key, to, row_of(&entry).revision.as_deref());
+            held(&st).notice = moved.as_ref().err().map(change_failed);
+            if moved.is_ok() {
                 c.changed();
             }
         }));
-        let (a, c, s) = (adapter, Arc::clone(&cache), Arc::clone(&state));
+        let (a, c, s) = (Arc::clone(&adapter), Arc::clone(&cache), Arc::clone(&state));
         events.enter = Some(Arc::new(move |place, text| {
-            if let Ok(mut draft) = a.blank() {
-                let today = c.current().map(|p| p.today);
-                for f in &mut draft.fields {
-                    match f.key.as_str() {
-                        "title" => f.value = text.to_string(),
-                        "due" if place == "today" => {
-                            f.value = today
-                                .map(|d| format!("{} 17:00", d.text()))
-                                .unwrap_or_default();
-                        }
-                        "labels" => {
-                            f.value = place.strip_prefix("label:").unwrap_or("").to_string();
-                        }
-                        _ => {}
-                    }
-                }
-                if a.create(&draft).is_ok() {
-                    c.changed();
-                }
-            }
-            let _ = &s;
+            enter_in(&a, &c, &s, place, text)
         }));
         Self {
             cache,
             state,
             entry: Entry::new("New to-do"),
             events,
+            lang: Lang::from_env(),
+            adapter,
         }
+    }
+}
+
+/// Enter in the entry line of the list `place`: the task takes what the list gives it; a refusal or a task the list
+/// does not show becomes the message of the screen.
+fn enter_in(a: &TaskAdapter, c: &Arc<Cache>, st: &Mutex<State>, place: &str, text: &str) {
+    let today = c.current().map_or_else(Day::today, |p| p.today);
+    let outcome = create_task(a, &View::List { place }, today, text);
+    let ok = outcome.is_ok();
+    held(st).notice = outcome.unwrap_or_else(Some);
+    if ok {
+        c.changed();
     }
 }
 
@@ -128,6 +134,27 @@ impl NextScreen {
     pub fn show(&self, list: &str) {
         held(&self.state).chosen = list.to_string();
     }
+
+    /// Typed `text` in the entry line of the list shown (what Enter does).
+    pub fn submit(&self, text: &str) {
+        let place = held(&self.state).chosen.clone();
+        enter_in(&self.adapter, &self.cache, &self.state, &place, text);
+    }
+
+    /// The message shown now, as a sentence in the language of the person, if there is one.
+    #[must_use]
+    pub fn notice(&self) -> Option<String> {
+        held(&self.state)
+            .notice
+            .as_ref()
+            .map(|n| notice_text(n, self.lang))
+    }
+
+    /// The message shown now as data (code and parameters).
+    #[must_use]
+    pub fn notice_data(&self) -> Option<Notice> {
+        held(&self.state).notice.clone()
+    }
 }
 
 impl Surface for NextScreen {
@@ -143,7 +170,10 @@ impl Surface for NextScreen {
             let st = held(&self.state);
             (st.chosen.clone(), st.opened.clone())
         };
-        let (title, note) = heading(&chosen);
+        let (title, mut note) = heading(&chosen);
+        if let Some(n) = held(&self.state).notice.as_ref() {
+            note = format!("{}  {note}", notice_text(n, self.lang));
+        }
         let (items, secs) = (
             side(&snapshot, &chosen),
             sections(&snapshot, &chosen, &opened),
@@ -206,6 +236,40 @@ impl PlanSurface {
     /// Show the day list `list` (for a picture).
     pub fn show_list(&self, list: &str) {
         self.list.show(list);
+    }
+
+    /// Show the project (label) of the board; `None` shows all tasks.
+    pub fn show_label(&self, label: Option<&str>) {
+        self.board.show_label(label);
+    }
+
+    /// Typed `text` in the entry line of the screen shown: of the list shown, or of the board column `column`.
+    pub fn submit(&self, column: &str, text: &str) {
+        if self.mode.is_list() {
+            self.list.submit(text);
+        } else {
+            self.board.submit(column, text);
+        }
+    }
+
+    /// The message of the screen shown, as a sentence.
+    #[must_use]
+    pub fn notice(&self) -> Option<String> {
+        if self.mode.is_list() {
+            self.list.notice()
+        } else {
+            self.board.notice()
+        }
+    }
+
+    /// The message of the screen shown, as data (code and parameters).
+    #[must_use]
+    pub fn notice_data(&self) -> Option<Notice> {
+        if self.mode.is_list() {
+            self.list.notice_data()
+        } else {
+            self.board.notice_data()
+        }
     }
 }
 

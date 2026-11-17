@@ -4,6 +4,8 @@
 //! Pattern: Fake behind a locked Repository trait (the trait is the folder [`tasks_v1`], byte for byte the locked one).
 //!
 //! * [`tasks_v1`]: the LOCKED trait folder (SHA-256 66c7cf13...aed085); never edit it, a change is `tasks_v2`.
+//! * [`draft`]: the unlocked trait delta `tasks_v2` (D1: stage, columns, note, live feed) and its conformance skeleton
+//!   (probe, no lock).
 //! * [`FakeTasks`]: in memory, every method and rule; [`EmptyTasks`] is the empty one; [`FakeExchange`] the boundary.
 //! * [`sample`]: the fixed set (about 90 tasks in 5 lists, every case of the plan).
 //! * [`conformance`]: rules any provider must pass (`run_conformance`, later also for `LocalTasks`).
@@ -36,6 +38,7 @@ mod clock;
 pub mod conformance;
 mod decorate;
 mod doubles;
+pub mod draft;
 mod exchange;
 mod fake;
 mod fake_impl;

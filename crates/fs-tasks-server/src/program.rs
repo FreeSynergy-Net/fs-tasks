@@ -6,12 +6,14 @@
 use std::ffi::OsString;
 use std::sync::Arc;
 
-use fs_interfaces::rpc::{ServerIdentity, ServerOptions, prepare_data_dir, run_until_signal_as};
+use fs_interfaces::rpc::{
+    ServerIdentity, ServerOptions, default_data_dir, prepare_data_dir, run_until_signal_as,
+};
 use fs_objects::{Store, TursoStore};
 use fs_tasks_core::TaskRepo;
 
 use crate::TasksServer;
-use crate::datadir::tighten;
+use crate::datadir_start::correct;
 use crate::datadir_text::{Lang, fault_text, tightened_text};
 
 const USAGE: &str = "fs-tasks serve [--socket PATH] [--data DIR] [--actor IRI] [--instance DOMAIN]\nDefaults: $XDG_RUNTIME_DIR/freesynergy/tasks.sock, $XDG_DATA_HOME/freesynergy/tasks, the local owner";
@@ -85,7 +87,7 @@ pub fn serve_command(args: impl IntoIterator<Item = OsString>) -> i32 {
 /// parameters, then the sentence in the language of the person.
 fn correct_data_dir(data: &std::path::Path) -> std::io::Result<()> {
     let lang = Lang::from_env();
-    match tighten(data) {
+    match correct(data, default_data_dir("tasks").as_deref()) {
         Ok(Some(done)) => {
             eprintln!(
                 "fs-tasks serve: {}\n{}",

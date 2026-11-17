@@ -46,6 +46,13 @@ pub enum Fault {
         /// The user this program runs as.
         me: u32,
     },
+    /// A folder above the data folder can be changed by others (the transport refuses such a path).
+    Ancestor {
+        /// The data folder.
+        path: PathBuf,
+        /// The folder above it that is open.
+        ancestor: PathBuf,
+    },
     /// The mode could not be read, or the change failed.
     Io {
         /// The path.
@@ -70,6 +77,7 @@ impl Fault {
             Fault::Symlink { .. } => "data-dir-symlink",
             Fault::NotDirectory { .. } => "data-dir-not-directory",
             Fault::ForeignOwner { .. } => "data-dir-foreign-owner",
+            Fault::Ancestor { .. } => "data-dir-ancestor",
             Fault::Io { .. } => "data-dir-io",
             Fault::StillOpen { .. } => "data-dir-still-open",
         }
@@ -82,6 +90,7 @@ impl Fault {
             Fault::Symlink { path }
             | Fault::NotDirectory { path }
             | Fault::ForeignOwner { path, .. }
+            | Fault::Ancestor { path, .. }
             | Fault::Io { path, .. }
             | Fault::StillOpen { path, .. } => path,
         }
@@ -93,6 +102,9 @@ impl Fault {
         let base = format!("{} path={}", self.code(), self.path().display());
         match self {
             Fault::ForeignOwner { owner, me, .. } => format!("{base} owner={owner} me={me}"),
+            Fault::Ancestor { ancestor, .. } => {
+                format!("{base} ancestor={}", ancestor.display())
+            }
             Fault::Io { kind, .. } => format!("{base} kind={kind:?}"),
             Fault::StillOpen { mode, .. } => format!("{base} mode={:04o}", mode & 0o7777),
             Fault::Symlink { .. } | Fault::NotDirectory { .. } => base,
@@ -163,8 +175,6 @@ impl Tightened {
 pub fn tighten(path: &Path) -> Result<Option<Tightened>, Fault> {
     use std::os::unix::fs::{MetadataExt, PermissionsExt};
 
-    use rustix::fs::{Mode, OFlags};
-
     let io = |e: io::Error| Fault::Io {
         path: path.to_path_buf(),
         kind: e.kind(),
@@ -187,13 +197,7 @@ pub fn tighten(path: &Path) -> Result<Option<Tightened>, Fault> {
         Action::Tighten(mode) => mode,
     };
     // Open the folder itself (no link, must be a directory) and work on the descriptor: no path race.
-    let fd = rustix::fs::open(
-        path,
-        OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
-        Mode::empty(),
-    )
-    .map_err(|e| io(e.into()))?;
-    let file = std::fs::File::from(fd);
+    let file = open_dir_nofollow(path).map_err(io)?;
     // What was opened is looked at again: still a folder of ours, still open.
     let opened = meta_of(&file.metadata().map_err(io)?);
     match decide(path, &opened, me) {
@@ -216,6 +220,18 @@ pub fn tighten(path: &Path) -> Result<Option<Tightened>, Fault> {
         path: path.to_path_buf(),
         old_mode: opened.mode,
     }))
+}
+
+/// Open the folder at `path` itself: a symbolic link (at the last place) or something that is not a folder is an error.
+///
+/// # Errors
+/// The system error (a link: `ELOOP`, a file: `ENOTDIR`).
+#[cfg(unix)]
+pub(crate) fn open_dir_nofollow(path: &Path) -> io::Result<std::fs::File> {
+    use rustix::fs::{Mode, OFlags};
+    let flags = OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC;
+    let fd = rustix::fs::open(path, flags, Mode::empty())?;
+    Ok(std::fs::File::from(fd))
 }
 
 /// No modes outside Unix (the folder is protected by the ACL of the user profile): nothing to correct.

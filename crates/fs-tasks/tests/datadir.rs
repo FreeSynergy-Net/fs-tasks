@@ -101,3 +101,28 @@ fn a_server_that_cannot_start_is_explained_with_its_cause_not_only_a_hint() {
     assert!(!text.contains("run `fs-tasks serve` to see why"), "{text}");
     assert_eq!(mode(&real), 0o700);
 }
+
+#[test]
+fn a_data_folder_named_with_data_is_never_corrected() {
+    let dir = tempfile::tempdir().unwrap();
+    let mine = dir.path().join("mine");
+    make(&mine, 0o755);
+    let status = Command::new(env!("CARGO_BIN_EXE_fs-tasks"))
+        .args(["serve", "--socket"])
+        .arg(dir.path().join("x.sock"))
+        .arg("--data")
+        .arg(&mine)
+        .env("LC_ALL", "en_US.UTF-8")
+        .output()
+        .unwrap();
+    assert_eq!(
+        status.status.code(),
+        Some(1),
+        "the transport refuses an open folder"
+    );
+    assert_eq!(
+        mode(&mine),
+        0o755,
+        "and it is not closed behind the person's back"
+    );
+}

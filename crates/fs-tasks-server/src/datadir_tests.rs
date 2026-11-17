@@ -226,3 +226,62 @@ fn private_folders_are_made_0700_from_freesynergy_down_and_not_above() {
     create_private_dir(&leaf).unwrap();
     assert_eq!(mode_of(&leaf), 0o755);
 }
+
+#[test]
+fn opening_never_follows_a_link_and_wants_a_folder() {
+    // This is what makes the correction safe against a swap between the look and the change (O_NOFOLLOW, O_DIRECTORY).
+    let (base, target) = dir_with(0o755);
+    let link = base.path().join("link");
+    symlink(&target, &link).unwrap();
+    assert!(
+        open_dir_nofollow(&link).is_err(),
+        "a link must not be opened"
+    );
+    assert!(open_dir_nofollow(&target).is_ok());
+    let file = base.path().join("file");
+    std::fs::write(&file, "x").unwrap();
+    assert!(open_dir_nofollow(&file).is_err(), "a file is no folder");
+}
+
+#[test]
+fn only_the_standard_data_folder_is_corrected_not_one_named_with_data() {
+    use crate::datadir_start::correct;
+    let (_base, dir) = dir_with(0o755);
+    let elsewhere = PathBuf::from("/nowhere/standard");
+    // A folder named by hand (`--data ~/mine`, `--data ~`) is left as it is: the transport refuses it if it is open.
+    assert_eq!(correct(&dir, Some(&elsewhere)), Ok(None));
+    assert_eq!(correct(&dir, None), Ok(None));
+    assert_eq!(mode_of(&dir), 0o755);
+    // The standard one is corrected.
+    assert!(correct(&dir, Some(&dir)).unwrap().is_some());
+    assert_eq!(mode_of(&dir), 0o700);
+}
+
+#[test]
+fn nothing_is_changed_below_a_path_that_others_can_write() {
+    use crate::datadir_start::correct;
+    let base = tempfile::tempdir().unwrap();
+    let above = base.path().join("freesynergy");
+    let dir = above.join("tasks");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::set_permissions(&dir, PermissionsExt::from_mode(0o755)).unwrap();
+    std::fs::set_permissions(&above, PermissionsExt::from_mode(0o777)).unwrap();
+    let fault = correct(&dir, Some(&dir)).unwrap_err();
+    assert_eq!(
+        fault,
+        Fault::Ancestor {
+            path: dir.clone(),
+            ancestor: above.canonicalize().unwrap()
+        }
+    );
+    assert_eq!(fault.code(), "data-dir-ancestor");
+    assert_eq!(
+        mode_of(&dir),
+        0o755,
+        "the folder was not touched before the path was checked"
+    );
+    // Safe again: now it is corrected.
+    std::fs::set_permissions(&above, PermissionsExt::from_mode(0o700)).unwrap();
+    assert!(correct(&dir, Some(&dir)).unwrap().is_some());
+    assert_eq!(mode_of(&dir), 0o700);
+}

@@ -65,6 +65,14 @@ pub fn fault_text(fault: &Fault, lang: Lang) -> String {
         (Fault::ForeignOwner { owner, me, .. }, Lang::De) => format!(
             "Der Datenordner {path} gehört Benutzer {owner}, nicht dir ({me}); er wird weder geändert noch benutzt."
         ),
+        (Fault::Ancestor { ancestor, .. }, Lang::En) => format!(
+            "The data folder {path} is not used: the folder {} above it can be changed by others (it must belong to you or to root, and not be writable by others).",
+            ancestor.display()
+        ),
+        (Fault::Ancestor { ancestor, .. }, Lang::De) => format!(
+            "Der Datenordner {path} wird nicht benutzt: der Ordner {} darüber kann von anderen verändert werden (er muss dir oder root gehören und darf für andere nicht beschreibbar sein).",
+            ancestor.display()
+        ),
         (Fault::Io { kind, .. }, Lang::En) => {
             format!("The data folder {path} could not be checked or made private ({kind:?}).")
         }

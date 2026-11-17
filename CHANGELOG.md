@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- check_lock_sources: `fs-objects` has two sources (0.0.1 in core/server/app, 0.0.2 in fs-tasks-local) until the lift run; `fs-interfaces` already had two on main (via fs-components-primitives).
+
 ### English
 
 - **`LocalTasks` (`crates/fs-tasks-local`), run 2a rest 2 on the fixed trait `tasks_v1`** (no lift; hash of the trait folder unchanged): `relate`, `unrelate` and `readiness` (capabilities `relation.create`, `relation.delete`, `dependency.evaluate`), the `ready` filter of `list` decided in SQL, alerts and links as typed rows, and the day range of `list` decided in SQL on derived day columns (`tasks_day`). New tables in step 5, a code step 6 that fills the day columns of an older file. The conformance rules (Fake = Local) gained the day range in more zones and the alerts and links.

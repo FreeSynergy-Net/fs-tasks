@@ -249,6 +249,8 @@ pub struct Change {
     pub kind: HistoryKind,
     pub at: Utc,
     /// `Generation::value` NACH der Transaktion, die diese Änderung erzeugt hat (Regel G1); mehrere Änderungen einer
-    /// Transaktion teilen den Wert. Ein Sprung größer als 1 zwischen zwei gesehenen Werten heißt: Voll-Reload.
-    pub generation: u64,
+    /// Transaktion teilen den Wert. Sprünge sind normal (der Zähler gilt je Anbieter, die Meldungen nur für lesbare
+    /// Listen); verlorene Meldungen zeigt `ended` oder das Wiederverbinden mit Vergleich von `generation()`. `None` = der
+    /// Weg trägt ihn nicht (Draht D1: `Change` in common.capnp ohne Zähler, `RemoteTasks`); ein lokaler Anbieter setzt ihn immer.
+    pub generation: Option<u64>,
 }

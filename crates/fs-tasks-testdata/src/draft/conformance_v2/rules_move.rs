@@ -86,6 +86,19 @@ async fn k10_after_and_column_are_checked() {
     assert!(
         matches!(r, Err(TaskError::Common(Error::Invalid(p))) if has_code(&p, "after.outside"))
     );
+    let r =
+        k.t.move_to(
+            a.id,
+            a.revision,
+            &todo,
+            Slot::After(a.id),
+            Children::Leave,
+            WHOLE,
+        )
+        .await;
+    assert!(
+        matches!(r, Err(TaskError::Common(Error::Invalid(p))) if has_code(&p, "after.outside"))
+    );
     let nowhere = crate::draft::tasks_v2::ColumnKey::parse("nowhere").unwrap();
     let r =
         k.t.move_to(

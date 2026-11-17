@@ -170,7 +170,7 @@ pub struct Task {
     pub overrides: Vec<Override>,
     /// Checkliste, nach `rank` (siehe [`ChecklistItem`]); geändert nur über `Tasks::checklist`.
     pub checklist: Vec<ChecklistItem>,
-    /// Handreihenfolge in Liste und Board (kleiner = weiter oben); gesetzt nur über `place` (Regeln: [`Rank`]).
+    /// Handreihenfolge in Liste und Board (kleiner = weiter oben); gesetzt über `create`, `progress`, `place` und `move_to` (Regeln: [`Rank`]).
     pub rank: Rank,
     pub claim: Option<Claim>,
     /// Herkunft, wenn importiert (nur lesend; `create`/`update` ignorieren es).

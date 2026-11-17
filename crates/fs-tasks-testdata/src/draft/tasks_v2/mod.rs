@@ -13,7 +13,7 @@
 //! REGEL KI-ORDNUNG (KI = fragende Person mit KI-Markierung, ADR 0054; unbekannt = wie KI, fail-closed): (1) Die
 //! Reihenfolge gehört den Menschen: `place`, `move_to` mit `Top`/`After` oder in die eigene Spalte, `create` mit
 //! `at: Top` sind `Forbidden { task.place }`. (2) Jeder Rang, den eine KI auslöst (`create`, `progress`, `move_to` mit
-//! `Bottom`), ist ganz unten in der neuen Folge; ändert sich `progress` nicht (nur Stufe), bleibt der Rang. (3) KI
+//! `Bottom`, `update` mit `list`/`parent`, `restore`), ist ganz unten in der neuen Folge; ändert sich `progress` nicht (nur Stufe), bleibt der Rang. (3) KI
 //! schreibt `progress`, `move_to`, `note` nur an Aufgaben, die SIE hält (gültiger `claim`): hält eine andere
 //! `Claimed`, sonst `Forbidden { task.claim }`; Ausnahme `create`. (4) `set_columns` und `update_list` verlangen
 //! `ListAccess` (KI höchstens `Write`): `Forbidden`. (5) `claim_next` für "die nächste Karte": `progress =
@@ -21,14 +21,16 @@
 //! Reihenfolge der Prüfung wie v1: `NotFound`, `Forbidden`, `Claimed`, `Changed`, dann `Invalid` oder `Columns`.
 //!
 //! REGEL LIVE-FEED (Regeln G1 bis G4, `Generation` in `query.rs`): G1 jede SCHREIBENDE Transaktion, die etwas ändert
-//! (jede Schreibmethode von `Tasks`, `TaskExchange::import`, Fristablauf von Papierkorb und Übernahme), erhöht
+//! (jede Schreibmethode von `Tasks`, `TaskExchange::import`, der Aufräumlauf, wenn der Papierkorb wirklich leert; nicht
+//! der Fristzeitpunkt, und nicht das Ende einer Übernahme durch `until`: das schreibt nichts), erhöht
 //! `generation().value` um GENAU 1 und erzeugt je geändertem Objekt GENAU einen `Change` mit diesem Wert; ohne
 //! Änderung (schon zugewiesen, `claim_next` ohne Treffer, abgelehnt) bleibt der Wert und es gibt keinen `Change`.
 //! G2 `set_columns` meldet `Change { task: None, kind: Update }`, `move_to` `Move`, `note` `Update`, über DENSELBEN Weg
 //! wie Aufgaben (jeder Schreibpfad, auch CLI und Agent). G3 Der Zähler steht in DERSELBEN Transaktion wie das Schreiben
 //! (Absturz: beides oder nichts) und fällt nach einem Neustart nie zurück. G4 Client-Regel beim Wiederverbinden: neu
-//! abonnieren, `generation()` lesen, weicht `(epoch, value)` vom zuletzt gesehenen ab oder springt `Change::generation`
-//! um mehr als 1: Voll-Reload; die Mechanik (Schleife mit Rückzug) ist ein Baustein von fs-rpc, nicht dieses Traits.
+//! abonnieren, `generation()` lesen, weicht `(epoch, value)` vom zuletzt gesehenen ab: Voll-Reload. Sprünge in
+//! `Change::generation` sind normal (der Zähler gilt je Anbieter, gemeldet wird nur für lesbare Listen, b7 7 und 10);
+//! verlorene Meldungen zeigt `ended` (common.capnp) bzw. das Wiederverbinden an. Die Mechanik (Schleife mit Rückzug) ist ein Baustein von fs-rpc, nicht dieses Traits.
 //!
 //! ERWEITERUNGEN (zusätzlich zu v1): JSCalendar `freesynergy.net:stage`, `freesynergy.net:note`; VTODO `X-FS-STAGE`,
 //! `X-FS-NOTE`. Ein Ziel ohne sie bekommt den Verlust in `lost`. Spalten sind Einstellung, kein Teil der Aufgabe und

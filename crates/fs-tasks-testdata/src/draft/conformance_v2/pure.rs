@@ -118,6 +118,7 @@ fn b7_gives_every_card_a_column() {
             Some("other"),
         ),
     );
+    cols.insert(0, col("left", &[Progress::InProcess], Some("x")));
     let s = set(cols);
     assert_eq!(s.problems(), Vec::new());
     let of = |p, st: Option<&str>| {

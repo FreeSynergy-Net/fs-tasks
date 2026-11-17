@@ -253,5 +253,12 @@ mod tests {
         o.create(4, Progress::InProcess, "", false);
         assert!(o.move_to(4, 1, At::Top) && o.layout(1) == [4, 1]);
         assert_eq!((o.layout(2), o.layout(1)), (vec![3], vec![4, 1]));
+        // F1 (B8): `After(x)` with another progress than the written one: top if x's progress comes earlier in the column.
+        o.create(10, Progress::Failed, "", false);
+        o.create(11, Progress::Cancelled, "", false);
+        o.create(12, Progress::Cancelled, "", false);
+        assert_eq!(o.layout(3), [10, 11, 12]);
+        assert!(o.move_to(12, 3, At::After(10)));
+        assert_eq!(o.layout(3), [10, 12, 11]);
     }
 }

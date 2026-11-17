@@ -26,7 +26,7 @@ async fn k25_every_write_counts_once() {
     let c = k.t.note(c.id, c.revision, Some("x")).await.unwrap();
     assert_eq!(value(&*k.t).await, v + 1);
     let seen = k.changes().await;
-    assert_eq!((seen.len(), seen[n].generation), (n + 1, v + 1));
+    assert_eq!((seen.len(), seen[n].generation), (n + 1, Some(v + 1)));
     let key = crate::draft::tasks_v2::ColumnKey::parse("doing").unwrap();
     k.t.move_to(c.id, c.revision, &key, Slot::Bottom, Children::Leave, WHOLE)
         .await
@@ -86,7 +86,7 @@ async fn k27_one_transaction_one_value() {
     k.t.delete(parent.id, parent.revision, WHOLE).await.unwrap();
     let new = k.changes().await.split_off(n);
     assert_eq!((value(&*k.t).await, new.len()), (v + 1, 3));
-    assert!(new.iter().all(|x| x.generation == v + 1));
+    assert!(new.iter().all(|x| x.generation == Some(v + 1)));
 }
 
 /// K28: Neustart des Anbieters (neu öffnen auf demselben Speicher): gleiche `epoch`, `value` nicht kleiner.

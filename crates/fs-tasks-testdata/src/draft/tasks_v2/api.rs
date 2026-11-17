@@ -167,8 +167,7 @@ pub trait Tasks: Send + Sync {
     ) -> TaskResult<Task>;
     /// `task.place`: Hand-Reihenfolge; direkt nach `after` einsortieren (`None` = ganz oben). Bezug ist die Rangfolge
     /// (dieselbe Liste, Eltern-Aufgabe, `progress`); ein `after` außerhalb davon ist `Invalid`. Schreibt nur diese
-    /// Aufgabe (Ausnahme: einmaliges Neu-Verteilen, siehe [`super::Rank`]). Ziehen im Board = erst `progress`, dann
-    /// `place` mit der neuen Revision; scheitert `place` mit `Changed`, wiederholt das Frontend `place`.
+    /// Aufgabe (Ausnahme: einmaliges Neu-Verteilen, siehe [`super::Rank`]). Ziehen im Board ist `move_to`.
     async fn place(
         &self,
         id: ObjectId,
@@ -263,8 +262,10 @@ pub trait Tasks: Send + Sync {
     ) -> TaskResult<ColumnSet>;
     /// `task.move`: Spaltenwechsel MIT Stufe und Platz in EINER Transaktion (ersetzt Ziehen = `progress` + `place`).
     /// Schreibt `progress` = erster Wert der Zielspalte (nur wenn die Karte keinen Wert der Spalte hat, sonst bleibt er),
-    /// `stage` = Stufe der Spalte, den Rang nach `at` (`After(x)`: x lebt und steht in DIESER Spalte, sonst `Invalid`
-    /// `after.outside`). Unbekannte Spalte: `Invalid` `column.unknown`. Gleiche Spalte = nur Platz. `children` und `scope`
+    /// `stage` = Stufe der Spalte, den Rang nach `at` (`After(x)` verlangt: x lebt (nicht im Papierkorb),
+    /// x ≠ id, gleiche Liste und Eltern-Aufgabe, `column_of(x)` ist die Zielspalte, sonst `Invalid` `after.outside`; hat x
+    /// einen anderen `progress` als den geschriebenen: ganz oben in der eigenen Folge, wenn dessen Stand in der Spalte früher
+    /// steht, sonst ganz unten (Regel B8). Neu verteilt wird bei `Exhausted`/`Equal` einmal (`Rank::spread`) wie bei `place`). Unbekannte Spalte: `Invalid` `column.unknown`. Gleiche Spalte = nur Platz. `children` und `scope`
     /// wie bei `progress`. EINE neue Revision, EIN `Change` (`Move`, Feld `stage`). KI: Regel KI-ORDNUNG.
     async fn move_to(
         &self,

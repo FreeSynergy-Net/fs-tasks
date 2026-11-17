@@ -81,6 +81,9 @@ pub enum Edge {
     Bottom,
 }
 
+/// Regel B8, ANSICHT EINER SPALTE: ihre Karten stehen in der Reihenfolge von `BoardColumn::progress`, darin nach `rank`,
+/// dann nach `id` (die Reihenfolge selbst ist `Task::rank`, es gibt keine Kartenplätze).
+///
 /// Spalten einer Liste, links nach rechts (Position = Index). `stored = false`: keine Einstellung gespeichert, der
 /// Standard wird geliefert. `revision` gehört dem Satz (eigene Spalte je Liste), nicht der Liste.
 #[derive(Clone, Debug, PartialEq, Eq)]

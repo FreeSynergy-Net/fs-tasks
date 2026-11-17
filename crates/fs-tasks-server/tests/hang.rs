@@ -149,7 +149,7 @@ fn another_program_file_is_never_ended_without_a_yes_and_is_then_ended_with_it()
         stuck
             .exe
             .as_deref()
-            .is_some_and(|e| e.ends_with("run/fs-tasks")),
+            .is_some_and(|e| e.ends_with(other.file_name().unwrap().to_str().unwrap())),
         "{stuck:?}"
     );
     assert!(

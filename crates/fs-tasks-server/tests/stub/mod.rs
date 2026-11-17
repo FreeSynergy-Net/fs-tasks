@@ -96,11 +96,12 @@ pub fn start_stub(exe: &Path, socket: &Path, extra: &[(&str, &str)]) -> Child {
     child
 }
 
-/// A copy of this test binary in `dir`: another program file with the same content.
+/// A copy of this test binary in `dir`, with the same file name: another program file with the same content and name.
 pub fn copy_of_this_program(dir: &Path) -> PathBuf {
     let _one = SPAWN.lock().unwrap_or_else(PoisonError::into_inner);
-    let copy = dir.join("fs-tasks");
-    std::fs::copy(std::env::current_exe().unwrap(), &copy).unwrap();
+    let exe = std::env::current_exe().unwrap();
+    let copy = dir.join(exe.file_name().unwrap());
+    std::fs::copy(&exe, &copy).unwrap();
     std::fs::set_permissions(&copy, PermissionsExt::from_mode(0o755)).unwrap();
     File::open(&copy).unwrap().sync_all().unwrap();
     copy

@@ -11,7 +11,9 @@ use fs_components_app::{
     AppError, AppWidget, Element, Menu, MenuEntry, Screen, Status, Surface, WindowOptions, launch,
 };
 use fs_components_widgets::{Block, Inline, TextView};
-use fs_tasks_server::{Lang, StartError, Stuck, end_confirmed, start_text, window_words};
+use fs_tasks_server::{
+    Lang, StartError, Stuck, close_word, end_confirmed, start_text, window_words,
+};
 
 const YES: &str = "server-end";
 const NO: &str = "server-close";
@@ -78,29 +80,28 @@ pub fn build(
         vec![Screen::new("problem", "", surface as Arc<dyn Surface>)],
     )?;
     app.set_status(Some(Status::Problem(start_text(error, lang))));
-    let mut yes_entry = MenuEntry::new(YES, yes);
-    if !error.stuck().is_some_and(|s| s.can_ask) {
-        yes_entry = yes_entry.disabled();
-    }
+    // A yes only for a process that is provably this program; for any other program there is the message and "Close".
+    let entries = if error.stuck().is_some_and(|s| s.can_ask) {
+        vec![MenuEntry::new(YES, yes), MenuEntry::new(NO, no)]
+    } else {
+        vec![MenuEntry::new(NO, close_word(lang))]
+    };
     let me = app.clone();
-    app.set_menus(
-        vec![Menu::new(title, vec![yes_entry, MenuEntry::new(NO, no)])],
-        move |id| match id {
-            YES => match end() {
-                Ok(()) => {
-                    retry.store(true, Ordering::SeqCst);
-                    me.quit();
-                }
-                Err(failed) => {
-                    eprintln!("fs-tasks: {}", failed.report(lang));
-                    me.set_status(Some(Status::Problem(start_text(&failed, lang))));
-                }
-            },
-            _ => {
+    app.set_menus(vec![Menu::new(title, entries)], move |id| match id {
+        YES => match end() {
+            Ok(()) => {
+                retry.store(true, Ordering::SeqCst);
                 me.quit();
             }
+            Err(failed) => {
+                eprintln!("fs-tasks: {}", failed.report(lang));
+                me.set_status(Some(Status::Problem(start_text(&failed, lang))));
+            }
         },
-    )?;
+        _ => {
+            me.quit();
+        }
+    })?;
     Ok(app)
 }
 

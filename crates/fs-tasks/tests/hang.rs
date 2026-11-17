@@ -105,7 +105,9 @@ fn the_command_line_says_that_the_server_does_not_answer_and_ends_with_code_4() 
         "{err}"
     );
     assert!(
-        err.contains("does not answer") && err.contains("End it?"),
+        err.contains("does not answer")
+            && err.contains("not ended from here")
+            && !err.contains("End it?"),
         "{err}"
     );
     assert!(

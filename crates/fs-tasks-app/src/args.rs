@@ -150,6 +150,7 @@ fn view(text: &str) -> Result<TaskView, String> {
 
 /// The help text.
 pub const HELP: &str = "fs-tasks app: the window of the tasks program (options of the window)
+Exit codes: 0 ok, 1 error, 3 a server holds the socket and does not answer (the window says so; the command line uses 4)
 
   --connect <socket> use the tasks server at this socket (default for a window: $XDG_RUNTIME_DIR/freesynergy/tasks.sock);
                      it is started if none answers and keeps running when the window closes

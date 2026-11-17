@@ -65,7 +65,6 @@ fn failed(text: impl Into<String>) -> StartError {
 fn stuck_of(peer: &Peer, decision: Decision) -> StartError {
     let (can_ask, why) = match decision {
         Decision::TakeOver => (true, "same-program"),
-        Decision::AskUser(why) => (true, why.code()),
         Decision::Refuse(why) => (false, why.code()),
     };
     StartError::Unresponsive(Stuck {
@@ -129,19 +128,18 @@ async fn gone_within(target: &Target, limit: Duration) -> bool {
     }
 }
 
-/// Look at the process once more and accept it for ending: this program (`TakeOver`), or, with the person's yes
-/// (`allow_ask`), another program of this user. Anything else is the failure to hand on.
-fn accepted(target: &Target, uid: u32, own: &Own, allow_ask: bool) -> Result<Peer, StartError> {
+/// Look at the process once more and accept it for ending: this program (`TakeOver`)
+/// only. Another program is never ended, also not with a yes: the failure to hand on says who it is.
+fn accepted(target: &Target, uid: u32, own: &Own) -> Result<Peer, StartError> {
     let peer = procfs::peer(target.pid, uid);
     match decide(Some(target.start), &peer, own) {
         Decision::TakeOver => Ok(peer),
-        Decision::AskUser(_) if allow_ask => Ok(peer),
-        other => Err(stuck_of(&peer, other)),
+        other @ Decision::Refuse(_) => Err(stuck_of(&peer, other)),
     }
 }
 
 /// End the process `target` (SIGTERM, then SIGKILL) and remove its socket file. `uid` is what the socket said about
-/// the user of the process; with `allow_ask` (the person said yes) another program of the same user is ended too.
+/// the user of the process.
 ///
 /// # Errors
 /// The process is not one that may be ended (`Unresponsive` with the reason), or it did not end.
@@ -149,12 +147,11 @@ pub(crate) async fn end_process(
     socket: &Path,
     target: &Target,
     uid: u32,
-    allow_ask: bool,
     times: &Times,
 ) -> Result<(), StartError> {
     let own = procfs::own().ok_or_else(|| failed("cannot read the facts of this program"))?;
     let socket_ino = std::fs::symlink_metadata(socket).ok().map(|m| m.ino());
-    accepted(target, uid, &own, allow_ask)?;
+    accepted(target, uid, &own)?;
     let pid = Pid::from_raw(target.pid).ok_or_else(|| failed("no such process"))?;
     let fd = match pidfd_open(pid, PidfdFlags::empty()) {
         Ok(fd) => fd,
@@ -162,7 +159,7 @@ pub(crate) async fn end_process(
         Err(e) => return Err(failed(format!("cannot hold process {}: {e}", target.pid))),
     };
     // Looked at again with the descriptor in hand: from now on the number cannot mean another process.
-    let peer = accepted(target, uid, &own, allow_ask)?;
+    let peer = accepted(target, uid, &own)?;
     let exe = peer.exe.as_ref().map_or("?", |e| e.path.as_str());
     let line = format!(
         "take-over pid={} start={} uid={} exe={exe} (found through the socket {})",
@@ -223,10 +220,10 @@ pub(crate) async fn free_socket(socket: &Path, times: &Times) -> Result<Freed, S
     let peer = procfs::peer(pid, uid);
     match decide(Some(start), &peer, &own) {
         Decision::TakeOver => {
-            end_process(socket, &Target { pid, start }, uid, false, times).await?;
+            end_process(socket, &Target { pid, start }, uid, times).await?;
             Ok(Freed::Free)
         }
-        other => Err(stuck_of(&peer, other)),
+        other @ Decision::Refuse(_) => Err(stuck_of(&peer, other)),
     }
 }
 
@@ -260,7 +257,6 @@ pub fn end_confirmed(socket: &Path, stuck: &Stuck) -> Result<(), StartError> {
         socket,
         &Target { pid, start },
         uid,
-        stuck.can_ask,
         &Times::default(),
     ))
 }

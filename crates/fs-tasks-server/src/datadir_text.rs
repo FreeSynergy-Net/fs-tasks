@@ -163,6 +163,15 @@ fn unresponsive_text(stuck: &Stuck, lang: Lang) -> String {
     }
 }
 
+/// The word of the only entry of the window when nothing may be ended.
+#[must_use]
+pub fn close_word(lang: Lang) -> &'static str {
+    match lang {
+        Lang::En => "Close",
+        Lang::De => "Schlie\u{df}en",
+    }
+}
+
 /// The words of the window that shows a silent server: the title, the answer "yes" (end it, start again) and the answer
 /// "no" (close). Menu entries stand for the two answers: there is no question dialog in the shell yet.
 #[must_use]

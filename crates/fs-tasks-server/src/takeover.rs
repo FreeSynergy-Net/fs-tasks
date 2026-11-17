@@ -1,7 +1,7 @@
 //! The rule for a server that does not answer: may it be ended? A pure decision over facts.
 //!
 //! Pattern: Policy + Guard — `decide` looks only at made-up or real facts of the process behind the socket and says
-//! `TakeOver` (end it, start a new one), `AskUser` (ask the person; their yes ends it) or `Refuse` (never). The
+//! `TakeOver` (it is provably this program: end it, start a new one) or `Refuse` (never; another program is only reported). The
 //! facts are read elsewhere (`procfs`); the killing is done elsewhere (`ending`). So every rule is testable with
 //! made-up data: a process of another user, another program, a reused process number, a link to this program.
 
@@ -83,8 +83,6 @@ impl Why {
 pub enum Decision {
     /// It is this program of this user, the same process as seen first: end it and start a new server.
     TakeOver,
-    /// It is the user's own process but another program: only the person may say yes.
-    AskUser(Why),
     /// Never: the person is told, nobody ends it from here.
     Refuse(Why),
 }
@@ -107,6 +105,6 @@ pub fn decide(seen: Option<u64>, peer: &Peer, own: &Own) -> Decision {
     match &peer.exe {
         None => Decision::Refuse(Why::Unreadable),
         Some(exe) if exe.same_as(&own.exe) => Decision::TakeOver,
-        Some(_) => Decision::AskUser(Why::OtherProgram),
+        Some(_) => Decision::Refuse(Why::OtherProgram),
     }
 }

@@ -104,15 +104,15 @@ fn what_cannot_be_read_cannot_be_verified() {
 }
 
 #[test]
-fn another_program_file_is_asked_about_even_with_the_same_name() {
-    // The same file name in another place is another program: never taken over without a yes.
+fn another_program_file_is_refused_even_with_the_same_name() {
+    // The same file name in another place is another program: never ended, only reported.
     let p = Peer {
         exe: Some(image(11, "/home/x/bin/fs-tasks")),
         ..peer()
     };
     assert_eq!(
         decide(Some(4242), &p, &own()),
-        Decision::AskUser(Why::OtherProgram)
+        Decision::Refuse(Why::OtherProgram)
     );
 }
 

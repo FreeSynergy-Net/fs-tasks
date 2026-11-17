@@ -51,7 +51,7 @@ mod wire_caps;
 pub use client::{Changes, RemoteItems};
 pub use datadir::{Action, Fault, Meta, Tightened, create_private_dir, decide, tighten};
 pub use datadir_start::{check_ancestors, correct};
-pub use datadir_text::{Lang, fault_text, start_text, tightened_text, window_words};
+pub use datadir_text::{Lang, close_word, fault_text, start_text, tightened_text, window_words};
 pub use ending::end_confirmed;
 pub use host::{Hosted, host};
 pub use program::serve_command;

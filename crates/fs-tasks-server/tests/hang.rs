@@ -135,7 +135,7 @@ fn a_link_to_this_program_is_this_program() {
 }
 
 #[test]
-fn another_program_file_is_never_ended_without_a_yes_and_is_then_ended_with_it() {
+fn another_program_file_is_never_ended_and_has_no_yes() {
     let (p, pids) = (place(), Arc::new(Mutex::new(Vec::new())));
     let other = stub::copy_of_this_program(&p.dir.path().join("run"));
     let mut silent = stub::start_stub(&other, &p.socket, &[]);
@@ -143,7 +143,7 @@ fn another_program_file_is_never_ended_without_a_yes_and_is_then_ended_with_it()
         panic!("the start must say that the server does not answer");
     };
     assert_eq!(stuck.pid, Some(i32::try_from(silent.id()).unwrap()));
-    assert!(stuck.can_ask, "{stuck:?}");
+    assert!(!stuck.can_ask, "no yes for another program: {stuck:?}");
     assert_eq!(stuck.why, "other-program");
     assert!(
         stuck
@@ -154,26 +154,19 @@ fn another_program_file_is_never_ended_without_a_yes_and_is_then_ended_with_it()
     );
     assert!(
         !stub::ended(&mut silent, Duration::from_millis(600)),
-        "another program was ended without a yes"
+        "another program was ended"
     );
     assert!(pids.lock().unwrap().is_empty(), "no new server was started");
-    // The process number was reused (another start time): the yes is not valid for what runs now.
-    let reused = fs_tasks_server::Stuck {
-        start: stuck.start.map(|s| s + 1),
+    // Not even a forged yes (the same process as shown, marked askable) ends it.
+    let forged = fs_tasks_server::Stuck {
+        can_ask: true,
         ..stuck.clone()
     };
-    assert!(end_confirmed(&p.socket, &reused).is_err());
+    assert!(end_confirmed(&p.socket, &forged).is_err());
     assert!(!stub::ended(&mut silent, Duration::from_millis(300)));
-    // Without the person's yes (nothing to ask about) it is not ended either.
-    let no_ask = fs_tasks_server::Stuck {
-        can_ask: false,
-        ..stuck.clone()
-    };
-    assert!(end_confirmed(&p.socket, &no_ask).is_err());
-    assert!(!stub::ended(&mut silent, Duration::from_millis(300)));
-    // The yes of the person (the same process as shown) ends it.
-    end_confirmed(&p.socket, &stuck).unwrap();
-    assert!(stub::ended(&mut silent, Duration::from_secs(3)));
+    // The message names the process and offers nothing to end.
+    let text = StartError::Unresponsive(stuck).report(fs_tasks_server::Lang::En);
+    assert!(text.contains("pid=") && !text.contains("End it?"), "{text}");
 }
 
 #[test]

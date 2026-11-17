@@ -109,7 +109,23 @@ fn a_failed_ending_is_shown_not_swallowed_and_a_process_that_may_not_be_asked_ab
     let refused = build(&silent(false), Lang::En, end, Arc::default()).unwrap();
     assert!(
         !refused.choose("server-end"),
-        "a disabled yes is not chosen"
+        "there is no yes for another program"
+    );
+    let entries = refused.with_shell(|s| {
+        s.menus()
+            .iter()
+            .map(|m| m.entries.len())
+            .collect::<Vec<_>>()
+    });
+    assert_eq!(entries, vec![1], "only Close is offered");
+    let Some(Status::Problem(text)) = refused.with_shell(|s| s.status().cloned()) else {
+        panic!("no status");
+    };
+    assert!(
+        text.contains("PID 4711")
+            && text.contains("/usr/bin/fs-tasks")
+            && !text.contains("End it?"),
+        "{text}"
     );
     assert_eq!(ended.load(Ordering::SeqCst), 0);
 }

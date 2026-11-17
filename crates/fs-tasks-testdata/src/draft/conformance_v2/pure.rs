@@ -72,7 +72,13 @@ fn rules_b1_to_b6_find_each_problem() {
     assert!(set(ok).problems().is_empty());
     assert_eq!(set(Vec::new()).problems()[0], ColumnProblem::None);
     let many: Vec<_> = (0..=COLUMNS_MAX)
-        .map(|i| col(&format!("c{i}"), &Progress::ALL, Some(&format!("s{i}"))))
+        .map(|i| {
+            col(
+                &format!("c{i}"),
+                &Progress::ALL,
+                Some(format!("s{i}").as_str()),
+            )
+        })
         .collect();
     assert!(
         set(many)
@@ -286,6 +292,7 @@ fn oracle_models_order() {
     o.create(2, Progress::NeedsAction, "", false);
     o.create(3, Progress::NeedsAction, "", true);
     assert_eq!(o.layout(0), [3, 1, 2]);
+    assert!(!o.set_columns(Vec::new()) && o.cols.len() == 4);
     assert!(o.move_to(1, 1, At::Bottom));
     assert_eq!((o.layout(0), o.layout(1)), (vec![3, 2], vec![1]));
     assert!(!o.move_to(2, 1, At::After(3)));

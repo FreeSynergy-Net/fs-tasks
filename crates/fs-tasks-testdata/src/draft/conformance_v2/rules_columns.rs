@@ -99,7 +99,7 @@ async fn k05_each_rule_has_its_problem() {
             col(
                 &format!("c{i}"),
                 &[Progress::NeedsAction],
-                Some(&format!("s{i}")),
+                Some(format!("s{i}").as_str()),
             )
         })
         .collect();

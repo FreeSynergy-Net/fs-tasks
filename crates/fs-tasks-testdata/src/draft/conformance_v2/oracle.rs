@@ -42,17 +42,17 @@ fn idx(p: Progress) -> usize {
 
 impl Oracle {
     pub(super) fn new() -> Self {
-        let std = |k: &str, p: &[Progress]| Col {
+        let base = |k: &str, p: &[Progress]| Col {
             key: k.to_owned(),
             progress: p.to_vec(),
             stage: String::new(),
         };
         Self {
             cols: vec![
-                std("todo", &[Progress::NeedsAction]),
-                std("doing", &[Progress::InProcess]),
-                std("done", &[Progress::Completed]),
-                std("closed", &[Progress::Failed, Progress::Cancelled]),
+                base("todo", &[Progress::NeedsAction]),
+                base("doing", &[Progress::InProcess]),
+                base("done", &[Progress::Completed]),
+                base("closed", &[Progress::Failed, Progress::Cancelled]),
             ],
             cards: Vec::new(),
             seq: HashMap::new(),
@@ -191,10 +191,8 @@ impl Oracle {
         } else {
             target.progress[0]
         };
-        if let At::After(x) = at {
-            if x == id || !self.layout(col).contains(&x) {
-                return false;
-            }
+        if matches!(at, At::After(x) if x == id || !self.layout(col).contains(&x)) {
+            return false;
         }
         let stage = target.stage.clone();
         let order = target.progress.clone();

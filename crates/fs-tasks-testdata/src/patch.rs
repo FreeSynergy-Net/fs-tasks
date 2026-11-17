@@ -6,7 +6,8 @@ use crate::clock::tz;
 use crate::ids::invalid;
 use crate::series::{base, supported};
 use crate::tasks_v1::{
-    Due, FieldChange, Progress, Recurrence, Task, TaskError, TaskPatch, TaskResult, Value,
+    Due, FieldChange, Frequency, Progress, Recurrence, RepeatFrom, RuleEnd, Skip, Task, TaskError,
+    TaskPatch, TaskResult, Value,
 };
 
 /// A timed due value needs a known zone (never guessed, ADR 0085).
@@ -43,22 +44,54 @@ pub(crate) fn check_patch(p: &TaskPatch) -> TaskResult<()> {
     {
         return Err(invalid("links", "href-or-file"));
     }
-    for r in [&p.recurrence, &p.excluded_recurrence]
-        .into_iter()
-        .flatten()
-        .flatten()
-    {
-        if matches!(r, Recurrence::Rule(rule) if !supported(rule)) {
-            return Err(invalid("recurrence", "outside-subset"));
+    keys_once(p.alerts.iter().flatten().map(|a| a.key.as_str()), "alerts")?;
+    keys_once(p.links.iter().flatten().map(|l| l.key.as_str()), "links")
+}
+
+/// A map by key: no key empty, none twice.
+fn keys_once<'a>(keys: impl Iterator<Item = &'a str>, field: &str) -> TaskResult<()> {
+    let mut seen = std::collections::BTreeSet::new();
+    for k in keys {
+        if k.is_empty() || !seen.insert(k) {
+            return Err(invalid(field, "key"));
         }
     }
     Ok(())
 }
 
-/// The check after the patch: a series needs a reference point.
+/// The check after the patch: a series needs a reference point; the rule is one the fake reads; a series from
+/// completion keeps to its form (`RepeatFrom::Completion`: one rule with frequency, interval and end only, no
+/// exclusions, only daily, weekly, monthly or yearly, never `Count(0)`).
 pub(crate) fn check_task(t: &Task) -> TaskResult<()> {
     if !t.recurrence.is_empty() && base(t).is_none() {
         return Err(invalid("recurrence", "needs-start-or-due"));
+    }
+    let completion = t.repeat_from == RepeatFrom::Completion && !t.recurrence.is_empty();
+    for r in t.recurrence.iter().chain(&t.excluded_recurrence) {
+        if let Recurrence::Rule(rule) = r {
+            if completion
+                && !matches!(
+                    rule.frequency,
+                    Frequency::Daily | Frequency::Weekly | Frequency::Monthly | Frequency::Yearly
+                )
+            {
+                return Err(invalid("recurrence.frequency", "completion-frequency"));
+            }
+            if !supported(rule) {
+                return Err(invalid("recurrence", "outside-subset"));
+            }
+        }
+    }
+    if completion {
+        let [Recurrence::Rule(rule)] = t.recurrence.as_slice() else {
+            return Err(invalid("recurrence", "completion-form"));
+        };
+        if !t.excluded_recurrence.is_empty() || rule.skip != Skip::Omit || rule.rscale.is_some() {
+            return Err(invalid("recurrence", "completion-form"));
+        }
+        if rule.end == RuleEnd::Count(0) {
+            return Err(invalid("recurrence.end", "count-zero"));
+        }
     }
     Ok(())
 }
@@ -87,6 +120,7 @@ pub(crate) fn apply(t: &mut Task, p: TaskPatch) {
         alerts,
         links,
         recurrence,
+        repeat_from,
         excluded_recurrence
     );
     if let Some(mut l) = p.labels {

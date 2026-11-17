@@ -1,10 +1,10 @@
-//! Aufgabe, Aufgabenliste, Entwurf, Änderung, Ausnahme und Teile.
+//! Aufgabe, Entwurf, Änderung, Ausnahme und Teile (die Liste steht in `list.rs`).
 //!
 //! Pattern: Value Object (Aufgabe und Teile als reine Daten, je Liste eine Untertabelle).
 
 use super::{
-    Due, FileRef, LocalDateTime, MediaType, ObjectId, Origin, PersonRef, Rank, Recurrence,
-    Revision, Span, Utc,
+    ChecklistItem, Due, FileRef, LocalDateTime, MediaType, ObjectId, Origin, PersonRef, Rank,
+    Recurrence, RepeatFrom, Revision, Span, Utc,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -61,21 +61,10 @@ pub enum Children {
     Leave,
 }
 
-/// Eine Aufgabenliste (Sammlung, wie ein Kalender; JMAP `TaskList`). Farbe ist die Vorgabe der Liste; Sichtbarkeit und
-/// Reihenfolge in der Seitenleiste sind Einstellung der Person.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct TaskList {
-    pub id: ObjectId,
-    pub name: String,
-    pub color: Option<String>,
-    pub owner: PersonRef,
-    pub revision: Revision,
-    /// `None` = lebt; `Some` = im Papierkorb bis dahin (nur in `lists` mit `Trash::Include`/`Only`).
-    pub restorable_until: Option<Utc>,
-}
-
-/// Eine zugewiesene Person (`JSCalendar` `participants` mit Rolle `attendee`). Kein Namensfeld (ADR 0085).
-/// `assigned_by`/`assigned`: wer wann zugewiesen hat; `None` nur bei Importiertem, wo die Quelle es nicht sagt.
+/// Eine zuständige Person oder Gruppe (`JSCalendar` `participants` mit Rolle `attendee`; eine Gruppe mit `kind`
+/// `group`). Kein Namensfeld (ADR 0085). `assigned_by`/`assigned`: wer wann zugewiesen hat; `None` nur bei
+/// Importiertem, wo die Quelle es nicht sagt. Bei einer Gruppe bleibt `status` `NeedsAction` (eine Gruppe antwortet
+/// nicht; ein Mitglied übernimmt mit `claim`, siehe `mod.rs`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Assignee {
     pub who: PersonRef,
@@ -85,7 +74,8 @@ pub struct Assignee {
     pub comment: Option<String>,
 }
 
-/// Übernahme gegen doppeltes Bearbeiten (Menschen und markierte KIs, ADR 0054), bis `until`.
+/// Übernahme gegen doppeltes Bearbeiten (Menschen und markierte KIs, ADR 0054), bis `until`; `by` ist immer eine
+/// Person, nie eine Gruppe (claim-Regel in `mod.rs`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Claim {
     pub by: PersonRef,
@@ -158,13 +148,18 @@ pub struct Task {
     pub assignees: Vec<Assignee>,
     pub alerts: Vec<Alert>,
     pub links: Vec<Link>,
-    /// Eltern-Aufgabe (Teilaufgabe; RFC 9253 `parent`/`child`). Kreise sind `TaskError::Cycle`.
+    /// Eltern-Aufgabe (Teilaufgabe; RFC 9253 `parent`/`child`). Kreise sind `TaskError::Cycle`; höchstens
+    /// [`SUBTASK_DEPTH_MAX`] Ebenen.
     pub parent: Option<ObjectId>,
     pub dependencies: Vec<Dependency>,
     pub related: Vec<Related>,
     pub recurrence: Vec<Recurrence>,
+    /// Zähl-Basis der Wiederholung (ohne `recurrence` bedeutungslos, `Schedule`).
+    pub repeat_from: RepeatFrom,
     pub excluded_recurrence: Vec<Recurrence>,
     pub overrides: Vec<Override>,
+    /// Checkliste, nach `rank` (siehe [`ChecklistItem`]); geändert nur über `Tasks::checklist`.
+    pub checklist: Vec<ChecklistItem>,
     /// Handreihenfolge in Liste und Board (kleiner = weiter oben); gesetzt nur über `place` (Regeln: [`Rank`]).
     pub rank: Rank,
     pub claim: Option<Claim>,
@@ -174,7 +169,8 @@ pub struct Task {
 
 /// Neue Aufgabe. `title` und `list` stehen NUR hier: `rest.title` und `rest.list` müssen `None` sein, sonst `Invalid`.
 /// `uid = None`: der Anbieter vergibt eine. `progress`: Anfangsstand (Board "+ in dieser Spalte").
-/// Die neue Aufgabe steht in ihrer Spalte oben (`rank`), bis `place` sie verschiebt.
+/// Die neue Aufgabe steht in ihrer Spalte oben (`rank`), bis `place` sie verschiebt. `assignees`: Personen oder
+/// Gruppen. `checklist`: Titel der Anfangspunkte in dieser Reihenfolge, alle offen.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TaskDraft {
     pub list: ObjectId,
@@ -182,11 +178,12 @@ pub struct TaskDraft {
     pub title: String,
     pub progress: Progress,
     pub assignees: Vec<PersonRef>,
+    pub checklist: Vec<String>,
     pub rest: TaskPatch,
 }
 
 /// Änderung: `Some` = Feld wird gesetzt (Listen ganz ersetzt, `labels` als Menge), `None` = bleibt. Stand, Zuweisung,
-/// Reihenfolge und Abhängigkeiten haben eigene Methoden (eigene Regeln, eigenes Protokoll).
+/// Reihenfolge, Checkliste und Abhängigkeiten haben eigene Methoden (eigene Regeln, eigenes Protokoll).
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct TaskPatch {
     pub title: Option<String>,
@@ -206,11 +203,13 @@ pub struct TaskPatch {
     /// Unter eine andere Aufgabe hängen oder lösen (nur `Whole`).
     pub parent: Option<Option<ObjectId>>,
     pub recurrence: Option<Vec<Recurrence>>,
+    /// Nur `Whole` (siehe [`RepeatFrom`]).
+    pub repeat_from: Option<RepeatFrom>,
     pub excluded_recurrence: Option<Vec<Recurrence>>,
 }
 
 /// Ausnahme eines Vorkommens: fällt aus, oder weicht ab (Felder, Stand, Zugewiesene). In `patch` sind `list`, `parent`,
-/// `recurrence` und `excluded_recurrence` nicht erlaubt (`Invalid`).
+/// `recurrence`, `repeat_from` und `excluded_recurrence` nicht erlaubt (`Invalid`).
 #[derive(Clone, Debug, PartialEq)]
 // Selten und als Daten gedacht: die große Variante zu boxen würde die Form für jeden Anbieter ändern (`Changed(Box<..>)`).
 #[allow(clippy::large_enum_variant)]
@@ -228,3 +227,7 @@ pub struct Override {
     pub recurrence_id: LocalDateTime,
     pub change: OverrideChange,
 }
+
+/// Höchste Tiefe des Teilaufgaben-Baums (die oberste Aufgabe ist Ebene 1; Regel in `mod.rs`, TEILAUFGABEN). Tiefer ist
+/// `Invalid` (`parent`).
+pub const SUBTASK_DEPTH_MAX: usize = 8;

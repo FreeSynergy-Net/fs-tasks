@@ -1,11 +1,14 @@
-//! `FailingTasks` and `SlowTasks`: the loading, error, partly broken and disconnected states of the plan (Z2 to Z5).
+//! `FailingTasks`, `SlowTasks` and `HeldTasks` (in `hold.rs`): the loading, error, partly broken and disconnected states
+//! of the plan (Z2 to Z5).
 //!
-//! Pattern: Decorator over `dyn Tasks`; the failure and the wait are configured per method. The wait is virtual: it moves
-//! the clock of the fake (`Clock`), nobody sleeps for real, so a test of "loading for 3 s" is instant and exact.
+//! Pattern: Decorator over `dyn Tasks`; the failure and the wait are configured per method. The wait of `SlowTasks` is
+//! virtual: it moves the clock of the fake (`Clock`), nobody sleeps for real, so a test of "loading for 3 s" is
+//! instant and exact. A frontend that must SHOW the loading state needs a call that stays open: that is `HeldTasks`.
 
 use crate::decorate::{Decorated, Gate, Op};
 use crate::fake::FakeTasks;
 use crate::tasks_v1::{Error, ObjectId, TaskError, TaskResult, Tasks, Utc};
+use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -40,6 +43,14 @@ pub fn forbidden(capability: &str) -> TaskError {
     })
 }
 
+impl<G: Gate> Decorated<G> {
+    /// Wrap `inner` behind any gate.
+    #[must_use]
+    pub fn with_gate(inner: Arc<dyn Tasks>, gate: G) -> Self {
+        Self { inner, gate }
+    }
+}
+
 /// The gate of [`FailingTasks`].
 #[derive(Default)]
 pub struct FailGate {
@@ -48,22 +59,29 @@ pub struct FailGate {
     lists: Mutex<HashMap<ObjectId, TaskError>>,
 }
 
+#[async_trait]
 impl Gate for FailGate {
-    fn pass(&self, op: Op) -> TaskResult<()> {
+    async fn pass(&self, op: Op) -> TaskResult<()> {
         if let Some(e) = locked(&self.ops).get(&op) {
             return Err(e.clone());
         }
         locked(&self.all).clone().map_or(Ok(()), Err)
     }
 
-    fn pass_list(&self, lists: &[ObjectId]) -> TaskResult<()> {
-        if let Some(e) = lists
-            .iter()
-            .find_map(|l| locked(&self.lists).get(l).cloned())
-        {
+    async fn pass_list(&self, lists: &[ObjectId]) -> TaskResult<()> {
+        let hit = {
+            let broken = locked(&self.lists);
+            // No list named = all lists (Z4): a broken one is among them.
+            if lists.is_empty() {
+                broken.values().next().cloned()
+            } else {
+                lists.iter().find_map(|l| broken.get(l).cloned())
+            }
+        };
+        if let Some(e) = hit {
             return Err(e);
         }
-        self.pass(Op::List)
+        self.pass(Op::List).await
     }
 }
 
@@ -101,6 +119,11 @@ impl FailingTasks {
         self
     }
 
+    /// From now on the method `op` answers `error` (a failure that starts in the middle of a run).
+    pub fn set_failing(&self, op: Op, error: TaskError) {
+        locked(&self.gate.ops).insert(op, error);
+    }
+
     /// Everything works again (the service came back, Z5).
     pub fn heal(&self) {
         *locked(&self.gate.all) = None;
@@ -117,8 +140,9 @@ pub struct SlowGate {
     waited: AtomicI64,
 }
 
+#[async_trait]
 impl Gate for SlowGate {
-    fn pass(&self, op: Op) -> TaskResult<()> {
+    async fn pass(&self, op: Op) -> TaskResult<()> {
         let ms = locked(&self.ops).get(&op).copied().unwrap_or(self.every);
         self.clock.advance(ms);
         self.waited.fetch_add(ms, Ordering::Relaxed);

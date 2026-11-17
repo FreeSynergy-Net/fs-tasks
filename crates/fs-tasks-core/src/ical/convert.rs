@@ -1,7 +1,7 @@
 //! iCalendar `VTODO`s as typed tasks.
 //!
 //! Pattern: Adapter — `fs-jscalendar` does the conversion on JSON values; this file picks our
-//! component kind and our type. `VEVENT`s of the same text belong to `fs-calendar`.
+//! component kind and our type. `VEVENT`s of the same text belong to `fs-calendars`.
 
 use fs_jscalendar::ical::{self, Component};
 pub use fs_jscalendar::ical::{ICS_MEDIA_TYPE, IcsPart, unfolded_lines};

@@ -9,24 +9,28 @@ use crate::fake::{FakeTasks, START_MS};
 use crate::ids::{object_id, person};
 use crate::sample_people::{KNOWN, Known};
 use crate::tasks_v1::{
-    Assignee, AssigneeStatus, Date, Dependency, DependencyKind, Due, LocalDateTime, ObjectId,
-    Override, OverrideChange, Progress, Recurrence, RecurrenceRule, Revision, Span, Task, TaskList,
-    Utc, Zone,
+    Assignee, AssigneeStatus, Date, Dependency, DependencyKind, Due, ListAccess, ListSource,
+    LocalDateTime, ObjectId, Override, OverrideChange, Progress, Recurrence, RecurrenceRule,
+    Revision, Span, Task, TaskList, Utc, Zone,
 };
 use fs_types::BasicValue;
 
 /// The whole sample.
 #[derive(Clone, Debug)]
 pub struct Sample {
-    /// Five lists: "Umzug Hafenstraße" (1), "Website-Relaunch" (2), "Alltag" (3), "Verein Beispielhausen" (4),
-    /// "Lange Liste" (5, one column of 40 tasks).
+    /// Six lists: "Umzug Hafenstraße" (1), "Website-Relaunch" (2), "Alltag" (3), "Verein Beispielhausen" (4),
+    /// "Lange Liste" (5, one column of 40 tasks), "Vorstand Beispielhausen" (6, owned by the group "Team Vorstand").
     pub lists: Vec<TaskList>,
-    /// Six invented people: the acting person (1), colleagues (2 to 5), a group (6).
+    /// Nine invented people: the acting person (1), colleagues (2 to 5), groups (6, 7), an AI (8), an AI group (9).
     pub people: Vec<Known>,
     /// The tasks with their slugs, in a fixed order.
     pub tasks: Vec<(&'static str, Task)>,
     /// A task in the trash (restorable for 20 days) and its slug.
     pub trashed: (&'static str, Task),
+    /// A task in the trash with "never automatically" (`Restorable::Manual`) and its slug.
+    pub manual: (&'static str, Task),
+    /// A task in the trash that is kept without an end (`Restorable::Held`) and its slug.
+    pub held: (&'static str, Task),
 }
 
 impl Sample {
@@ -61,6 +65,12 @@ impl Sample {
             self.trashed.1.clone(),
             Utc::from_millis(START_MS + 20 * 86_400_000),
         );
+        fake.insert_manual_raw(self.manual.1.clone());
+        fake.insert_deleted_raw(
+            self.held.1.clone(),
+            Utc::from_millis(START_MS + 5 * 86_400_000),
+        );
+        fake.keep(self.held.1.id, None);
         fake
     }
 }
@@ -208,13 +218,25 @@ impl B {
 
 /// Number to id (helper for lists in the data files).
 pub(crate) fn list(n: u64, name: &str, color: &str) -> TaskList {
+    list_of(n, name, color, person(1))
+}
+
+/// A list of an owner (a person or a group).
+pub(crate) fn list_of(
+    n: u64,
+    name: &str,
+    color: &str,
+    owner: crate::tasks_v1::PersonRef,
+) -> TaskList {
     TaskList {
         id: object_id(n),
         name: name.to_owned(),
         color: Some(color.to_owned()),
-        owner: person(1),
+        owner,
         revision: Revision(1),
-        restorable_until: None,
+        access: ListAccess::Manage,
+        source: ListSource::Own,
+        trash: None,
     }
 }
 
@@ -222,6 +244,7 @@ pub(crate) fn list(n: u64, name: &str, color: &str) -> TaskList {
 #[must_use]
 pub fn sample() -> Sample {
     let (tasks, trashed) = crate::sample_data::tasks();
+    let (manual, held) = crate::sample_delta::trash_states();
     Sample {
         lists: vec![
             list(1, "Umzug Hafenstraße", "#3b82f6"),
@@ -229,10 +252,13 @@ pub fn sample() -> Sample {
             list(3, "Alltag", "#f59e0b"),
             list(4, "Verein Beispielhausen", "#8b5cf6"),
             list(5, "Lange Liste", "#ef4444"),
+            list_of(6, "Vorstand Beispielhausen", "#06b6d4", KNOWN[5].person()),
         ],
         people: KNOWN.to_vec(),
         tasks,
         trashed,
+        manual,
+        held,
     }
 }
 

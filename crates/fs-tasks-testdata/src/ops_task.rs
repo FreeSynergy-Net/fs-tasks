@@ -4,18 +4,20 @@
 
 use crate::blank::blank_task;
 use crate::ids::object_number;
+use crate::mutation::Mutation;
+use crate::ops_checklist::items_of;
 use crate::patch::{apply, check_patch, check_task, cycle, diff};
 use crate::ready::is_done;
 use crate::scope::{Target, changed};
 use crate::state::{Row, State};
 use crate::tasks_v1::{
-    Assignee, AssigneeStatus, HistoryKind, ObjectId, Revision, SeriesScope, Task, TaskDraft,
-    TaskPatch, TaskResult,
+    Assignee, AssigneeStatus, HistoryKind, ObjectId, Revision, SUBTASK_DEPTH_MAX, SeriesScope,
+    Task, TaskDraft, TaskPatch, TaskResult,
 };
 
 impl State {
     pub(crate) fn create(&mut self, d: TaskDraft) -> TaskResult<Task> {
-        self.purge();
+        self.expire();
         if d.rest.title.is_some() || d.rest.list.is_some() {
             return Err(Self::bad("rest", "title-or-list-set-twice"));
         }
@@ -23,13 +25,23 @@ impl State {
             return Err(Self::bad("title", "empty"));
         }
         self.live_list(d.list)?;
+        self.need_write(d.list, "task.create")?;
         check_patch(&d.rest)?;
         if let Some(Some(p)) = d.rest.parent {
             let k = self.live(p)?;
             if self.rows[k].task.list != d.list {
                 return Err(Self::bad("parent", "other-list"));
             }
+            if self.depth_of(p) + 1 > SUBTASK_DEPTH_MAX && !self.mutated(Mutation::NoDepthLimit) {
+                return Err(Self::bad("parent", "too-deep"));
+            }
         }
+        let mut keys = Vec::new();
+        for _ in 0..d.checklist.len() {
+            keys.push(self.next_key());
+        }
+        let mut keys = keys.into_iter();
+        let items = items_of(&d.checklist, &mut || keys.next().unwrap_or_default())?;
         if d.uid
             .as_deref()
             .is_some_and(|u| u.is_empty() || self.rows.iter().any(|r| r.task.uid == u))
@@ -44,6 +56,7 @@ impl State {
         let mut t = blank_task(id, d.list, &uid, &d.title, now);
         t.progress = d.progress;
         t.parent = d.rest.parent.flatten();
+        t.checklist = items;
         apply(&mut t, d.rest);
         check_task(&t)?;
         if is_done(t.progress) {
@@ -78,11 +91,14 @@ impl State {
         patch: TaskPatch,
         scope: SeriesScope,
     ) -> TaskResult<Task> {
-        self.purge();
+        self.expire();
         let i = self.live_expected(id, expected)?;
+        self.need_write(self.rows[i].task.list, "task.edit")?;
         check_patch(&patch)?;
         let moves = patch.list.is_some() || patch.parent.is_some();
-        let series = patch.recurrence.is_some() || patch.excluded_recurrence.is_some();
+        let series = patch.recurrence.is_some()
+            || patch.excluded_recurrence.is_some()
+            || patch.repeat_from.is_some();
         if scope != SeriesScope::Whole && (moves || series) {
             return Err(Self::bad("patch", "whole-only"));
         }
@@ -117,6 +133,9 @@ impl State {
             if let Some(path) = self.parent_cycle(&old, p) {
                 return Err(cycle(path));
             }
+            if self.depth_of(p) + self.height_of(old.id) > SUBTASK_DEPTH_MAX {
+                return Err(Self::bad("parent", "too-deep"));
+            }
         }
         let mut t = old.clone();
         apply(&mut t, patch);
@@ -147,6 +166,30 @@ impl State {
             fields,
         );
         Ok(self.rows[j].task.clone())
+    }
+
+    /// The level of a task in its tree (a top-level task is level 1).
+    pub(crate) fn depth_of(&self, id: ObjectId) -> usize {
+        let mut n = 0;
+        let mut at = Some(id);
+        while let Some(i) = at {
+            n += 1;
+            at = self.at(i).and_then(|k| self.rows[k].task.parent);
+            if n > 1000 {
+                break;
+            }
+        }
+        n
+    }
+
+    /// The levels of the tree below a task, the task itself counted (a task without subtasks is 1).
+    fn height_of(&self, id: ObjectId) -> usize {
+        1 + self
+            .children(id)
+            .into_iter()
+            .map(|k| self.height_of(self.rows[k].task.id))
+            .max()
+            .unwrap_or(0)
     }
 
     /// The `uid`s along the way from `parent` up to `task` if hanging `task` under `parent` closes a cycle.

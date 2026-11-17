@@ -1,12 +1,14 @@
 //! `FakePeople`: the people of the frontend (picker, names), an adapter over the fake of the locked `person_directory_v1`.
 //!
 //! Pattern: Adapter (stub). Tasks keep only `PersonRef`s (ADR 0085); who they are and who can be suggested comes from
-//! the `PersonDirectory` of fs-people. This is its `FakeDirectory` with the invented people of fs-people (`example.org`),
-//! handed on unchanged; the plan has no tasks-specific people trait.
+//! the `PersonDirectory` of fs-people. This is its `FakeDirectory` filled from [`KNOWN`] (the invented people of the
+//! sample, `example.org`: same names, kinds and AI mark as the tasks show), handed on unchanged; the plan has no
+//! tasks-specific people trait.
 
+use crate::sample_people::KNOWN;
 use fs_people_directory::{
-    Candidate, ContactAddress, DirectoryChange, Excerpt, ExcerptField, FakeDirectory,
-    PersonDirectory, PersonView, ProposeEntry, Resolved, Suggest, sample, sample_ref,
+    Candidate, ContactAddress, DirectoryChange, Entry, Excerpt, ExcerptField, FakeDirectory,
+    PersonDirectory, PersonView, ProposeEntry, Resolved, Suggest,
 };
 use fs_types::{Capabilities, ObjectId, Page, PageCursor, PersonRef, Reference};
 
@@ -16,18 +18,26 @@ pub struct FakePeople {
 }
 
 impl FakePeople {
-    /// The fixed sample directory of fs-people.
+    /// The directory of the people of [`KNOWN`]; the asker is person 1.
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            directory: sample(),
+        let directory = FakeDirectory::new().with_asker(KNOWN.first().map(crate::Known::person));
+        for k in KNOWN {
+            let mut entry = Entry::new(k.person(), k.display);
+            entry.address = ContactAddress::parse(&format!("mailto:{}", k.address)).ok();
+            entry.ai = k.ai;
+            directory.add(entry);
         }
+        Self { directory }
     }
 
     /// The reference of sample person `n` (`None` when there is none).
     #[must_use]
     pub fn person(n: u8) -> Option<PersonRef> {
-        sample_ref(n)
+        KNOWN
+            .iter()
+            .find(|k| k.number == u64::from(n))
+            .map(crate::Known::person)
     }
 
     /// The directory inside, for tests that change it.

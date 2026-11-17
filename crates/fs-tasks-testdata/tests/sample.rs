@@ -1,7 +1,8 @@
 //! The fixed sample: its size, its cases and its invented people.
 
 use fs_tasks_testdata::tasks_v1::{
-    AssigneeStatus, Due, Order, Page, Progress, Readiness, TaskQuery, Tasks, Trash, Zone,
+    AssigneeFilter, AssigneeStatus, Due, Order, Page, Progress, Readiness, Restorable, TaskQuery,
+    Tasks, Trash, Zone,
 };
 use fs_tasks_testdata::{KNOWN, occurrence, sample};
 
@@ -29,9 +30,9 @@ async fn all(fake: &impl Tasks) -> Page<fs_tasks_testdata::tasks_v1::TaskSummary
 }
 
 #[test]
-fn the_sample_has_about_ninety_tasks_in_five_lists_with_unique_ids() {
+fn the_sample_has_about_ninety_tasks_in_six_lists_with_unique_ids() {
     let s = sample();
-    assert_eq!(s.lists.len(), 5);
+    assert_eq!(s.lists.len(), 6);
     assert!(
         (80..=100).contains(&s.tasks.len()),
         "{} tasks",
@@ -59,7 +60,7 @@ fn the_people_are_invented_and_live_at_example_org() {
     for k in KNOWN {
         assert!(k.address.ends_with("@example.org"), "{}", k.address);
     }
-    assert_eq!(KNOWN.len(), 6);
+    assert_eq!(KNOWN.len(), 9);
 }
 
 #[tokio::test]
@@ -137,14 +138,17 @@ async fn the_loaded_fake_shows_every_readiness_and_the_series() {
 }
 
 #[tokio::test]
-async fn the_trash_holds_one_task_and_the_logbook_is_ordered() {
+async fn the_trash_holds_three_tasks_and_the_logbook_is_ordered() {
     let s = sample();
     let fake = s.fake();
     let mut q = query("Europe/Berlin");
     q.trash = Trash::Only;
     let gone = fake.list(&q, None, 10).await.unwrap();
-    assert_eq!(gone.items.len(), 1);
-    assert_eq!(gone.items[0].id, s.trashed.1.id);
+    assert_eq!(gone.items.len(), 3);
+    let state = |id| gone.items.iter().find(|t| t.id == id).and_then(|t| t.trash);
+    assert!(matches!(state(s.trashed.1.id), Some(Restorable::Until(_))));
+    assert_eq!(state(s.manual.1.id), Some(Restorable::Manual));
+    assert_eq!(state(s.held.1.id), Some(Restorable::Held(None)));
     let mut q = query("Europe/Berlin");
     q.progress = vec![Progress::Completed];
     q.order = Order::Finished;
@@ -178,4 +182,75 @@ async fn the_tokyo_task_counts_for_the_17th_in_berlin_and_the_16th_in_utc() {
     let id = s.get("partnerbuero").id;
     assert!(berlin.iter().any(|x| x.id == id));
     assert!(!utc.iter().any(|x| x.id == id));
+}
+
+#[tokio::test]
+async fn the_delta_sample_has_group_lists_group_tasks_checklists_and_series_from_completion() {
+    use fs_tasks_testdata::tasks_v1::{ListAccess, RepeatFrom};
+    let s = sample();
+    let fake = s.fake();
+    let lists = fake.lists(Trash::Exclude).await.unwrap();
+    let board = lists
+        .iter()
+        .find(|l| l.name == "Vorstand Beispielhausen")
+        .unwrap();
+    assert_eq!(board.owner, KNOWN[5].person());
+    assert_eq!(board.access, ListAccess::Manage); // Anna manages "Team Vorstand"
+    // The asking person (Anna) is in "Team Vorstand" (6), not in "Team Umzug" (7).
+    let mut q = query("Europe/Berlin");
+    q.assignee = Some(AssigneeFilter::MyGroups);
+    let mine: Vec<_> = fake.list(&q, None, 100).await.unwrap().items;
+    let slugs: Vec<_> = mine.iter().map(|t| t.id).collect();
+    assert!(slugs.contains(&s.get("jahresversammlung").id));
+    assert!(slugs.contains(&s.get("kassenpruefung").id));
+    assert!(!slugs.contains(&s.get("umzugsteam").id));
+    let shopping = fake.get(s.get("wocheneinkauf").id).await.unwrap().unwrap();
+    assert_eq!(
+        shopping
+            .checklist
+            .iter()
+            .filter(|c| c.done.is_none())
+            .count(),
+        2
+    );
+    assert_eq!(shopping.checklist.len(), 5);
+    for slug in ["blumen", "rauchmelder", "wasserfilter"] {
+        assert_eq!(s.get(slug).repeat_from, RepeatFrom::Completion, "{slug}");
+    }
+    let flowers = fake.get(s.get("blumen").id).await.unwrap().unwrap();
+    assert_eq!(flowers.overrides.len(), 2);
+    assert_eq!(
+        s.get("kassenpruefung").claim.as_ref().map(|c| c.by.clone()),
+        Some(KNOWN[1].person())
+    );
+}
+
+#[tokio::test]
+async fn the_group_the_asker_is_not_in_cannot_claim_and_a_member_can() {
+    let s = sample();
+    let fake = s.fake();
+    let team = s.get("umzugsteam");
+    let denied = fake
+        .claim(
+            team.id,
+            team.revision,
+            fs_tasks_testdata::tasks_v1::Utc::from_millis(fake.now().millis() + 60_000),
+        )
+        .await;
+    assert!(matches!(
+        denied,
+        Err(fs_tasks_testdata::tasks_v1::TaskError::Common(
+            fs_tasks_testdata::tasks_v1::Error::Forbidden { .. }
+        ))
+    ));
+    let board = s.get("jahresversammlung");
+    let ok = fake
+        .claim(
+            board.id,
+            board.revision,
+            fs_tasks_testdata::tasks_v1::Utc::from_millis(fake.now().millis() + 60_000),
+        )
+        .await
+        .unwrap();
+    assert_eq!(ok.claim.unwrap().by, fake.account());
 }

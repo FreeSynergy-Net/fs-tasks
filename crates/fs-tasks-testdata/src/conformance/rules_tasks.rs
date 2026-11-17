@@ -83,6 +83,8 @@ pub(super) async fn rules(cx: &mut Cx<'_>) {
     );
     update_rules(cx, &t, other.id).await;
     super::rules_subtasks::rules(cx, list.id).await;
+    super::rules_subtasks::depth(cx, list.id).await;
+    super::rules_subtasks::restore_depth(cx, list.id).await;
 }
 
 async fn update_rules(

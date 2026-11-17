@@ -1,9 +1,13 @@
 //! `FakeExchange`: the `TaskExchange` of the fake, honest about what it cannot do.
 //!
-//! Pattern: Null Object (the fake keeps no files, so it answers `formats()` with `No` in both directions and the
-//! trait defaults say `Unsupported` for import and export; the format adapters are step K3).
+//! Pattern: Null Object (the fake keeps no files, so it answers `formats()` with `No` in both directions and says
+//! `Unsupported` ([`not_possible`]) for import and export, as the trait has no default methods; the format adapters
+//! are step K3).
 
-use crate::tasks_v1::{FormatSupport, Level, MediaType, TaskExchange};
+use crate::tasks_v1::{
+    ExportReport, ExportTarget, FileRef, FormatSupport, ImportContext, ImportReport, Level,
+    MediaType, ObjectId, TaskExchange, TaskResult, not_possible,
+};
 use async_trait::async_trait;
 
 /// The two formats of the boundary: VTODO (`text/calendar`) and the JSCalendar task.
@@ -24,5 +28,18 @@ impl TaskExchange for FakeExchange {
                 export: Level::No,
             })
             .collect()
+    }
+
+    async fn import(
+        &self,
+        _source: FileRef,
+        _as_type: &MediaType,
+        _ctx: &ImportContext,
+    ) -> TaskResult<ImportReport> {
+        not_possible("exchange.import")
+    }
+
+    async fn export(&self, _ids: &[ObjectId], _to: &ExportTarget) -> TaskResult<ExportReport> {
+        not_possible("exchange.export")
     }
 }

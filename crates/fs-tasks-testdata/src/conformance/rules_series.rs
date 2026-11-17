@@ -109,7 +109,7 @@ async fn delete_rules(
         return;
     };
     cx.ensure(
-        gone.scope == d17 && gone.restorable_until.is_some(),
+        gone.scope == d17 && gone.restorable.is_some(),
         "delete: This answers with its scope and a deadline",
     );
     let s = cx.summary(list, t.id).await;

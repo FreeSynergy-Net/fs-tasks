@@ -5,6 +5,7 @@
 
 use crate::clock::{day_in, instant, tz};
 use crate::ids::invalid;
+use crate::mutation::Mutation;
 use crate::series::{Cur, current};
 use crate::state::State;
 use crate::tasks_v1::{
@@ -69,13 +70,20 @@ impl State {
         });
         let text = q.text.as_ref().is_none_or(|x| {
             let x = x.to_lowercase();
-            t.title.to_lowercase().contains(&x) || t.description.to_lowercase().contains(&x)
+            t.title.to_lowercase().contains(&x)
+                || t.description.to_lowercase().contains(&x)
+                || t.checklist
+                    .iter()
+                    .any(|c| c.title.to_lowercase().contains(&x))
         });
         let who = match &q.assignee {
             None => true,
             Some(AssigneeFilter::Nobody) => cur.assignees.is_empty(),
             Some(AssigneeFilter::Me) => cur.assignees.iter().any(|a| self.is_me(&a.who)),
             Some(AssigneeFilter::Person(p)) => cur.assignees.iter().any(|a| &a.who == p),
+            Some(AssigneeFilter::MyGroups) => {
+                cur.assignees.iter().any(|a| self.in_my_groups(&a.who))
+            }
         };
         let undated = q
             .undated
@@ -85,7 +93,8 @@ impl State {
             Some(ParentFilter::TopLevel) => t.parent.is_none(),
             Some(ParentFilter::Of(p)) => t.parent == Some(p),
         };
-        wanted(q.trash, self.deleted_until(i).is_some())
+        self.sees_task(i)
+            && wanted(q.trash, self.trash_of(i).is_some())
             && (q.lists.is_empty() || q.lists.contains(&t.list))
             && (q.progress.is_empty() || q.progress.contains(&cur.progress))
             && in_range
@@ -127,12 +136,8 @@ impl State {
         rows
     }
 
-    pub(crate) fn query(
-        &self,
-        q: &TaskQuery,
-        after: Option<&Place>,
-        size: usize,
-    ) -> TaskResult<Page<TaskSummary>> {
+    /// The rows a query selects, in the order it asks for (all of them; the pages cut from this).
+    pub(crate) fn selected(&self, q: &TaskQuery) -> TaskResult<Vec<usize>> {
         if q.ready.is_some() && !self.evaluate {
             return not_possible("dependency.evaluate");
         }
@@ -140,16 +145,31 @@ impl State {
         let rows: Vec<usize> = (0..self.rows.len())
             .filter(|&i| self.matches(i, q, view))
             .collect();
-        let sorted = self.sorted(rows, q.order, view);
-        let summaries = sorted.into_iter().map(|i| self.summary(i)).collect();
+        Ok(self.sorted(rows, q.order, view))
+    }
+
+    pub(crate) fn query(
+        &self,
+        q: &TaskQuery,
+        after: Option<&Place>,
+        size: usize,
+    ) -> TaskResult<Page<TaskSummary>> {
+        let summaries = self
+            .selected(q)?
+            .into_iter()
+            .map(|i| self.summary(i))
+            .collect();
         page(summaries, after, size)
     }
 
+    /// The lists the asking person may see, with their access and trash state.
     pub(crate) fn lists_of(&self, trash: Trash) -> Vec<TaskList> {
-        self.lists
-            .iter()
-            .filter(|l| wanted(trash, l.restorable_until.is_some()))
-            .cloned()
+        (0..self.lists.len())
+            .filter(|&i| {
+                self.sees(&self.lists[i])
+                    && wanted(trash, self.list_bins.contains_key(&self.lists[i].id))
+            })
+            .map(|i| self.shown(i))
             .collect()
     }
 
@@ -161,7 +181,7 @@ impl State {
         size: usize,
     ) -> TaskResult<Page<LabelCount>> {
         let mut counts = BTreeMap::<String, u32>::new();
-        for i in (0..self.rows.len()).filter(|&i| self.deleted_until(i).is_none()) {
+        for i in (0..self.rows.len()).filter(|&i| self.trash_of(i).is_none() && self.sees_task(i)) {
             let t = &self.rows[i].task;
             if !lists.is_empty() && !lists.contains(&t.list) {
                 continue;
@@ -199,7 +219,10 @@ impl State {
         after: Option<&Place>,
         size: usize,
     ) -> TaskResult<Page<HistoryEntry>> {
-        self.at(id).ok_or(crate::tasks_v1::Error::NotFound(id))?;
+        // Reading a list covers its log: whoever may not see the list gets `NotFound`, as for `get`.
+        self.at(id)
+            .filter(|&i| self.sees_task(i) || self.mutated(Mutation::LeakTrash))
+            .ok_or(crate::tasks_v1::Error::NotFound(id))?;
         let entries = self
             .history
             .iter()
@@ -222,11 +245,20 @@ impl State {
         if from > self.changes.len() {
             return Err(invalid("since", "cursor"));
         }
-        let items: Vec<Change> = self.changes.iter().skip(from).take(size).cloned().collect();
-        let next = Place((from + items.len()).to_string());
+        // What the asker may not see is left out, and the page is filled from what follows: a page is empty only at
+        // the end of the feed (the cursor counts what was read, not what was shown).
+        let mut items: Vec<Change> = Vec::new();
+        let mut at = from;
+        while at < self.changes.len() && items.len() < size {
+            let c = &self.changes[at];
+            if self.sees_feed_of(c.list) || self.mutated(Mutation::LeakTrash) {
+                items.push(c.clone());
+            }
+            at += 1;
+        }
         Ok(Page {
             items,
-            next: Some(next),
+            next: Some(Place(at.to_string())),
         })
     }
 }

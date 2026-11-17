@@ -3,21 +3,25 @@
 //! Pattern: Repository state (one value behind one lock; every rule of the trait is a method of this value, so a
 //! call is one transaction).
 
+use crate::bin::Bin;
+use crate::groups::GroupMembers;
 use crate::ids::{invalid, object_id};
 use crate::tasks_v1::{
     Change, Error, FieldChange, HistoryEntry, HistoryKind, LocalDateTime, ObjectId, Override,
     PersonRef, Recurrence, Revision, Task, TaskError, TaskList, TaskResult, Utc,
 };
+use std::collections::BTreeMap;
+use std::sync::Arc;
 
-/// How long a deleted thing stays in the trash: 30 days.
-pub(crate) const TRASH_MS: i64 = 30 * 86_400_000;
+/// The default of the trash setting: 30 days.
+pub(crate) const TRASH_DAYS: u32 = 30;
 
 /// A stored task and its trash state.
 #[derive(Clone, Debug)]
 pub(crate) struct Row {
     pub task: Task,
-    /// Own deletion: `Some` = in the trash until then.
-    pub deleted: Option<Utc>,
+    /// Own deletion: `Some` = in the trash.
+    pub deleted: Option<Bin>,
     /// Deleted together with this parent (comes back only with it).
     pub deleted_with: Option<ObjectId>,
 }
@@ -43,10 +47,25 @@ pub(crate) struct State {
     pub changes: Vec<Change>,
     pub history: Vec<(ObjectId, HistoryEntry)>,
     pub cuts: Vec<Cut>,
+    /// Lists in the trash, with their deletion.
+    pub list_bins: BTreeMap<ObjectId, Bin>,
+    /// Keeps (`keep_until`) of tasks and lists: `None` = without an end.
+    pub keeps: BTreeMap<ObjectId, Option<Utc>>,
+    /// Lists a person may only read (person, list): the fixture's way to a `Read` access.
+    pub read_only: Vec<(PersonRef, ObjectId)>,
+    /// The trash setting: days until the automatic purge, `None` = never ("nie automatisch löschen").
+    pub trash_days: Option<u32>,
+    pub groups: Arc<dyn GroupMembers>,
+    /// The zone setting of the asking person (days of `Date` and floating values in "from completion").
+    pub zone: chrono_tz::Tz,
+    /// A deliberately wrong behaviour (tests of the rules only).
+    pub mutation: Option<crate::mutation::Mutation>,
     pub n: u64,
     pub now: Utc,
     pub account: PersonRef,
     pub me_card: Option<PersonRef>,
+    /// Somebody else asks (a colleague, an AI): replaces the account and the "I" card as the asking person.
+    pub acting: Option<PersonRef>,
     pub evaluate: bool,
 }
 
@@ -60,29 +79,54 @@ pub(crate) fn check(current: Revision, expected: Revision) -> TaskResult<()> {
 }
 
 impl State {
-    pub(crate) fn new(account: PersonRef, now: Utc, evaluate: bool) -> Self {
+    /// Whether the fake runs with this mutation (never, outside the tests of the rules).
+    pub(crate) fn mutated(&self, m: crate::mutation::Mutation) -> bool {
+        self.mutation == Some(m)
+    }
+
+    pub(crate) fn new(
+        account: PersonRef,
+        now: Utc,
+        evaluate: bool,
+        groups: Arc<dyn GroupMembers>,
+    ) -> Self {
         Self {
             lists: Vec::new(),
             rows: Vec::new(),
             changes: Vec::new(),
             history: Vec::new(),
             cuts: Vec::new(),
+            list_bins: BTreeMap::new(),
+            keeps: BTreeMap::new(),
+            read_only: Vec::new(),
+            trash_days: Some(TRASH_DAYS),
+            groups,
+            zone: chrono_tz::Europe::Berlin,
+            mutation: None,
             n: 0,
             now,
             account,
             me_card: None,
+            acting: None,
             evaluate,
         }
     }
 
-    /// The asking person: the "I" card if there is one, else the account of the provider (never an error).
+    /// The asking person: somebody acting, else the "I" card if there is one, else the account of the provider (never
+    /// an error).
     pub(crate) fn asker(&self) -> PersonRef {
-        self.me_card.clone().unwrap_or_else(|| self.account.clone())
+        self.acting
+            .clone()
+            .or_else(|| self.me_card.clone())
+            .unwrap_or_else(|| self.account.clone())
     }
 
-    /// Whether `who` is the asking person (account or "I" card).
+    /// Whether `who` is the asking person (account or "I" card; somebody acting is only themselves).
     pub(crate) fn is_me(&self, who: &PersonRef) -> bool {
-        *who == self.account || self.me_card.as_ref() == Some(who)
+        match &self.acting {
+            Some(a) => a.id == who.id,
+            None => *who == self.account || self.me_card.as_ref() == Some(who),
+        }
     }
 
     /// One second later; returns the new time.
@@ -96,34 +140,14 @@ impl State {
         object_id(self.n)
     }
 
-    pub(crate) fn trash_until(&self) -> Utc {
-        Utc::from_millis(self.now.millis() + TRASH_MS)
-    }
-
-    /// Remove everything whose trash deadline has passed (nothing is "half" gone).
-    pub(crate) fn purge(&mut self) {
-        let now = self.now;
-        let gone = |u: Option<Utc>| u.is_some_and(|u| u <= now);
-        let dead: Vec<ObjectId> = self
-            .lists
-            .iter()
-            .filter(|l| gone(l.restorable_until))
-            .map(|l| l.id)
-            .collect();
-        self.rows
-            .retain(|r| !gone(r.deleted) && !dead.contains(&r.task.list));
-        self.lists.retain(|l| !gone(l.restorable_until));
-        self.cuts.retain(|c| c.until > now);
-    }
-
     pub(crate) fn list_at(&self, id: ObjectId) -> Option<usize> {
         self.lists.iter().position(|l| l.id == id)
     }
 
-    /// A list that lives (not in the trash).
+    /// A list that lives (not in the trash) and that the asking person may see (else `NotFound`).
     pub(crate) fn live_list(&self, id: ObjectId) -> TaskResult<usize> {
         self.list_at(id)
-            .filter(|&i| self.lists[i].restorable_until.is_none())
+            .filter(|&i| !self.list_bins.contains_key(&id) && self.sees(&self.lists[i]))
             .ok_or_else(|| Error::NotFound(id).into())
     }
 
@@ -131,19 +155,10 @@ impl State {
         self.rows.iter().position(|r| r.task.id == id)
     }
 
-    /// The trash deadline of a row: its own, else the one of its list.
-    pub(crate) fn deleted_until(&self, i: usize) -> Option<Utc> {
-        let row = &self.rows[i];
-        row.deleted.or_else(|| {
-            self.list_at(row.task.list)
-                .and_then(|l| self.lists[l].restorable_until)
-        })
-    }
-
     /// A task that lives: not deleted, and its list not in the trash.
     pub(crate) fn live(&self, id: ObjectId) -> TaskResult<usize> {
         self.at(id)
-            .filter(|&i| self.deleted_until(i).is_none())
+            .filter(|&i| self.trash_of(i).is_none() && self.sees_task(i))
             .ok_or_else(|| Error::NotFound(id).into())
     }
 
@@ -157,7 +172,7 @@ impl State {
     /// The living direct subtasks of a task.
     pub(crate) fn children(&self, id: ObjectId) -> Vec<usize> {
         (0..self.rows.len())
-            .filter(|&i| self.rows[i].task.parent == Some(id) && self.deleted_until(i).is_none())
+            .filter(|&i| self.rows[i].task.parent == Some(id) && self.trash_of(i).is_none())
             .collect()
     }
 

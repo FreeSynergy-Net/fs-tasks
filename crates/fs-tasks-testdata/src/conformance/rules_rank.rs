@@ -1,4 +1,5 @@
-//! Rules for the hand order (`Rank`): top and bottom, neighbours, 1000 appends, and the one-time spread.
+//! Rules for the hand order that need `task.place`: neighbours, the bottom, and the one-time spread by placing. The
+//! rules of the top (new tasks, `create` only) are in `rules_rank_top`.
 //!
 //! Pattern: Template method (rules as plain checks collected in the report).
 
@@ -6,18 +7,18 @@ use super::cx::{Cx, is_invalid};
 use crate::tasks_v1::{HistoryKind, ObjectId, Rank, TaskPatch};
 
 /// The ids of a list in rank order.
-async fn order(cx: &Cx<'_>, list: ObjectId) -> Vec<ObjectId> {
+pub(super) async fn order(cx: &Cx<'_>, list: ObjectId) -> Vec<ObjectId> {
     cx.ids(&cx.query(&[list])).await
 }
 
 /// The longest rank an edge may reach after `n` insertions at the same edge: about 25 per character (the step of
 /// `Rank::between`), plus two. Halving at the edge would need 4 to 5 per character and fail this.
-fn edge_len(n: usize) -> usize {
+pub(super) fn edge_len(n: usize) -> usize {
     n / 25 + 2
 }
 
 /// Ranks in the listing are strictly ascending and at most `max` characters long.
-async fn ascending(cx: &Cx<'_>, list: ObjectId, max: usize) -> bool {
+pub(super) async fn ascending(cx: &Cx<'_>, list: ObjectId, max: usize) -> bool {
     let ranks: Vec<Rank> = cx
         .all(&cx.query(&[list]))
         .await
@@ -39,10 +40,6 @@ pub(super) async fn rules(cx: &mut Cx<'_>) {
     ) else {
         return;
     };
-    cx.ensure(
-        order(cx, list.id).await == [c.id, b.id, a.id],
-        "create: a new task is on top of its column",
-    );
     let moved = dir.place(a.id, a.revision, None).await;
     cx.ensure(
         moved.is_ok() && order(cx, list.id).await == [a.id, c.id, b.id],
@@ -86,39 +83,9 @@ pub(super) async fn rules(cx: &mut Cx<'_>) {
     spread(cx).await;
 }
 
-/// 1000 appends at the top (`create`) and at the bottom (`place`): short ranks, nobody else is written.
+/// 1000 appends at the bottom (`place`): short ranks, nobody else is written (the top is `rules_rank_top`).
 async fn appends(cx: &mut Cx<'_>) {
     let dir = cx.dir;
-    let Some(list) = cx.list("rank top").await else {
-        return;
-    };
-    let Some(first) = cx.task(list.id, "first").await else {
-        return;
-    };
-    for i in 0..1000 {
-        if dir
-            .create(super::cx::draft(
-                list.id,
-                &format!("t{i}"),
-                TaskPatch::default(),
-            ))
-            .await
-            .is_err()
-        {
-            cx.ensure(false, "create: 1000 appends at the top");
-            return;
-        }
-    }
-    cx.ensure(
-        ascending(cx, list.id, edge_len(1000)).await,
-        "rank: 1000 appends at the top stay ascending and at most 1000/25 + 2 characters long",
-    );
-    cx.ensure(
-        cx.fresh(first.id)
-            .await
-            .is_some_and(|f| f.revision == first.revision),
-        "rank: 1000 appends at the top write nobody else",
-    );
     let Some(list) = cx.list("rank bottom").await else {
         return;
     };
@@ -154,49 +121,44 @@ async fn appends(cx: &mut Cx<'_>) {
     );
 }
 
-/// 6000 insertions at the top and 6000 at the bottom: no spread (no `Move` in `changes`), ranks within the edge bound.
+/// `Cx::edge` insertions (2000; 6000 with the `heavy` switch of the night run) at the bottom (each one placed after the
+/// last): ranks within the edge bound, a `Move` for each placed task. The top edge is `rules_rank_top` (no `place`).
 async fn edges(cx: &mut Cx<'_>) {
-    const N: usize = 6000;
+    let n = cx.edge;
     let dir = cx.dir;
-    for (name, top) in [("rank edge top", true), ("rank edge bottom", false)] {
-        let Some(list) = cx.list(name).await else {
+    let Some(list) = cx.list("rank edge bottom").await else {
+        return;
+    };
+    let Some(anchor) = cx.task(list.id, "anchor").await else {
+        return;
+    };
+    let start = start_of(cx).await;
+    let mut last = anchor.id;
+    for i in 0..n {
+        let draft = super::cx::draft(list.id, &format!("e{i}"), TaskPatch::default());
+        let Ok(t) = dir.create(draft).await else {
+            cx.ensure(false, &format!("create: {n} insertions at the edge"));
             return;
         };
-        let Some(anchor) = cx.task(list.id, "anchor").await else {
+        let Ok(p) = dir.place(t.id, t.revision, Some(last)).await else {
+            cx.ensure(false, &format!("place: {n} insertions at the bottom"));
             return;
         };
-        let Ok(start) = dir.changes(None, 0).await else {
-            return;
-        };
-        let mut last = anchor.id;
-        for i in 0..N {
-            let draft = super::cx::draft(list.id, &format!("e{i}"), TaskPatch::default());
-            let Ok(t) = dir.create(draft).await else {
-                cx.ensure(false, "create: 6000 insertions at the edge");
-                return;
-            };
-            if !top {
-                let Ok(p) = dir.place(t.id, t.revision, Some(last)).await else {
-                    cx.ensure(false, "place: 6000 insertions at the bottom");
-                    return;
-                };
-                last = p.id;
-            }
-        }
-        cx.ensure(
-            ascending(cx, list.id, edge_len(N)).await,
-            "rank: 6000 insertions at one edge stay ascending and at most 6000/25 + 2 characters long",
-        );
-        let moves = dir
-            .changes(start.next.as_ref(), 100_000)
-            .await
-            .map(|p| p.items)
-            .unwrap_or_default();
+        last = p.id;
+    }
+    cx.ensure(
+        ascending(cx, list.id, edge_len(n)).await,
+        &format!("rank: {n} insertions at the bottom stay ascending and at most {n}/25 + 2 characters long"),
+    );
+    if let Some(start) = start {
+        let moves = cx.changes_since(start.next.as_ref()).await;
         let moved = moves.iter().filter(|c| c.kind == HistoryKind::Move).count();
         cx.ensure(
-            moved == if top { 0 } else { N },
-            "rank: 6000 insertions at one edge spread nothing (a Move only for each placed task)",
+            moved == n,
+            &format!("rank: {n} insertions at the bottom spread nothing (a Move only for each placed task)"),
         );
+    } else {
+        cx.skip("rank: no Move for the placed tasks (the provider has no task.changes)");
     }
 }
 
@@ -212,9 +174,7 @@ async fn spread(cx: &mut Cx<'_>) {
     ) else {
         return;
     };
-    let Ok(start) = dir.changes(None, 0).await else {
-        return;
-    };
+    let start = start_of(cx).await;
     let mut moved_without_changed = true;
     let mut lower = high.id;
     for i in 0..2500 {
@@ -240,6 +200,10 @@ async fn spread(cx: &mut Cx<'_>) {
                 break;
             }
         }
+        // The spread shows as a new revision of a neighbour: stop there (the same gap runs out after about 250 steps).
+        if i % 16 == 15 && spread_seen(cx, &low, &high).await {
+            break;
+        }
     }
     cx.ensure(
         moved_without_changed,
@@ -256,26 +220,49 @@ async fn spread(cx: &mut Cx<'_>) {
         l.revision > low.revision || h.revision > high.revision,
         "rank: the spread gives the tasks whose rank changed a new revision",
     );
-    let moves = dir
-        .changes(start.next.as_ref(), 100_000)
-        .await
-        .map(|p| p.items)
-        .unwrap_or_default();
-    let by_spread = moves
-        .iter()
-        .filter(|c| c.kind == HistoryKind::Move && (c.task == low.id || c.task == high.id))
-        .count();
-    cx.ensure(
-        by_spread > 0,
-        "changes: a Move for each task the spread rewrote",
-    );
-    let log = dir
-        .history(low.id, None, 100)
-        .await
-        .map(|p| p.items)
-        .unwrap_or_default();
-    cx.ensure(
-        !log.iter().any(|e| e.kind == HistoryKind::Move),
-        "history: the spread writes no Move into the log of a task nobody moved",
-    );
+    if let Some(start) = start {
+        let moves = cx.changes_since(start.next.as_ref()).await;
+        let by_spread = moves
+            .iter()
+            .filter(|c| c.kind == HistoryKind::Move && (c.task == low.id || c.task == high.id))
+            .count();
+        cx.ensure(
+            by_spread > 0,
+            "changes: a Move for each task the spread rewrote",
+        );
+    } else {
+        cx.skip("rank: a Move for each task the spread rewrote (the provider has no task.changes)");
+    }
+    if cx.caps("task.history") {
+        let log = dir
+            .history(low.id, None, 100)
+            .await
+            .map(|p| p.items)
+            .unwrap_or_default();
+        cx.ensure(
+            !log.iter().any(|e| e.kind == HistoryKind::Move),
+            "history: the spread writes no Move into the log of a task nobody moved",
+        );
+    } else {
+        cx.skip("rank: the spread writes no Move into a log (the provider has no task.history)");
+    }
+}
+
+/// The start of the feed, when the provider has one.
+async fn start_of(cx: &Cx<'_>) -> Option<crate::tasks_v1::Page<crate::tasks_v1::Change>> {
+    if cx.caps("task.changes") {
+        cx.dir.changes(None, 0).await.ok()
+    } else {
+        None
+    }
+}
+
+/// Whether a task of the gap has a newer revision than it was created with.
+async fn spread_seen(
+    cx: &Cx<'_>,
+    low: &crate::tasks_v1::Task,
+    high: &crate::tasks_v1::Task,
+) -> bool {
+    let (l, h) = (cx.fresh(low.id).await, cx.fresh(high.id).await);
+    l.is_some_and(|l| l.revision > low.revision) || h.is_some_and(|h| h.revision > high.revision)
 }

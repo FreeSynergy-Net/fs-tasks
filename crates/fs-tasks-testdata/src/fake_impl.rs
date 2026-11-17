@@ -5,10 +5,10 @@
 
 use crate::fake::FakeTasks;
 use crate::tasks_v1::{
-    Answer, CAPABILITIES, Capabilities, Change, Children, Deleted, Dependency, DependencyKind,
-    HistoryEntry, LabelCount, ObjectId, Page, PersonRef, Place, Progress, Readiness, Revision,
-    SeriesScope, Task, TaskDraft, TaskList, TaskPatch, TaskQuery, TaskResult, TaskSummary, Tasks,
-    Trash, Utc,
+    Answer, CAPABILITIES, Capabilities, Change, ChecklistChange, Children, Deleted, Dependency,
+    DependencyKind, HistoryEntry, LabelCount, ObjectId, Page, PersonRef, Place, Progress,
+    Readiness, Revision, SeriesScope, Task, TaskDraft, TaskList, TaskListPatch, TaskPatch,
+    TaskQuery, TaskResult, TaskSummary, Tasks, Trash, Utc,
 };
 use async_trait::async_trait;
 
@@ -30,22 +30,26 @@ impl Tasks for FakeTasks {
 
     async fn lists(&self, trash: Trash) -> TaskResult<Vec<TaskList>> {
         let mut s = self.lock();
-        s.purge();
+        s.expire();
         Ok(s.lists_of(trash))
     }
 
-    async fn create_list(&self, name: &str, color: Option<&str>) -> TaskResult<TaskList> {
-        self.lock().create_list(name, color)
+    async fn create_list(
+        &self,
+        name: &str,
+        color: Option<&str>,
+        owner: Option<&PersonRef>,
+    ) -> TaskResult<TaskList> {
+        self.lock().create_list(name, color, owner)
     }
 
     async fn update_list(
         &self,
         id: ObjectId,
         expected: Revision,
-        name: Option<&str>,
-        color: Option<Option<&str>>,
+        change: TaskListPatch,
     ) -> TaskResult<TaskList> {
-        self.lock().update_list(id, expected, name, color)
+        self.lock().update_list(id, expected, change)
     }
 
     async fn delete_list(&self, id: ObjectId, expected: Revision) -> TaskResult<Deleted> {
@@ -58,15 +62,15 @@ impl Tasks for FakeTasks {
 
     async fn get(&self, id: ObjectId) -> TaskResult<Option<Task>> {
         let mut s = self.lock();
-        s.purge();
+        s.expire();
         Ok(s.live(id).ok().map(|i| s.rows[i].task.clone()))
     }
 
     async fn get_by_uid(&self, uid: &str) -> TaskResult<Option<Task>> {
         let mut s = self.lock();
-        s.purge();
-        let found =
-            (0..s.rows.len()).find(|&i| s.rows[i].task.uid == uid && s.deleted_until(i).is_none());
+        s.expire();
+        let found = (0..s.rows.len())
+            .find(|&i| s.rows[i].task.uid == uid && s.trash_of(i).is_none() && s.sees_task(i));
         Ok(found.map(|i| s.rows[i].task.clone()))
     }
 
@@ -77,7 +81,7 @@ impl Tasks for FakeTasks {
         size: usize,
     ) -> TaskResult<Page<TaskSummary>> {
         let mut s = self.lock();
-        s.purge();
+        s.expire();
         s.query(query, after, size)
     }
 
@@ -89,13 +93,13 @@ impl Tasks for FakeTasks {
         size: usize,
     ) -> TaskResult<Page<LabelCount>> {
         let mut s = self.lock();
-        s.purge();
+        s.expire();
         s.label_counts(lists, prefix, after, size)
     }
 
     async fn readiness(&self, ids: &[ObjectId]) -> TaskResult<Vec<(ObjectId, Readiness)>> {
         let mut s = self.lock();
-        s.purge();
+        s.expire();
         s.readiness_many(ids)
     }
 
@@ -164,6 +168,15 @@ impl Tasks for FakeTasks {
         self.lock().place(id, expected, after)
     }
 
+    async fn checklist(
+        &self,
+        id: ObjectId,
+        expected: Revision,
+        change: ChecklistChange,
+    ) -> TaskResult<Task> {
+        self.lock().checklist(id, expected, change)
+    }
+
     async fn relate(
         &self,
         id: ObjectId,
@@ -191,6 +204,10 @@ impl Tasks for FakeTasks {
         self.lock().release(id, expected)
     }
 
+    async fn claim_next(&self, query: &TaskQuery, until: Utc) -> TaskResult<Option<Task>> {
+        self.lock().claim_next(query, until)
+    }
+
     async fn delete(
         &self,
         id: ObjectId,
@@ -204,6 +221,10 @@ impl Tasks for FakeTasks {
         self.lock().restore(id, scope)
     }
 
+    async fn purge(&self, id: ObjectId) -> TaskResult<()> {
+        self.lock().purge_now(id)
+    }
+
     async fn history(
         &self,
         id: ObjectId,
@@ -211,13 +232,13 @@ impl Tasks for FakeTasks {
         size: usize,
     ) -> TaskResult<Page<HistoryEntry>> {
         let mut s = self.lock();
-        s.purge();
+        s.expire();
         s.log_of(id, after, size)
     }
 
     async fn changes(&self, since: Option<&Place>, size: usize) -> TaskResult<Page<Change>> {
         let mut s = self.lock();
-        s.purge();
+        s.expire();
         s.feed_since(since, size)
     }
 }

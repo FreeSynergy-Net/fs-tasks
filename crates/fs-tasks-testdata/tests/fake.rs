@@ -2,8 +2,8 @@
 //! the boundary and the capabilities.
 
 use fs_tasks_testdata::tasks_v1::{
-    Capabilities, Children, Error, Progress, SeriesScope, TaskDraft, TaskError, TaskExchange,
-    TaskPatch, Tasks, Trash, Utc,
+    Capabilities, Children, Error, Progress, Restorable, SeriesScope, TaskDraft, TaskError,
+    TaskExchange, TaskPatch, Tasks, Trash, Utc,
 };
 use fs_tasks_testdata::{DECISIONS, FakeExchange, FakeTasks, MEDIA_TYPES, person, sample};
 
@@ -14,6 +14,7 @@ fn draft(list: fs_tasks_testdata::tasks_v1::ObjectId, title: &str) -> TaskDraft 
         title: title.to_owned(),
         progress: Progress::NeedsAction,
         assignees: Vec::new(),
+        checklist: Vec::new(),
         rest: TaskPatch::default(),
     }
 }
@@ -45,10 +46,15 @@ async fn a_claim_of_another_person_holds_until_it_runs_out() {
 #[tokio::test]
 async fn the_trash_is_gone_after_thirty_days_with_the_whole_list() {
     let fake = FakeTasks::new();
-    let list = fake.create_list("Weg", None).await.unwrap();
+    let list = fake.create_list("Weg", None, None).await.unwrap();
     let t = fake.create(draft(list.id, "x")).await.unwrap();
     let d = fake.delete_list(list.id, list.revision).await.unwrap();
-    fake.set_now(Utc::from_millis(d.restorable_until.unwrap().millis() + 1));
+    fake.set_now(Utc::from_millis(
+        match d.restorable {
+            Some(Restorable::Until(t)) => t.millis(),
+            other => panic!("a deadline, not {other:?}"),
+        } + 1,
+    ));
     assert!(fake.restore_list(list.id).await.is_err());
     assert_eq!(fake.lists(Trash::Include).await.unwrap(), Vec::new());
     assert!(!fake.knows(t.id));
@@ -57,7 +63,7 @@ async fn the_trash_is_gone_after_thirty_days_with_the_whole_list() {
 #[tokio::test]
 async fn an_update_that_changes_nothing_writes_nothing() {
     let fake = FakeTasks::new();
-    let list = fake.create_list("L", None).await.unwrap();
+    let list = fake.create_list("L", None, None).await.unwrap();
     let t = fake.create(draft(list.id, "x")).await.unwrap();
     let before = fake.changes(None, 1).await.unwrap().next.unwrap();
     let same = fake
@@ -149,11 +155,11 @@ async fn open_subtasks_refuse_and_same_changes_them_in_one_call() {
 #[test]
 fn the_capabilities_say_what_the_fake_can() {
     let caps = FakeTasks::new().capabilities();
-    assert_eq!(caps.0.len(), 20);
+    assert_eq!(caps.0.len(), 22);
     assert!(caps.0.iter().all(|(_, on)| *on));
     let caps = FakeTasks::new().without_evaluation().capabilities();
     assert!(!on(&caps, "dependency.evaluate") && on(&caps, "relation.create"));
-    assert_eq!(DECISIONS.len(), 10);
+    assert_eq!(DECISIONS.len(), 14);
 }
 
 #[test]

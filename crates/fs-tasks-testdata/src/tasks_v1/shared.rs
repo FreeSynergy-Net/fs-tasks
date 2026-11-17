@@ -11,8 +11,11 @@ pub use fs_types::{
     PersonRef, Problem, Reference, Revision, TypeProblem, Utc, Zone, ZoneKind,
 };
 
-/// Fehler des Themas.
+/// Fehler des Themas. Eine unbekannte oder hier nicht gültige Zone ist KEIN eigener Fehler (wie `appointments_v1`,
+/// Entscheidung 2a): sie ist `Invalid` mit einem [`Problem`] am Feld (`due.zone`, `start.zone`, `view_zone`,
+/// `assume_zone` …) und dem Code der Zonenprüfung aus [`TypeProblem`] (heute `zone.bad`); nie raten (ADR 0085).
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub enum Error {
     /// Der Anbieter kann es ausdrücklich nicht (ADR 0045), mit Fähigkeitskennung.
     Unsupported {
@@ -29,10 +32,8 @@ pub enum Error {
     Forbidden {
         capability: String,
     },
-    /// Prüfung gescheitert; nichts geschrieben.
+    /// Prüfung gescheitert; nichts geschrieben. Je Feld ein [`Problem`] mit Code (auch die Zone, siehe oben).
     Invalid(Vec<Problem>),
-    /// Zone unbekannt (weder IANA noch eigene Zone dieser Aufgabe); nie raten (ADR 0085).
-    UnknownZone(String),
     /// Speicher oder Anbieter nicht erreichbar.
     Unavailable(String),
 }

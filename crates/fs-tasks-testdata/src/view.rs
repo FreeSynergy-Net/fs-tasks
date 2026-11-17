@@ -49,12 +49,15 @@ impl State {
             rank: t.rank.clone(),
             claimed_by,
             revision: t.revision,
-            restorable_until: self.deleted_until(i),
+            trash: self.trash_of(i),
             has_description: !t.description.is_empty(),
             percent_complete: t.percent_complete,
             estimated: t.estimated,
             links: u32::try_from(t.links.len()).unwrap_or(u32::MAX),
             alerts: u32::try_from(t.alerts.len()).unwrap_or(u32::MAX),
+            checklist_open: u32::try_from(t.checklist.iter().filter(|c| c.done.is_none()).count())
+                .unwrap_or(u32::MAX),
+            checklist_total: u32::try_from(t.checklist.len()).unwrap_or(u32::MAX),
         }
     }
 }

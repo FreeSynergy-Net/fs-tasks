@@ -11,7 +11,7 @@ fn ics_is_split_per_uid_with_exact_text() {
     assert_eq!(
         parts.iter().map(|p| p.uid.as_str()).collect::<Vec<_>>(),
         ["todo-1", "todo-2"],
-        "events belong to fs-calendar"
+        "events belong to fs-calendars"
     );
     for p in &parts {
         assert!(

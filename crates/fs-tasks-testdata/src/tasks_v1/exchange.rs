@@ -4,11 +4,12 @@
 //! (v2 beider Traits: nach fs-interfaces). Personen werden über den `PersonDirectory` von fs-people normalisiert, den der
 //! Anbieter im Konstruktor bekommt (nicht Teil dieser Signaturen).
 
-use super::{not_possible, FileRef, MediaType, ObjectId, Problem, Reference, TaskResult, Zone};
+use super::{FileRef, MediaType, ObjectId, Problem, Reference, TaskResult, Zone};
 use async_trait::async_trait;
 
 /// Fähigkeit eines Formats je Richtung.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Level {
     Full,
     Partial { missing: Vec<String> },
@@ -73,21 +74,26 @@ pub struct ExportReport {
 
 /// Grenz-Adapter eines Formats (`text/calendar` mit `VTODO`, `application/jscalendar+json` mit `Task`). Liest, normalisiert
 /// (Zeiten, Personen) und schreibt über [`super::Tasks`]; Export ist ein eigener Befehl, nie Speichern (ADR 0046).
+/// Jede Methode ist Pflicht; ein Format ohne Import oder Export meldet es in `formats` (`Level::No`) und antwortet
+/// mit [`super::not_possible`]. Checkliste und `RepeatFrom::Completion` reisen als Erweiterung
+/// (`freesynergy.net:checklist`, `freesynergy.net:repeatFrom`; VTODO `X-FS-…`), sonst stehen sie in `lost`.
+///
+/// AB ERLEDIGUNG im Export: die erledigten (ausgelassenen) Vorkommen liegen unter alten Bezugspunkten, die nicht auf
+/// dem Raster der heutigen Regel liegen. JSCalendar-Task: als Schlüssel in `recurrenceOverrides` gültig (RFC 8984
+/// 4.3.5, Zusatz-Vorkommen). VTODO: je solches Vorkommen ein `RDATE` plus die Ausnahme mit `RECURRENCE-ID` (Stand
+/// `COMPLETED` usw.); kann das Ziel das nicht, stehen sie in `lost` (nie still weg). Verdichtete (nur noch im Verlauf,
+/// [`super::REPEAT_DONE_KEPT`]) gehören nicht mehr zur Aufgabe und werden nicht exportiert.
 #[async_trait]
 pub trait TaskExchange: Send + Sync {
     fn formats(&self) -> Vec<FormatSupport>;
     /// `exchange.import`: unbekannte Felder bleiben im Original und stehen in `lost` (ADR 0086 Punkt 5).
     async fn import(
         &self,
-        _source: FileRef,
-        _as_type: &MediaType,
-        _ctx: &ImportContext,
-    ) -> TaskResult<ImportReport> {
-        not_possible("exchange.import")
-    }
+        source: FileRef,
+        as_type: &MediaType,
+        ctx: &ImportContext,
+    ) -> TaskResult<ImportReport>;
     /// `exchange.export`: Ziel = Quelle und unverändert = Original Byte für Byte; eine unbekannte Id ergibt `NotFound`
     /// für den ganzen Aufruf.
-    async fn export(&self, _ids: &[ObjectId], _to: &ExportTarget) -> TaskResult<ExportReport> {
-        not_possible("exchange.export")
-    }
+    async fn export(&self, ids: &[ObjectId], to: &ExportTarget) -> TaskResult<ExportReport>;
 }

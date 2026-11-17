@@ -2,7 +2,9 @@
 //!
 //! Pattern: Adapter (the typed values of the trait on one side, `chrono` and the tz database on the other).
 
-use crate::tasks_v1::{Date, Due, Error, LocalDateTime, TaskError, TaskResult, Zone, ZoneKind};
+use crate::tasks_v1::{
+    Date, Due, Error, LocalDateTime, Problem, TaskError, TaskResult, TypeProblem, Zone, ZoneKind,
+};
 use chrono::{Duration, NaiveDate, NaiveDateTime, TimeZone, Timelike};
 use chrono_tz::Tz;
 use fs_types::BasicValue;
@@ -27,14 +29,19 @@ pub(crate) fn date_of(d: NaiveDate) -> Option<Date> {
     Date::parse(&d.format("%Y-%m-%d").to_string()).ok()
 }
 
-/// The tz database entry of a zone; a custom zone or an unknown name is `UnknownZone` (never guessed, ADR 0085).
+/// The tz database entry of a zone; a custom zone or an unknown name is `Invalid` with the zone code (`zone.bad`, never
+/// guessed, ADR 0085).
 pub(crate) fn tz(zone: &Zone) -> TaskResult<Tz> {
+    let bad = || {
+        TaskError::from(Error::Invalid(vec![Problem {
+            field: "zone".to_owned(),
+            reason: TypeProblem::BadZone.code().to_owned(),
+        }]))
+    };
     if zone.kind() == ZoneKind::Custom {
-        return Err(Error::UnknownZone(zone.id().to_owned()).into());
+        return Err(bad());
     }
-    zone.id()
-        .parse::<Tz>()
-        .map_err(|_| TaskError::from(Error::UnknownZone(zone.id().to_owned())))
+    zone.id().parse::<Tz>().map_err(|_| bad())
 }
 
 /// Wall-clock reading of a due value (a plain date reads as midnight).

@@ -92,6 +92,10 @@ fn finished(p: Progress) -> bool {
 /// The current occurrence: the first one that is neither excluded nor finished.
 pub(crate) fn current_occurrence(task: &Task) -> Option<(u32, NaiveDateTime)> {
     let (r, b) = (rule(task)?, base(task)?);
+    if crate::ops_repeat::is_completion(task) {
+        // From completion the reference point IS the current occurrence; the exceptions are finished ones before it.
+        return nth(r, b, 0).map(|at| (0, at));
+    }
     let mut i = 0;
     loop {
         let at = nth(r, b, i)?;

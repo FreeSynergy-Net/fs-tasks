@@ -47,6 +47,17 @@ Branch `linear-import` (after 0.8.0, not tagged): the `.ics` import is **linear*
 | Tests | core `tests/edit_checked.rs`, `tests/integrity.rs` plus the earlier ones; server over a real socket, comparing values, exact problem types, the real binary across a restart, exit codes, data directory mode |
 | ADR 0043 | every file <= 200 lines, `//! Pattern:` in every module, `#![deny(missing_docs)]`, `#![warn(clippy::pedantic)]` clean |
 
+## Start without a wait for ever (0.0.10, `fs-tasks-server`: `start`, `handshake`, `ending`, `takeover`, `procfs`, `startfail`)
+
+Pattern: Double-checked lock with a limit on every wait; Policy (`takeover::decide`) kept apart from the facts (`procfs`) and from the act (`ending`).
+
+- `ensure_server`: handshake (`Control.version`, `call` 2 s per step) -> start lock `<socket>.lock` by try-lock (`lock_wait` 2 s) -> handshake again -> a silent server is looked at (`ending::free_socket`) -> start and wait (`start` 5 s). `Times` holds all limits; `ensure_server_with` takes other limits and another starter (tests).
+- A server counts as there when it answered; one that does not know `Control` (the window's own `host`) counts too. The server of another program is named (`other-program`), never replaced.
+- The holder of the socket: `SO_PEERCRED` of a connection (the process that called `listen`), no scan of `/proc`. `decide(seen_start, peer, own)` returns `TakeOver`, `AskUser(why)` or `Refuse(why)`; rules in the order: not 1/not itself, same user, same start time as seen (and readable), program file readable and the same (`Image::same_as`: same file or same real path). `AskUser` = the person's own process of another program: only their yes ends it (`end_confirmed`, same rules for the rest); `Refuse` is never ended.
+- The act: `pidfd_open`, look again, `pidfd_send_signal` TERM, wait `term`, KILL, wait `kill`; remove the socket file only if it is the same file (inode) that was seen; log to `<socket>.takeover.log`.
+- Failures are values (`StartError`: code, parameters, `exit_code`), the sentences are in `datadir_text` (de/en); the window (`fs-tasks-app/problem_window.rs`) shows them and offers the two answers.
+- Not done: Windows (no `/proc`: message only), version replacement of an answering server, a question dialog in the shell (menu entries stand for yes/no).
+
 ## Frontend (`crates/fs-tasks-app`, provisional)
 
 A list and a view by status of one set of tasks; search; create, edit (title, description, due, priority, status, labels), delete; a card moved by keyboard, by the buttons beside the task, or by a frontend's gesture through `TasksWidget::grab`, `hover`, `drop_held`; iCalendar in and out by path on the command line (`--store`, `--import`, `--export`, `--export-sensitive`, `--snapshot`, `--size`, `--view list|status`). It imports no `blinc_*` crate. Its menus (ADR 0056, only real commands, in `surface.rs`): Task: New; View: List, Status; the compact variant has none. The work surface is the workbench `tasks` in `fs-components`, which knows no store and no type of this repo and has no window function: it gives its host a plain context (selected key, view; ADR 0056).

@@ -768,9 +768,9 @@ dependencies = [
 
 [[package]]
 name = "capnp-futures"
-version = "0.27.0"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3a1724aec0e9587f267bf19708934afa545113a44f20acac4b3db9a92857056"
+checksum = "3be9d2c64fef701b779960748be8c9d659bcecc6e01ecdd9e636c1d9584690cf"
 dependencies = [
  "capnp",
  "futures-channel",
@@ -779,9 +779,9 @@ dependencies = [
 
 [[package]]
 name = "capnp-rpc"
-version = "0.27.3"
+version = "0.27.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "629b0af76bb3b4073694783338d1844d993b13848d9b8618f67e2ed39870b4ca"
+checksum = "78cc13745b71c62d9756537969000a394d559a55794e123f5fb955813d748d44"
 dependencies = [
  "capnp",
  "capnp-futures",
@@ -1526,7 +1526,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "fs-interfaces 0.0.22",
  "fs-tasks-app",
@@ -1538,7 +1538,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-app"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "async-trait",
  "fs-components-app",
@@ -1556,7 +1556,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-cli"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "capnp",
  "chrono",
@@ -1571,7 +1571,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-core"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "async-trait",
  "capnp",
@@ -1588,7 +1588,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-server"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "async-trait",
  "capnp",
@@ -1605,7 +1605,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-testdata"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "async-trait",
  "chrono",

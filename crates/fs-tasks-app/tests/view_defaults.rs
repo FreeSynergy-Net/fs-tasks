@@ -2,7 +2,7 @@
 //! made is told, never swallowed.
 //!
 //! Pattern: Black-box tests through the screens (`PlanSurface`) over the real core and adapter; the failing store is
-//! a Decorator over the real core whose writes are refused (the tasks_v1 `FailingTasks` double has the locked
+//! a Decorator over the real core whose writes are refused (the `tasks_v1` `FailingTasks` double has the locked
 //! `Tasks` trait, not the `TaskItems` the window works on).
 
 mod common;

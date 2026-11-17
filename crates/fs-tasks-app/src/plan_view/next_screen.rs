@@ -90,7 +90,7 @@ impl NextScreen {
         }));
         let (a, c, s) = (Arc::clone(&adapter), Arc::clone(&cache), Arc::clone(&state));
         events.enter = Some(Arc::new(move |place, text| {
-            enter_in(&a, &c, &s, place, text)
+            enter_in(&a, &c, &s, place, text);
         }));
         Self {
             cache,

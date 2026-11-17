@@ -3,7 +3,7 @@
 //! Pattern: Strategy (one rule per view) + Specification (`fits`) — pure functions, so every view can be tested
 //! without a window. The entry line of a view must not make a task that the view then hides: the task takes the
 //! project, the status or the day of the view; and where the view cannot hold it (the logbook, "someday"), the
-//! caller says so (see `notice`).
+//! caller says so (the window shows a notice).
 
 use crate::day::Day;
 

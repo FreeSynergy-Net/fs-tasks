@@ -1596,6 +1596,7 @@ dependencies = [
  "fs-interfaces 0.0.22",
  "fs-objects",
  "fs-tasks-core",
+ "rustix 1.1.6",
  "serde_json",
  "tempfile",
  "tokio",

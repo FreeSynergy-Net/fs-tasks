@@ -11,6 +11,8 @@ use fs_objects::{Store, TursoStore};
 use fs_tasks_core::TaskRepo;
 
 use crate::TasksServer;
+use crate::datadir::tighten;
+use crate::datadir_text::{Lang, fault_text, tightened_text};
 
 const USAGE: &str = "fs-tasks serve [--socket PATH] [--data DIR] [--actor IRI] [--instance DOMAIN]\nDefaults: $XDG_RUNTIME_DIR/freesynergy/tasks.sock, $XDG_DATA_HOME/freesynergy/tasks, the local owner";
 
@@ -44,6 +46,7 @@ pub fn serve_command(args: impl IntoIterator<Item = OsString>) -> i32 {
     // Name and version go to `Control.version`: a window of another version replaces this server (fs-interfaces handshake).
     let identity = ServerIdentity::new("fs-tasks", env!("CARGO_PKG_VERSION"));
     let served = run_until_signal_as(&socket, identity, || async move {
+        correct_data_dir(&data)?;
         let data = prepare_data_dir(&data)?;
         let store = TursoStore::open(data.join("objects.db"))
             .await
@@ -74,5 +77,27 @@ pub fn serve_command(args: impl IntoIterator<Item = OsString>) -> i32 {
             eprintln!("fs-tasks serve: {e}");
             1
         }
+    }
+}
+
+/// Take the bits away from an open data folder of this user before the transport looks at it (it refuses anything but
+/// 0700). What was done is said on stderr (the log of the server); a refused folder ends the start with its code and
+/// parameters, then the sentence in the language of the person.
+fn correct_data_dir(data: &std::path::Path) -> std::io::Result<()> {
+    let lang = Lang::from_env();
+    match tighten(data) {
+        Ok(Some(done)) => {
+            eprintln!(
+                "fs-tasks serve: {}\n{}",
+                done.params(),
+                tightened_text(&done, lang)
+            );
+            Ok(())
+        }
+        Ok(None) => Ok(()),
+        Err(fault) => Err(std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            format!("{}\n{}", fault.params(), fault_text(&fault, lang)),
+        )),
     }
 }

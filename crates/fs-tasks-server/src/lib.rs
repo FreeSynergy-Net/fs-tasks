@@ -12,6 +12,8 @@
 
 mod client;
 mod cursor;
+mod datadir;
+mod datadir_text;
 mod edit_if;
 mod errors;
 mod facts;
@@ -20,12 +22,15 @@ mod host;
 mod items_service;
 mod paging;
 mod program;
+mod serverlog;
 mod start;
 mod tasks_service;
 mod wire;
 mod wire_caps;
 
 pub use client::{Changes, RemoteItems};
+pub use datadir::{Action, Fault, Meta, Tightened, create_private_dir, decide, tighten};
+pub use datadir_text::{Lang, fault_text, tightened_text};
 pub use host::{Hosted, host};
 pub use program::serve_command;
 pub use start::ensure_server;

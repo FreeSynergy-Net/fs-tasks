@@ -50,9 +50,9 @@ pub fn host(repo: Arc<TaskRepo>, socket: PathBuf) -> Result<Hosted, String> {
         };
         tokio::task::LocalSet::new().block_on(&runtime, async move {
             if let Some(dir) = socket.parent()
-                && let Err(e) = std::fs::create_dir_all(dir)
+                && let Err(e) = crate::datadir::create_private_dir(dir)
             {
-                let _ = ready.send(Err(format!("{}: {e}", dir.display())));
+                let _ = ready.send(Err(e));
                 return;
             }
             let root = TasksServer::new(repo.clone(), repo).into_client();

@@ -129,7 +129,7 @@ impl Preference {
             .file_name()
             .ok_or_else(|| format!("{} is not a file name", self.file.display()))?;
         if let Some(dir) = self.file.parent().filter(|d| !d.as_os_str().is_empty()) {
-            std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+            fs_tasks_server::create_private_dir(dir)?;
         }
         let mut temp_name = name.to_os_string();
         temp_name.push(format!(".{}.tmp", std::process::id()));

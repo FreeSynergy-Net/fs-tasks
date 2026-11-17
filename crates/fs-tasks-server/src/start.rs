@@ -28,10 +28,14 @@ fn spawn(socket: &Path, data: Option<&Path>) -> Result<Child, String> {
     if let Some(data) = data {
         command.arg("--data").arg(data);
     }
+    // What the server says when it cannot start goes to `<socket>.log` (0600, one file, overwritten at each start), so the
+    // client can tell the person the cause.
+    let log = crate::serverlog::open_fresh(&crate::serverlog::path_for(socket))
+        .map_or_else(|_| Stdio::null(), Stdio::from);
     command
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null());
+        .stderr(log);
     // Its own process group: a Ctrl-C meant for the client does not stop the server.
     #[cfg(unix)]
     std::os::unix::process::CommandExt::process_group(&mut command, 0);
@@ -49,7 +53,7 @@ pub async fn ensure_server(socket: &Path, data: Option<&Path>) -> Result<(), Str
         return Ok(());
     }
     if let Some(dir) = socket.parent() {
-        std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+        crate::datadir::create_private_dir(dir)?;
     }
     let lock = OpenOptions::new()
         .create(true)
@@ -70,13 +74,23 @@ pub async fn ensure_server(socket: &Path, data: Option<&Path>) -> Result<(), Str
             return Ok(());
         }
         if let Ok(Some(status)) = child.try_wait() {
-            return Err(format!(
-                "the server ended at once ({status}); run `fs-tasks serve` to see why"
+            return Err(ended(
+                socket,
+                &format!("the server ended at once ({status})"),
             ));
         }
     }
-    Err(format!(
-        "the server did not come up at {}",
-        socket.display()
+    Err(ended(
+        socket,
+        &format!("the server did not come up at {}", socket.display()),
     ))
+}
+
+/// The start error: what happened, then the last lines the server wrote (the cause), and where the whole log is.
+fn ended(socket: &Path, what: &str) -> String {
+    let log = crate::serverlog::path_for(socket);
+    match crate::serverlog::last_lines(&log) {
+        Some(lines) => format!("{what}; its log {}:\n{lines}", log.display()),
+        None => format!("{what}; it wrote nothing to {}", log.display()),
+    }
 }

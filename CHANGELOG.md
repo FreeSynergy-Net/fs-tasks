@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.0.9
+
+### English
+
+- **Fix: the program did not start when its data folder existed with mode 0755.** The window of 0.0.8 made `~/.local/share/freesynergy/tasks` with the default mode (0755) before the server ran; the transport of the server wants 0700 and refused it, and the client only said "run `fs-tasks serve` to see why". Now: (1) the window, the server and the client make their folders with 0700 (`freesynergy` and below; `~/.local/share` itself keeps its ordinary mode); (2) the server **corrects** an open data folder of its own before it starts: only bits are taken away (to 0700), only for a folder of this user that is not a link and is a directory, on the opened folder itself (not the path), checked again afterwards; what is inside is not changed, the folders above are still only checked. It says so in its log (`data-dir-tightened`, folder, old mode, "was open, may have been read"); a private folder gives no message. A link, a file, a folder of somebody else or a folder that stays open is refused with a code and parameters (`data-dir-symlink`, `-not-directory`, `-foreign-owner`, `-io`, `-still-open`) and a sentence in German or English (by `LC_ALL`/`LANG`).
+- **Start errors are visible.** A server started by a client writes what it says to `<socket>.log` (mode 0600, one file per program, overwritten at each start, cut to its last 64 KB when the start error is read); a start error now shows the last ten lines, so the cause stands there (for example `PermissionDenied`), not only a hint.
+- Limits: a server that runs for a very long time can write more than 64 KB before the next start; the window shows the start error on the terminal (stderr) and in its exit message, not in a dialog; the fix of the library (`fs-interfaces`, pinned at v0.0.22) is not done here: the correction is local to this program.
+
+### Deutsch
+
+- **Korrektur: Das Programm startete nicht, wenn der Datenordner mit 0755 existierte.** Das Fenster von 0.0.8 legte `~/.local/share/freesynergy/tasks` mit dem Standardmodus (0755) an, bevor der Server lief; der Transport des Servers verlangt 0700 und lehnte ihn ab, und der Client sagte nur „run `fs-tasks serve` to see why“. Jetzt: (1) Fenster, Server und Client legen ihre Ordner mit 0700 an (`freesynergy` und darunter; `~/.local/share` selbst behält den üblichen Modus); (2) der Server **korrigiert** einen zu offenen eigenen Datenordner vor dem Start: nur Bits werden weggenommen (auf 0700), nur bei einem Ordner dieses Benutzers, der kein Link ist, am geöffneten Ordner selbst (nicht am Pfad), danach erneut geprüft; der Inhalt bleibt unverändert, die Ordner darüber werden weiter nur geprüft. Er schreibt es ins Protokoll (`data-dir-tightened`, Ordner, alter Modus, „war offen, ggf. gelesen“); ein privater Ordner erzeugt keine Meldung. Link, Datei, fremder Ordner oder ein Ordner, der offen bleibt, werden mit Code und Parametern (`data-dir-symlink`, `-not-directory`, `-foreign-owner`, `-io`, `-still-open`) und einem Satz auf Deutsch oder Englisch (nach `LC_ALL`/`LANG`) abgelehnt.
+- **Startfehler sind sichtbar.** Ein vom Client gestarteter Server schreibt seine Meldungen nach `<Socket>.log` (Modus 0600, eine Datei je Programm, bei jedem Start überschrieben, beim Lesen des Startfehlers auf die letzten 64 KB gekürzt); der Startfehler zeigt jetzt die letzten zehn Zeilen, die Ursache steht also da (z. B. `PermissionDenied`), nicht nur ein Hinweis.
+- Grenzen: ein sehr lange laufender Server kann bis zum nächsten Start mehr als 64 KB schreiben; das Fenster zeigt den Startfehler im Terminal (stderr) und in der Abschlussmeldung, nicht in einem Dialog; die Korrektur der Bibliothek (`fs-interfaces`, gepinnt auf v0.0.22) ist nicht hier: die Korrektur liegt lokal in diesem Programm.
+
 ## 0.0.8 (unreleased until tagged)
 
 ### English

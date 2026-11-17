@@ -56,6 +56,14 @@ fn adopt_legacy_store(dir: &Path) -> Result<(), String> {
     Ok(())
 }
 
+/// Make the data folder before the server runs. It is made 0700 (never 0755: the transport of the server refuses any
+/// other mode, and the program did not start up to 0.0.8); a folder that exists is left to the server, which takes the
+/// open bits away from a folder of its own.
+fn prepare_own_dir(dir: &Path) -> Result<(), String> {
+    fs_tasks_server::create_private_dir(dir)?;
+    adopt_legacy_store(dir)
+}
+
 /// Connect to the server (starting it if none answers). The window never opens the data file in this case.
 fn client(args: &Args) -> Result<Opened, String> {
     let socket = args
@@ -66,8 +74,7 @@ fn client(args: &Args) -> Result<Opened, String> {
     if args.connect.is_none()
         && let Some(dir) = data_dir()
     {
-        std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
-        adopt_legacy_store(&dir)?;
+        prepare_own_dir(&dir)?;
     }
     let remote = RemoteItems::connect(socket, None).map_err(|e| format!("tasks server: {e}"))?;
     let changes = remote.changes();
@@ -145,6 +152,24 @@ mod tests {
         adopt_legacy_store(dir.path()).unwrap();
         assert_eq!(read("objects.db").as_deref(), Some("app.db"));
         assert_eq!(read("app.db").as_deref(), Some("old"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_window_makes_the_data_folder_private_so_the_server_starts() {
+        use std::os::unix::fs::PermissionsExt;
+        let base = tempfile::tempdir().unwrap();
+        let dir = base.path().join("share/freesynergy/tasks");
+        prepare_own_dir(&dir).unwrap();
+        let mode = |p: &Path| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode(&dir), 0o700, "the window never makes it 0755");
+        assert_eq!(
+            mode(dir.parent().unwrap()),
+            0o700,
+            "nor the folder of the suite"
+        );
+        // What the server then does to it: nothing to correct, so it starts.
+        assert_eq!(fs_tasks_server::tighten(&dir), Ok(None));
     }
 
     #[test]

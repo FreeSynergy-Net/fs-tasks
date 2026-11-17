@@ -202,11 +202,14 @@ fn it_refuses_bad_arguments_and_a_data_directory_others_can_read() {
         Some(2)
     );
 
+    // A data folder that is a link is refused (an open folder of its own is corrected, see `tests/datadir.rs`).
     let dir = tempfile::tempdir().unwrap();
-    let open = dir.path().join("open");
-    std::fs::create_dir(&open).unwrap();
-    std::fs::set_permissions(&open, PermissionsExt::from_mode(0o755)).unwrap();
+    let real = dir.path().join("real");
+    std::fs::create_dir(&real).unwrap();
+    std::fs::set_permissions(&real, PermissionsExt::from_mode(0o700)).unwrap();
+    let link = dir.path().join("link");
+    std::os::unix::fs::symlink(&real, &link).unwrap();
     let socket = dir.path().join("x.sock");
-    let (socket, open) = (socket.to_str().unwrap(), open.to_str().unwrap());
-    assert_eq!(run(&["--socket", socket, "--data", open]), Some(1));
+    let (socket, link) = (socket.to_str().unwrap(), link.to_str().unwrap());
+    assert_eq!(run(&["--socket", socket, "--data", link]), Some(1));
 }

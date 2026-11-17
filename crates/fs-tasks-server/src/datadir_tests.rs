@@ -1,3 +1,7 @@
+//! Tests of the data folder rule and its application to real folders (Unix).
+//!
+//! Pattern: Table tests — the pure rule on made-up facts, then the same cases on real folders in a temporary folder.
+
 use std::os::unix::fs::{MetadataExt, PermissionsExt, symlink};
 use std::path::Path;
 

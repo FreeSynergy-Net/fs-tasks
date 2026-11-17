@@ -175,6 +175,9 @@ async fn k13_agent_cards_go_to_the_bottom() {
     )
     .await
     .unwrap();
-    assert_eq!(k.order_of(l, &todo).await, [before, vec![c.id]].concat());
+    assert_eq!(
+        k.order_of(l, &todo).await,
+        [before.clone(), vec![c.id]].concat()
+    );
     assert_eq!(before, vec![a.id, b.id]);
 }

@@ -4,7 +4,7 @@
 //! Pattern: Template method (feste Fälle; hier gegen die Werte des Ordners selbst).
 
 use super::kern::{col, std4};
-use super::oracle::{At, Col, Oracle};
+use super::oracle::{Col, Oracle};
 use crate::draft::tasks_v2::{
     CAPABILITIES, COLUMNS_MAX, ColumnProblem, ColumnSet, INVALID_CODES, NOTE_MAX, ObjectId,
     Progress, Revision, StageKey,
@@ -281,24 +281,4 @@ fn oracle_agrees_with_the_rules_on_samples() {
     for cols in [std4(), twice, missing, ok, Vec::new()] {
         assert_eq!(Oracle::accepts(&to(&cols)), set(cols).problems().is_empty());
     }
-}
-
-/// Das Orakel legt Karten und verschiebt sie: Rand oben/unten, `After`, Stand-Wechsel leert die Stufe, abgelehntes
-/// `After` ändert nichts. Mutant: `After(x)` mit x in anderer Spalte wird angenommen.
-#[test]
-fn oracle_models_order() {
-    let mut o = Oracle::new();
-    o.create(1, Progress::NeedsAction, "", false);
-    o.create(2, Progress::NeedsAction, "", false);
-    o.create(3, Progress::NeedsAction, "", true);
-    assert_eq!(o.layout(0), [3, 1, 2]);
-    assert!(!o.set_columns(Vec::new()) && o.cols.len() == 4);
-    assert!(o.move_to(1, 1, At::Bottom));
-    assert_eq!((o.layout(0), o.layout(1)), (vec![3, 2], vec![1]));
-    assert!(!o.move_to(2, 1, At::After(3)));
-    assert_eq!(o.layout(0), [3, 2]);
-    assert!(o.move_to(3, 1, At::After(1)));
-    assert_eq!(o.layout(1), [1, 3]);
-    o.progress(3, Progress::Completed, true);
-    assert_eq!((o.layout(2), o.layout(1)), (vec![3], vec![1]));
 }

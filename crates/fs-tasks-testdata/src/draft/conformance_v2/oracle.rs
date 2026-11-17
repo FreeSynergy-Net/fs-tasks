@@ -231,3 +231,30 @@ impl Oracle {
         true
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Das Orakel legt Karten und verschiebt sie: Rand oben/unten, `After`, Stand-Wechsel leert die Stufe, abgelehntes
+    /// `After` ändert nichts. Mutant: `After(x)` mit x in anderer Spalte wird angenommen.
+    #[test]
+    fn oracle_models_order() {
+        let mut o = Oracle::new();
+        o.create(1, Progress::NeedsAction, "", false);
+        o.create(2, Progress::NeedsAction, "", false);
+        o.create(3, Progress::NeedsAction, "", true);
+        assert_eq!(o.layout(0), [3, 1, 2]);
+        assert!(!o.set_columns(Vec::new()) && o.cols.len() == 4);
+        assert!(o.move_to(1, 1, At::Bottom));
+        assert_eq!((o.layout(0), o.layout(1)), (vec![3, 2], vec![1]));
+        assert!(!o.move_to(2, 1, At::After(3)));
+        assert_eq!(o.layout(0), [3, 2]);
+        assert!(o.move_to(3, 1, At::After(1)));
+        assert_eq!(o.layout(1), [1, 3]);
+        o.progress(3, Progress::Completed, true);
+        o.create(4, Progress::InProcess, "", false);
+        assert!(o.move_to(4, 1, At::Top) && o.layout(1) == [4, 1]);
+        assert_eq!((o.layout(2), o.layout(1)), (vec![3], vec![4, 1]));
+    }
+}

@@ -69,7 +69,7 @@ fn rules_b1_to_b6_find_each_problem() {
     );
     let mut ok = std4();
     ok.push(col("a", &[Progress::InProcess], Some("testing")));
-    assert!(set(ok).problems().is_empty());
+    assert_eq!(set(ok).problems(), Vec::new());
     assert_eq!(set(Vec::new()).problems()[0], ColumnProblem::None);
     let many: Vec<_> = (0..=COLUMNS_MAX)
         .map(|i| {
@@ -135,7 +135,7 @@ fn b7_gives_every_card_a_column() {
         ),
     );
     let s = set(cols);
-    assert!(s.problems().is_empty());
+    assert_eq!(s.problems(), Vec::new());
     let of = |p, st: Option<&str>| {
         s.column_of(p, st.and_then(StageKey::parse).as_ref())
             .map(|k| k.as_str().to_owned())
@@ -157,7 +157,7 @@ fn b7_gives_every_card_a_column() {
     assert_eq!(
         only_staged
             .column_of(Progress::Failed, None)
-            .map(|k| k.as_str()),
+            .map(crate::draft::tasks_v2::ColumnKey::as_str),
         Some("a")
     );
     for p in Progress::ALL {

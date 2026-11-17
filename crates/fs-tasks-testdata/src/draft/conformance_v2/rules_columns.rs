@@ -15,7 +15,7 @@ async fn k01_default_columns() {
     let set = k.t.columns(l).await.unwrap();
     assert!(!set.stored);
     assert_eq!(set.columns.len(), 4);
-    assert!(set.problems().is_empty());
+    assert_eq!(set.problems(), Vec::new());
 }
 
 /// K2: ein Satz ohne `Failed` ergibt `Columns([ProgressMissing { Failed }])`, nichts geschrieben (`columns` danach

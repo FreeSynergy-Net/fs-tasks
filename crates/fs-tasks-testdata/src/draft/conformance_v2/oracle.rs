@@ -163,11 +163,8 @@ impl Oracle {
             .or_default()
             .retain(|x| *x != id);
         let s = self.seq.entry(idx(to)).or_default();
-        if top {
-            s.insert(0, id)
-        } else {
-            s.push(id)
-        }
+        let at = if top { 0 } else { s.len() };
+        s.insert(at, id);
         let card = self.cards.iter_mut().find(|x| x.id == id).expect("known");
         (card.progress, card.stage) = (to, String::new());
     }
@@ -209,9 +206,8 @@ impl Oracle {
             At::Top => pos(seq, members.iter().find(|m| seq.contains(m))).unwrap_or(0),
             At::Bottom => pos(seq, members.iter().rev().find(|m| seq.contains(m)))
                 .map_or(seq.len(), |i| i + 1),
-            At::After(x) => match pos(seq, Some(&x)) {
-                Some(i) => i + 1,
-                None => {
+            At::After(x) => pos(seq, Some(&x)).map_or_else(
+                || {
                     let xp = self
                         .cards
                         .iter()
@@ -221,8 +217,9 @@ impl Oracle {
                     let earlier = order.iter().position(|p| *p == xp)
                         < order.iter().position(|p| *p == written);
                     if earlier { 0 } else { seq.len() }
-                }
-            },
+                },
+                |i| i + 1,
+            ),
         };
         self.seq
             .entry(idx(written))

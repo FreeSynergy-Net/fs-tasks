@@ -18,7 +18,9 @@ use fs_interfaces::tasks_capnp::{items as wire_items, tasks};
 use fs_tasks_core::{Error, Result as CoreResult};
 use tokio::sync::{mpsc, oneshot};
 
-use crate::start::ensure_server;
+use crate::ending::describe;
+use crate::start::{Times, ensure_server};
+use crate::startfail::StartError;
 
 type Callback = Arc<dyn Fn() + Send + Sync>;
 type Job = Box<dyn FnOnce(wire_items::Client) + Send>;
@@ -68,6 +70,12 @@ impl change_listener::Server for Listener {
     }
 }
 
+/// The most the whole start of a connection may take (the steps inside have limits of their own).
+const START_LIMIT: Duration = Duration::from_secs(30);
+
+/// How long one step of the connection (the first questions) may take.
+const STEP_LIMIT: Duration = Duration::from_secs(5);
+
 /// How long a call may take before it ends with a message (a hanging server must not freeze the window).
 const CALL_LIMIT: Duration = Duration::from_secs(10);
 
@@ -85,7 +93,10 @@ impl RemoteItems {
     ///
     /// # Errors
     /// The text says why the server could not be started or reached.
-    pub fn connect(socket: PathBuf, data: Option<PathBuf>) -> std::result::Result<Self, String> {
+    pub fn connect(
+        socket: PathBuf,
+        data: Option<PathBuf>,
+    ) -> std::result::Result<Self, StartError> {
         let changes = Arc::new(Changes::default());
         let (jobs, mut inbox) = mpsc::unbounded_channel::<Job>();
         let (ready, ready_rx) = std::sync::mpsc::channel();
@@ -96,7 +107,7 @@ impl RemoteItems {
                 .build()
             {
                 Ok(r) => r,
-                Err(e) => return drop(ready.send(Err(e.to_string()))),
+                Err(e) => return drop(ready.send(Err(StartError::Failed(e.to_string())))),
             };
             tokio::task::LocalSet::new().block_on(&runtime, async move {
                 if let Err(e) = serve_jobs(&socket, data.as_deref(), feed, &mut inbox, &ready).await
@@ -105,7 +116,9 @@ impl RemoteItems {
                 }
             });
         });
-        match ready_rx.recv() {
+        // Every step of the connection thread has a limit of its own; this one only keeps a thread that is stuck anyway
+        // from holding the caller for ever.
+        match ready_rx.recv_timeout(START_LIMIT) {
             Ok(Ok(capability_ids)) => Ok(Self {
                 jobs,
                 changes,
@@ -113,7 +126,13 @@ impl RemoteItems {
                 capability_ids,
             }),
             Ok(Err(e)) => Err(e),
-            Err(_) => Err("the connection thread ended at once".into()),
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => Err(StartError::Failed(format!(
+                "the connection to the tasks server was not ready within {} s",
+                START_LIMIT.as_secs()
+            ))),
+            Err(_) => Err(StartError::Failed(
+                "the connection thread ended at once".into(),
+            )),
         }
     }
 
@@ -157,38 +176,44 @@ impl RemoteItems {
     }
 }
 
-type Ready = std::sync::mpsc::Sender<std::result::Result<Vec<String>, String>>;
+type Ready = std::sync::mpsc::Sender<std::result::Result<Vec<String>, StartError>>;
+
+/// One question of the start, within `STEP_LIMIT`: a server that answered the handshake and then stops answering gets the
+/// same message as one that never did.
+async fn step<T>(
+    socket: &std::path::Path,
+    question: impl Future<Output = std::result::Result<T, capnp::Error>>,
+) -> std::result::Result<T, StartError> {
+    match tokio::time::timeout(STEP_LIMIT, question).await {
+        Ok(answer) => answer.map_err(|e| StartError::Failed(format!("{}: {e}", socket.display()))),
+        Err(_) => Err(describe(socket, &Times::default()).await),
+    }
+}
 
 /// Connect, subscribe, say `ready` (with the capability ids), then run the jobs until the proxy is dropped. The
-/// connection and the subscription stay alive for as long as this function runs.
+/// connection and the subscription stay alive for as long as this function runs. Every question has a limit.
 async fn serve_jobs(
     socket: &std::path::Path,
     data: Option<&std::path::Path>,
     changes: Arc<Changes>,
     inbox: &mut mpsc::UnboundedReceiver<Job>,
     ready: &Ready,
-) -> std::result::Result<(), String> {
+) -> std::result::Result<(), StartError> {
     ensure_server(socket, data).await?;
-    let said = |e: capnp::Error| format!("{}: {e}", socket.display());
-    let connection = connect::<tasks::Client>(socket)
-        .await
-        .map_err(|e| format!("{}: {e}", socket.display()))?;
+    let said = |e: capnp::Error| StartError::Failed(format!("{}: {e}", socket.display()));
+    let io_said = |e: std::io::Error| StartError::Failed(format!("{}: {e}", socket.display()));
+    let connection = match tokio::time::timeout(STEP_LIMIT, connect::<tasks::Client>(socket)).await
+    {
+        Ok(connected) => connected.map_err(io_said)?,
+        Err(_) => return Err(describe(socket, &Times::default()).await),
+    };
     let root = &connection.client;
-    let items = root
-        .items_request()
-        .send()
-        .promise
-        .await
-        .map_err(said)?
+    let items = step(socket, root.items_request().send().promise)
+        .await?
         .get()
         .and_then(tasks::items_results::Reader::get_items)
         .map_err(said)?;
-    let answer = root
-        .capabilities_request()
-        .send()
-        .promise
-        .await
-        .map_err(said)?;
+    let answer = step(socket, root.capabilities_request().send().promise).await?;
     let ids = answer
         .get()
         .and_then(tasks::capabilities_results::Reader::get_capabilities)
@@ -196,16 +221,13 @@ async fn serve_jobs(
         .map_err(said)?
         .iter()
         .map(|t| Ok(t.map_err(said)?.to_string().unwrap_or_default()))
-        .collect::<std::result::Result<Vec<_>, String>>()?;
+        .collect::<std::result::Result<Vec<_>, StartError>>()?;
     let mut subscribe = root.subscribe_request();
     subscribe
         .get()
         .set_listener(capnp_rpc::new_client(Listener(changes)));
-    let subscription = subscribe
-        .send()
-        .promise
-        .await
-        .map_err(said)?
+    let subscription = step(socket, subscribe.send().promise)
+        .await?
         .get()
         .and_then(tasks::subscribe_results::Reader::get_subscription)
         .map_err(said)?;

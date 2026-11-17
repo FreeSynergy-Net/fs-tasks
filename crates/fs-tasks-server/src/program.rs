@@ -47,34 +47,41 @@ pub fn serve_command(args: impl IntoIterator<Item = OsString>) -> i32 {
     }
     // Name and version go to `Control.version`: a window of another version replaces this server (fs-interfaces handshake).
     let identity = ServerIdentity::new("fs-tasks", env!("CARGO_PKG_VERSION"));
-    let served = run_until_signal_as(&socket, identity, || async move {
-        correct_data_dir(&data)?;
-        let data = prepare_data_dir(&data)?;
-        let store = TursoStore::open(data.join("objects.db"))
-            .await
-            .map_err(std::io::Error::other)?;
-        let store: Arc<dyn Store> = Arc::new(store);
-        let mut repo = TaskRepo::new(store, actor);
-        if let Some(instance) = instance {
-            repo = repo.with_instance(instance);
-        }
-        // Tasks stored before 0.7.0 get the index fields the pages need; what cannot be repaired is
-        // named, and a page says so as well.
-        let report = repo.upgrade_index().await.map_err(std::io::Error::other)?;
-        if report.rewritten > 0 {
-            eprintln!(
-                "fs-tasks serve: index completed for {} tasks",
-                report.rewritten
-            );
-        }
-        for failed in &report.failed {
-            eprintln!("fs-tasks serve: task not repaired: {failed}");
-        }
-        let repo = Arc::new(repo);
-        Ok(TasksServer::new(repo.clone(), repo).into_client().client)
+    let served = run_until_signal_as(&socket, identity, || {
+        crate::early::until_signal(async move {
+            correct_data_dir(&data)?;
+            let data = prepare_data_dir(&data)?;
+            let store = TursoStore::open(data.join("objects.db"))
+                .await
+                .map_err(std::io::Error::other)?;
+            let store: Arc<dyn Store> = Arc::new(store);
+            let mut repo = TaskRepo::new(store, actor);
+            if let Some(instance) = instance {
+                repo = repo.with_instance(instance);
+            }
+            // Tasks stored before 0.7.0 get the index fields the pages need; what cannot be repaired is
+            // named, and a page says so as well.
+            let report = repo.upgrade_index().await.map_err(std::io::Error::other)?;
+            if report.rewritten > 0 {
+                eprintln!(
+                    "fs-tasks serve: index completed for {} tasks",
+                    report.rewritten
+                );
+            }
+            for failed in &report.failed {
+                eprintln!("fs-tasks serve: task not repaired: {failed}");
+            }
+            let repo = Arc::new(repo);
+            Ok(TasksServer::new(repo.clone(), repo).into_client().client)
+        })
     });
     match served {
         Ok(()) => 0,
+        // A stop signal during the start is a stop, not a failure.
+        Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {
+            eprintln!("fs-tasks serve: {e}");
+            0
+        }
         Err(e) => {
             eprintln!("fs-tasks serve: {e}");
             1

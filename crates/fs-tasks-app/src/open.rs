@@ -10,7 +10,7 @@ use std::sync::Arc;
 use fs_interfaces::rpc::default_socket;
 use fs_objects::{Store, TursoStore};
 use fs_tasks_core::{TaskItems, TaskRepo};
-use fs_tasks_server::{Changes, RemoteItems};
+use fs_tasks_server::{Changes, RemoteItems, StartError};
 
 use crate::args::Args;
 
@@ -19,6 +19,43 @@ const ACTOR: &str = "https://localhost/actors/owner";
 
 /// The store the window, `fs-tasks serve` and the command line share: the file the server opens by default.
 const SHARED_STORE: &str = "objects.db";
+
+/// Why the tasks could not be opened: the server holds the socket and does not answer (or the start cannot proceed), which
+/// the window shows with its own words, or anything else, in a text.
+#[derive(Debug)]
+pub enum OpenError {
+    /// The server could not be reached (code and parameters in the error).
+    Server(StartError),
+    /// Anything else.
+    Text(String),
+}
+
+impl From<String> for OpenError {
+    fn from(text: String) -> Self {
+        OpenError::Text(text)
+    }
+}
+
+impl From<&str> for OpenError {
+    fn from(text: &str) -> Self {
+        OpenError::Text(text.to_owned())
+    }
+}
+
+impl From<StartError> for OpenError {
+    fn from(error: StartError) -> Self {
+        OpenError::Server(error)
+    }
+}
+
+impl std::fmt::Display for OpenError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OpenError::Server(error) => write!(f, "tasks server: {error}"),
+            OpenError::Text(text) => f.write_str(text),
+        }
+    }
+}
 
 /// The tasks and, for a window that is a client, the change notices of the server.
 pub struct Opened {
@@ -65,7 +102,7 @@ fn prepare_own_dir(dir: &Path) -> Result<(), String> {
 }
 
 /// Connect to the server (starting it if none answers). The window never opens the data file in this case.
-fn client(args: &Args) -> Result<Opened, String> {
+fn client(args: &Args) -> Result<Opened, OpenError> {
     let socket = args
         .connect
         .clone()
@@ -76,7 +113,7 @@ fn client(args: &Args) -> Result<Opened, String> {
     {
         prepare_own_dir(&dir)?;
     }
-    let remote = RemoteItems::connect(socket, None).map_err(|e| format!("tasks server: {e}"))?;
+    let remote = RemoteItems::connect(socket, None)?;
     let changes = remote.changes();
     Ok(Opened {
         items: Arc::new(remote),
@@ -85,7 +122,7 @@ fn client(args: &Args) -> Result<Opened, String> {
 }
 
 /// A store in this process: `--store`, or memory (a picture, an export).
-fn own(args: &Args, runtime: &tokio::runtime::Runtime) -> Result<Opened, String> {
+fn own(args: &Args, runtime: &tokio::runtime::Runtime) -> Result<Opened, OpenError> {
     let store: Arc<dyn Store> = runtime
         .block_on(async {
             match &args.store {
@@ -124,7 +161,7 @@ fn own(args: &Args, runtime: &tokio::runtime::Runtime) -> Result<Opened, String>
 ///
 /// # Errors
 /// The text says why the server or the store could not be reached.
-pub fn open(args: &Args, runtime: &tokio::runtime::Runtime) -> Result<Opened, String> {
+pub fn open(args: &Args, runtime: &tokio::runtime::Runtime) -> Result<Opened, OpenError> {
     if is_client(args) {
         client(args)
     } else {

@@ -9,23 +9,54 @@ use crate::args::{Args, HELP, Plan, parse};
 use crate::day::Day;
 use crate::frontend::{Frontend, Preference};
 use crate::frontends::{FrontendOptions, Frontends};
-use crate::open::{data_dir, open};
+use crate::open::{OpenError, data_dir, open};
 use crate::plan_view::{Board, Cache, Layout, Next, PlanSource};
+use crate::problem_window::{self, Outcome};
 use crate::sample::by_name as sample_by_name;
 use crate::{TaskAdapter, export_all, import_file, labels, labels_next, screen_widget};
 use fs_components_app::{Status, WindowOptions, launch};
 use fs_components_workbenches::tasks::{TaskView, TasksWidget};
+use fs_interfaces::rpc::default_socket;
 use fs_tasks_core::TaskItems;
-use fs_tasks_server::Changes;
+use fs_tasks_server::{Changes, Lang, StartError};
 
-/// Open the window (or import, export, take a picture) with `argv`, the words after `app`; the exit code.
+/// Open the window (or import, export, take a picture) with `argv`, the words after `app`; the exit code. A failure is
+/// never silent: it goes to stderr as code and parameters plus the sentence; the exit code is 1, or 3 when the server
+/// holds the socket and does not answer (then a window says it and asks whether to end it, if a window is possible).
 #[must_use]
 pub fn app_command(argv: &[String]) -> i32 {
-    match run(argv) {
-        Ok(()) => 0,
-        Err(message) => {
-            eprintln!("fs-tasks: {message}");
-            1
+    // After "yes" the server was ended: one more try, no more (a server that is silent again is the person's to look at).
+    for attempt in 0..2 {
+        match run(argv) {
+            Ok(()) => return 0,
+            Err(OpenError::Text(message)) => {
+                eprintln!("fs-tasks: {message}");
+                return 1;
+            }
+            Err(OpenError::Server(error)) => match trouble(&error, argv, attempt == 0) {
+                Some(Outcome::Retry) => {}
+                _ => return error.exit_code(),
+            },
+        }
+    }
+    3
+}
+
+/// Say that the server could not be reached: on stderr, and in a window when one is possible (not for a picture, an
+/// export or the help). `None` if there was no window or it failed.
+fn trouble(error: &StartError, argv: &[String], window: bool) -> Option<Outcome> {
+    let lang = Lang::from_env();
+    eprintln!("fs-tasks: {}", error.report(lang));
+    let options = parse(argv).ok()?;
+    if !window || options.snapshot.is_some() || options.export.is_some() || options.help {
+        return None;
+    }
+    let socket = options.connect.or_else(|| default_socket("tasks"))?;
+    match problem_window::show(error, lang, &socket) {
+        Ok(outcome) => Some(outcome),
+        Err(why) => {
+            eprintln!("fs-tasks: no window: {why}");
+            None
         }
     }
 }
@@ -38,7 +69,7 @@ fn settings_file(args: &Args) -> Option<std::path::PathBuf> {
     data_dir().map(|dir| dir.join("settings.json"))
 }
 
-fn run(argv: &[String]) -> Result<(), String> {
+fn run(argv: &[String]) -> Result<(), OpenError> {
     // The typing test reads what is typed into the fields: the registry must be on BEFORE the first field is made, so
     // before the window is built. A debug-only feature, off in a release.
     #[cfg(feature = "test-access")]
@@ -79,13 +110,20 @@ fn run(argv: &[String]) -> Result<(), String> {
         let report = export_all(items.as_ref(), &handle, file, &options.export_sensitive)?;
         eprintln!("{}", report.message(file));
         if !report.failed.is_empty() {
-            return Err(format!("{} could not be exported", report.failed.len()));
+            return Err(format!("{} could not be exported", report.failed.len()).into());
         }
         if options.snapshot.is_none() {
             return Ok(());
         }
     }
-    show(&options, items, handle, status, today, opened.changes)
+    Ok(show(
+        &options,
+        items,
+        handle,
+        status,
+        today,
+        opened.changes,
+    )?)
 }
 
 fn show(

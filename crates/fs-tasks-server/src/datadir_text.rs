@@ -5,6 +5,7 @@
 //! program makes the sentence.
 
 use crate::datadir::{Fault, Tightened};
+use crate::startfail::{StartError, Stuck};
 
 /// The language of a message.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -101,6 +102,81 @@ pub fn tightened_text(done: &Tightened, lang: Lang) -> String {
         ),
         Lang::De => format!(
             "Der Datenordner {path} war für andere offen (Modus {mode:04o}); er ist jetzt privat (0700). Er kann zwischenzeitlich gelesen worden sein."
+        ),
+    }
+}
+
+/// The sentence for a failed start. The words differ by language; the code and parameters (`StartError::report`) do not.
+#[must_use]
+pub fn start_text(error: &StartError, lang: Lang) -> String {
+    match (error, lang) {
+        (StartError::Failed(text), _) => text.clone(),
+        (StartError::Unresponsive(stuck), lang) => unresponsive_text(stuck, lang),
+        (StartError::StartLocked { path }, Lang::En) => format!(
+            "Another start holds {} and the server does not come up. Wait a moment and start again.",
+            path.display()
+        ),
+        (StartError::StartLocked { path }, Lang::De) => format!(
+            "Ein anderer Start hält {} und der Server kommt nicht hoch. Einen Moment warten und neu starten.",
+            path.display()
+        ),
+        (StartError::OtherProgram { program }, Lang::En) => format!(
+            "The socket is served by {program}, not by fs-tasks: check the --socket / --connect argument."
+        ),
+        (StartError::OtherProgram { program }, Lang::De) => format!(
+            "Der Socket gehört {program}, nicht fs-tasks: das Argument --socket / --connect prüfen."
+        ),
+    }
+}
+
+fn process_words(stuck: &Stuck) -> String {
+    let word = |name: &str, value: Option<String>| {
+        value.map(|v| format!(" {name} {v}")).unwrap_or_default()
+    };
+    [
+        word("PID", stuck.pid.map(|p| p.to_string())),
+        word("since", stuck.since.clone()),
+        word("program", stuck.exe.clone()),
+    ]
+    .concat()
+    .trim_start()
+    .to_owned()
+}
+
+fn unresponsive_text(stuck: &Stuck, lang: Lang) -> String {
+    let who = process_words(stuck);
+    match (stuck.can_ask, lang) {
+        (true, Lang::En) => {
+            format!("Tasks is already running, but it does not answer ({who}). End it?")
+        }
+        (true, Lang::De) => {
+            format!("Tasks l\u{e4}uft schon, reagiert aber nicht ({who}). Beenden?")
+        }
+        (false, Lang::En) => format!(
+            "Tasks is already running, but it does not answer ({who}). It is not ended from here (reason: {}); end it yourself.",
+            stuck.why
+        ),
+        (false, Lang::De) => format!(
+            "Tasks l\u{e4}uft schon, reagiert aber nicht ({who}). Es wird von hier nicht beendet (Grund: {}); bitte selbst beenden.",
+            stuck.why
+        ),
+    }
+}
+
+/// The words of the window that shows a silent server: the title, the answer "yes" (end it, start again) and the answer
+/// "no" (close). Menu entries stand for the two answers: there is no question dialog in the shell yet.
+#[must_use]
+pub fn window_words(lang: Lang) -> (&'static str, &'static str, &'static str) {
+    match lang {
+        Lang::En => (
+            "Tasks does not answer",
+            "Yes: end it and start again",
+            "No: close",
+        ),
+        Lang::De => (
+            "Tasks antwortet nicht",
+            "Ja: beenden und neu starten",
+            "Nein: schlie\u{df}en",
         ),
     }
 }

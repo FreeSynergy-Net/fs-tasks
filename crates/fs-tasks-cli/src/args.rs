@@ -160,7 +160,7 @@ Commands:
   delete <id>                delete a task
   export                     all tasks as iCalendar
   import <file.ics>          import VTODOs
-Work (exit 0 ok, 1 error, 3 conflict: somebody else holds the claim; add --json for JSON):
+Work (exit 0 ok, 1 error, 3 conflict: somebody else holds the claim, 4 the server does not answer; add --json for JSON):
   claim <id> --as NAME [--until 90m|2h|UTC] [--json]
   release <id> --as NAME [--json]
   next --as NAME [--project P] [--json]

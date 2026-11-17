@@ -10,6 +10,8 @@ use std::fmt;
 pub struct Failure {
     /// A claim (or another exclusive hold) of somebody else is the cause.
     pub conflict: bool,
+    /// The server holds the socket and does not answer, or the start cannot proceed: exit code 4.
+    pub server: bool,
     /// What went wrong, in words; for a conflict it names the holder.
     pub text: String,
 }
@@ -20,14 +22,22 @@ impl Failure {
     pub fn conflict(text: impl Into<String>) -> Self {
         Self {
             conflict: true,
+            server: false,
             text: text.into(),
         }
     }
 
-    /// The exit code: 3 for a conflict, 1 for everything else.
+    /// The exit code: 3 for a conflict, 4 for a server that does not answer, 1 for everything else. (The window ends
+    /// with 3 for the silent server; the command line keeps 3 for the claim conflict workers rely on.)
     #[must_use]
     pub fn code(&self) -> i32 {
-        if self.conflict { 3 } else { 1 }
+        if self.conflict {
+            3
+        } else if self.server {
+            4
+        } else {
+            1
+        }
     }
 }
 
@@ -35,7 +45,18 @@ impl From<String> for Failure {
     fn from(text: String) -> Self {
         Self {
             conflict: false,
+            server: false,
             text,
+        }
+    }
+}
+
+impl From<fs_tasks_server::StartError> for Failure {
+    fn from(error: fs_tasks_server::StartError) -> Self {
+        Self {
+            conflict: false,
+            server: error.exit_code() == 3,
+            text: error.report(fs_tasks_server::Lang::from_env()),
         }
     }
 }

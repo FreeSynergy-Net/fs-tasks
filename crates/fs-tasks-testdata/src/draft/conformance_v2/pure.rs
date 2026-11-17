@@ -210,10 +210,9 @@ fn exactly_seven_files_are_byte_equal_to_v1() {
     let mut same = Vec::new();
     for entry in std::fs::read_dir(&v2).expect("tasks_v2 folder") {
         let name = entry.expect("entry").file_name();
-        if let Ok(old) = std::fs::read(v1.join(&name)) {
-            if old == std::fs::read(v2.join(&name)).expect("read") {
-                same.push(name.to_string_lossy().into_owned());
-            }
+        let (old, new) = (std::fs::read(v1.join(&name)), std::fs::read(v2.join(&name)));
+        if old.is_ok_and(|old| new.is_ok_and(|new| old == new)) {
+            same.push(name.to_string_lossy().into_owned());
         }
     }
     same.sort();

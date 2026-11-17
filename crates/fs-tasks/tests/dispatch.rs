@@ -1,12 +1,14 @@
 //! The first word picks the subcommand (ADR 0063).
 
+mod common;
+use common::Limited;
+
 use std::process::Command;
 
 fn run(args: &[&str]) -> (Option<i32>, String, String) {
     let out = Command::new(env!("CARGO_BIN_EXE_fs-tasks"))
         .args(args)
-        .output()
-        .unwrap();
+        .output_limited();
     (
         out.status.code(),
         String::from_utf8_lossy(&out.stdout).into_owned(),

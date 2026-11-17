@@ -1,5 +1,8 @@
 //! The real program as a worker tool: no server started by hand, many clients at once, one store.
 
+mod common;
+use common::Limited;
+
 use std::path::Path;
 use std::process::{Command, Output};
 
@@ -14,7 +17,7 @@ fn fs_tasks(dir: &Path, args: &[&str]) -> Command {
 }
 
 fn run(dir: &Path, args: &[&str]) -> Output {
-    fs_tasks(dir, args).output().unwrap()
+    fs_tasks(dir, args).output_limited()
 }
 
 /// The processes `fs-tasks serve` that use this test's folder.

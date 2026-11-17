@@ -2,6 +2,9 @@
 
 #![cfg(feature = "gui")]
 
+mod common;
+use common::{Limited, wait_limited};
+
 use std::path::Path;
 use std::process::{Child, Command, Output, Stdio};
 use std::time::{Duration, Instant};
@@ -16,7 +19,7 @@ fn fs_tasks(dir: &Path, args: &[&str]) -> Command {
 }
 
 fn run(dir: &Path, args: &[&str]) -> Output {
-    fs_tasks(dir, args).output().unwrap()
+    fs_tasks(dir, args).output_limited()
 }
 
 fn socket(dir: &Path) -> String {
@@ -116,7 +119,7 @@ fn a_window_next_to_a_running_server_opens_without_a_second_lock() {
         "the server is still there"
     );
     let _ = server.kill();
-    let _ = server.wait();
+    let _ = wait_limited(&mut server);
 }
 
 #[test]

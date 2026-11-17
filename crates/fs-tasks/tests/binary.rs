@@ -1,5 +1,8 @@
 //! The real program: started, used, stopped and started again; the tasks are still there.
 
+mod common;
+use common::{Limited, wait_limited};
+
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
@@ -37,7 +40,7 @@ fn terminate(mut child: Child) {
         .status()
         .unwrap();
     assert!(status.success());
-    assert!(child.wait().unwrap().success());
+    assert!(wait_limited(&mut child).success());
 }
 
 async fn stored_tasks(socket: &Path) -> usize {
@@ -77,7 +80,7 @@ async fn tasks_survive_a_restart_and_a_second_start_is_refused() {
 
             let mut second = start(&socket, &data);
             assert_eq!(
-                second.wait().unwrap().code(),
+                wait_limited(&mut second).code(),
                 Some(1),
                 "a second server started"
             );
@@ -174,8 +177,7 @@ fn it_refuses_an_instance_that_is_no_domain() {
             .arg(dir.path().join("data"))
             .args(["--instance", bad])
             .stderr(Stdio::null())
-            .status()
-            .unwrap()
+            .status_limited()
             .code();
         assert_eq!(code, Some(2), "{bad}");
     }
@@ -190,8 +192,7 @@ fn it_refuses_bad_arguments_and_a_data_directory_others_can_read() {
             .args(args)
             .stderr(Stdio::null())
             .stdout(Stdio::null())
-            .status()
-            .unwrap()
+            .status_limited()
             .code()
     };
     assert_eq!(run(&["--help"]), Some(0));

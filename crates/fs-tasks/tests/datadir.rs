@@ -1,6 +1,9 @@
 //! The data folder: an open one (0755, as the window of 0.0.8 made it) is corrected and the program starts; a refused
 //! one is named with its cause where the person sees it.
 
+mod common;
+use common::Limited;
+
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::{Command, Output};
@@ -16,7 +19,7 @@ fn fs_tasks(dir: &Path, args: &[&str]) -> Command {
 }
 
 fn run(dir: &Path, args: &[&str]) -> Output {
-    fs_tasks(dir, args).output().unwrap()
+    fs_tasks(dir, args).output_limited()
 }
 
 fn mode(path: &Path) -> u32 {
@@ -113,8 +116,7 @@ fn a_data_folder_named_with_data_is_never_corrected() {
         .arg("--data")
         .arg(&mine)
         .env("LC_ALL", "en_US.UTF-8")
-        .output()
-        .unwrap();
+        .output_limited();
     assert_eq!(
         status.status.code(),
         Some(1),

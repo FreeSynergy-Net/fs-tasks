@@ -8,8 +8,8 @@ use fs_components_workbenches::tasks::{TaskDraft, TaskSource};
 
 use super::defaults::{View, defaults_for, fits, landing};
 use super::notice::Notice;
-use crate::day::Day;
 use crate::source::TaskAdapter;
+use fs_tasks_core::Day;
 
 /// What the store refused, as a message of the screen.
 pub(super) fn failed(title: &str, e: &SourceError) -> Notice {

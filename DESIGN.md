@@ -297,3 +297,27 @@ skipped **by name** (`Report::skipped`), never counted as passed.
 ## New task takes the view's filter (0.0.10)
 
 `plan_view/defaults.rs` is the one rule "view to defaults" (`defaults_for(View, today)`, `fits`, `landing`; pure functions): the board gives the chosen label and the column's `progress`, Today the day, Upcoming tomorrow, a project list its label. `enter.rs` makes the task from it for both screens (Command) and returns what the screen must tell; `notice.rs` is the catalog (`Notice` = code + parameters, `notice_text(Notice, Lang)` German or English). A refused create, move or tick is shown (board: heading of the side list; day list: note), never swallowed. Limit: the entry widget of `fs-components` v0.0.13 clears the typed text before the program is called and cannot be set, so a refused text is kept in the message.
+
+## Lists and dates in the core (sorted, NOT compiled; run S2b)
+
+The rules that decide "Today / Ready / Blocked / Finished", how a due date stands (`Urgency`), which of the six lists holds a task (`lists::in_list`), what a new task takes over from the view (`lists::defaults_for`, `fits`, `landing`; moved here from `plan_view/defaults.rs`) and the calendar day (`Day`, moved from `fs-tasks-app/src/day.rs`) now live in `fs-tasks-core` (`lists/`, `day.rs`). `fs-tasks-app` keeps the words, tones, icons and the widgets, and calls the core (`standing(snapshot, entry)` is a one-line call of `lists::standing_of`). The window `plan_view/board_screen` (BoardBench, fs-components v0.0.29) is untouched.
+
+They are fixed in code for now (only moved). Settable later through `fs-setting` (draft `trait-runde/fs-settings`); rule -> proposed setting key:
+
+| Rule (now) | Proposed key | Default now |
+|---|---|---|
+| "Today" = open, ready, due today or before (`standing_of`) | `tasks.lists.today.includes_overdue` | true |
+| Day the lists are cut at (`today`, `--today`) | `tasks.lists.today.source` (`clock-utc` / zone) | clock UTC |
+| "Upcoming" = ready and due later (`in_list`) | `tasks.lists.upcoming.horizon_days` | unlimited |
+| "Anytime" = ready, no due date | `tasks.lists.anytime.enabled` | true |
+| "Someday" = blocked (waiting, stopped, unknown, cycle) | `tasks.lists.someday.holds` (set of readiness kinds) | all four |
+| "Inbox" = open, no due date, no label, nobody holding it (`is_inbox`) | `tasks.lists.inbox.criteria` (due/labels/people) | all three |
+| "Logbook" = completed, cancelled, failed (`is_open`) | `tasks.lists.logbook.states` | the three |
+| Entry line in "Today" sets due = today (`defaults_for`) | `tasks.new.today.due_offset_days` | 0 |
+| Entry line in "Upcoming" sets due = tomorrow | `tasks.new.upcoming.due_offset_days` | 1 |
+| Entry line in a project takes the label | `tasks.new.project.takes_label` | true |
+| Board entry line takes the column's `progress` | `tasks.new.board.takes_column` | true |
+| Names shown before "and N more" (`why`, stays in app: text) | `tasks.blocked.names_shown` | 3 |
+| Overdue chip: danger tone (stays in app: style) | belongs to style layers, not to tasks | - |
+
+Dates: `Day` is plain civil-calendar arithmetic (days since 1970-01-01, UTC today). It duplicates `fs-components-words` `format.rs` (`civil`, private) and `chrono`; target is the date type of `fs-types` (`Date`, a date stays a date) and `fs-jscalendar`; see the table in the sorting file.

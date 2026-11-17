@@ -6,7 +6,6 @@
 use std::sync::Arc;
 
 use crate::args::{Args, HELP, Plan, parse};
-use crate::day::Day;
 use crate::frontend::{Frontend, Preference};
 use crate::frontends::{FrontendOptions, Frontends};
 use crate::open::{OpenError, data_dir, open};
@@ -17,6 +16,7 @@ use crate::{TaskAdapter, export_all, import_file, labels, labels_next, screen_wi
 use fs_components_app::{Status, WindowOptions, launch};
 use fs_components_workbenches::tasks::{TaskView, TasksWidget};
 use fs_interfaces::rpc::default_socket;
+use fs_tasks_core::Day;
 use fs_tasks_core::TaskItems;
 use fs_tasks_server::{Changes, Lang, StartError};
 

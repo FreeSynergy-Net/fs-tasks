@@ -3,7 +3,7 @@
 //! Pattern: Factory — a name in, an iCalendar text out.
 
 use super::{chain, demo};
-use crate::day::Day;
+use fs_tasks_core::Day;
 
 /// What `--sample` names: `demo`, or `chain:N`.
 ///

@@ -7,8 +7,8 @@ use std::path::PathBuf;
 use fs_components_app::parse_size;
 use fs_components_workbenches::tasks::TaskView;
 
-use crate::day::Day;
 use crate::frontend::Frontend;
+use fs_tasks_core::Day;
 
 /// What `--plan` can ask for: a frontend of the window, or one of the earlier plan views of the workbench.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

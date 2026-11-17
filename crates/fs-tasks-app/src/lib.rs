@@ -11,7 +11,6 @@
 #![allow(clippy::must_use_candidate, clippy::module_name_repetitions)]
 
 pub mod args;
-mod day;
 mod frontend;
 mod frontends;
 mod open;
@@ -24,9 +23,9 @@ mod surface;
 mod transfer;
 mod words;
 
-pub use day::Day;
 pub use frontend::{Frontend, Preference, data_dir_in};
 pub use frontends::{FrontendOptions, Frontends};
+pub use fs_tasks_core::Day;
 pub use open::{OpenError, Opened, open};
 pub use program::app_command;
 pub use sample::{by_name as sample_by_name, chain as sample_chain, demo as sample_demo};

@@ -5,74 +5,21 @@
 
 use std::fmt::Write;
 
+pub use fs_tasks_core::lists::{Standing, Urgency, urgency};
+use fs_tasks_core::lists::{people_of, standing_of};
 use fs_tasks_core::plan::Readiness;
-use fs_tasks_core::{Task, TaskEntry};
+use fs_tasks_core::{Day, Task, TaskEntry};
 
 use super::snapshot::Snapshot;
-use crate::day::Day;
-use crate::source::is_open;
 
-/// Where a task stands for the person who asks "what next?".
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Standing {
-    /// Open, nothing keeps it from starting, and it is due today or was due before.
-    Today,
-    /// Open and nothing keeps it from starting.
-    Ready,
-    /// Open and something keeps it from starting (waiting, a stopped task behind it, an unknown task, a cycle).
-    Blocked,
-    /// Completed, cancelled or failed.
-    Finished,
-}
-
-/// How a due date stands against today.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Urgency {
-    /// Before today.
-    Overdue,
-    /// Today.
-    Today,
-    /// Later.
-    Later,
-}
-
-/// The date part of the due text, `YYYY-MM-DD`.
-fn due_day(task: &Task) -> Option<&str> {
-    task.due.as_deref().and_then(|d| d.get(..10))
-}
-
-/// How the due date stands, if there is one.
-#[must_use]
-pub fn urgency(task: &Task, today: Day) -> Option<Urgency> {
-    let day = due_day(task)?;
-    let today = today.text();
-    Some(match day.cmp(today.as_str()) {
-        std::cmp::Ordering::Less => Urgency::Overdue,
-        std::cmp::Ordering::Equal => Urgency::Today,
-        std::cmp::Ordering::Greater => Urgency::Later,
-    })
-}
-
-/// The group of `entry`.
+/// The group of `entry` (the rule lives in `fs-tasks-core`, `lists::standing_of`).
 #[must_use]
 pub fn standing(snapshot: &Snapshot, entry: &TaskEntry) -> Standing {
-    if !is_open(&entry.task) {
-        return Standing::Finished;
-    }
-    match snapshot.readiness(&entry.id.to_string()) {
-        None | Some(Readiness::Ready) => {
-            if matches!(
-                urgency(&entry.task, snapshot.today),
-                Some(Urgency::Overdue | Urgency::Today)
-            ) {
-                Standing::Today
-            } else {
-                Standing::Ready
-            }
-        }
-        Some(Readiness::Done) => Standing::Finished,
-        Some(_) => Standing::Blocked,
-    }
+    standing_of(
+        &entry.task,
+        snapshot.readiness(&entry.id.to_string()),
+        snapshot.today,
+    )
 }
 
 /// At most three names, then "and N more".
@@ -125,11 +72,8 @@ pub fn due_phrase(task: &Task, today: Day) -> String {
     }
 }
 
-/// Who holds the task: the names of its participants, in order.
+/// Who holds the task: the names of its participants, in order (the rule lives in `fs-tasks-core`).
 #[must_use]
 pub fn people(task: &Task) -> Vec<String> {
-    task.participants
-        .values()
-        .filter_map(|p| p.name.clone().filter(|n| !n.is_empty()))
-        .collect()
+    people_of(task)
 }

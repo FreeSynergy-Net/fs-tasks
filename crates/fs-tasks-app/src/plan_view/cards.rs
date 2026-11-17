@@ -8,9 +8,9 @@ use fs_tasks_core::{Task, TaskEntry};
 
 use super::look::{Standing, Urgency, people, standing, urgency, why};
 use super::snapshot::Snapshot;
-use crate::day::Day;
 use crate::source::label_list as label_names;
 use crate::words::progress_title;
+use fs_tasks_core::Day;
 
 const MONTHS: [&str; 12] = [
     "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",

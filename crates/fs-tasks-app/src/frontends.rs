@@ -14,12 +14,12 @@ use fs_tasks_core::TaskItems;
 use fs_tasks_server::Changes;
 use tokio::runtime::Handle;
 
-use crate::day::Day;
 use crate::frontend::{Frontend, Preference};
 use crate::plan_view::{Cache, PlanSurface};
 use crate::source::TaskAdapter;
 use crate::surface::{menus_of, run};
 use crate::words::{TITLE, labels, menu};
+use fs_tasks_core::Day;
 
 const PREFIX: &str = "frontend-";
 const FIRST_READING: Duration = Duration::from_secs(600);

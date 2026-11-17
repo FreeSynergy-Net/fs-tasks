@@ -25,15 +25,18 @@ pub use fs_interfaces::{Capabilities, Unsupported};
 pub use fs_interfaces::{common_capnp, tasks_capnp};
 #[cfg(feature = "contract")]
 pub mod contract;
+mod day;
 mod error;
 pub mod ical;
 mod interface;
+pub mod lists;
 pub mod model;
 pub mod plan;
 mod repo;
 mod revision;
 pub mod validate;
 
+pub use day::Day;
 pub use error::{Error, MAX_TASK_BYTES, Result};
 pub use fs_jscalendar::upgrade::{Upgraded, upgrade};
 pub use fs_jscalendar::{Issue, now_utc, time, upgrade};

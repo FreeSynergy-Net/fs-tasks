@@ -3,7 +3,7 @@
 //! Pattern: Builder — the same part, repeated.
 
 use super::parts::{HEAD, Part, push};
-use crate::day::Day;
+use fs_tasks_core::Day;
 
 /// A chain of `n` tasks: task `i + 1` depends on task `i`, so only the first is ready. Due dates are spread over
 /// the days after `today`, a few people hold tasks.

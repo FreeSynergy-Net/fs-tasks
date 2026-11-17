@@ -4,6 +4,7 @@
 //! progress as the core computes it (RFC 8984 §5.2.5), so nothing is shown that the task does not say.
 
 use fs_components_workbenches::tasks::TaskRow;
+pub(crate) use fs_tasks_core::lists::{is_open, label_list};
 use fs_tasks_core::{Task, TaskEntry};
 
 use super::adapter::revision_of;
@@ -20,15 +21,6 @@ pub(super) fn due_text(task: &Task) -> String {
     text.strip_suffix(":00").unwrap_or(&text).to_string()
 }
 
-/// The labels in a stable order: those switched on.
-pub(crate) fn label_list(task: &Task) -> Vec<String> {
-    task.keywords
-        .iter()
-        .filter(|(_, on)| **on)
-        .map(|(k, _)| k.clone())
-        .collect()
-}
-
 pub(super) fn priority_text(task: &Task) -> String {
     task.priority.map(|p| p.to_string()).unwrap_or_default()
 }
@@ -40,11 +32,6 @@ pub(crate) fn matches(task: &Task, term: &str) -> bool {
         || has(&task.display_title())
         || task.description.as_deref().is_some_and(has)
         || task.keywords.keys().any(|k| has(k))
-}
-
-/// Is it still to be done?
-pub(crate) fn is_open(task: &Task) -> bool {
-    matches!(task.effective_progress(), "needs-action" | "in-process")
 }
 
 /// The row of a stored task.

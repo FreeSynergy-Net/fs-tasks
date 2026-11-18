@@ -2,7 +2,7 @@
 # Groups of the old list (plan_view/next.rs GROUPS): TODAY (due today or overdue, nothing blocking), READY (later or no date),
 # BLOCKED (waits for another task). They are a grouping the PROGRAM provides by name ("standing", unproven: no TypeCatalog yet);
 # the description only names it (rules are never in the description, ADR 0096 point 1). Blocks without declared slots are placed
-# without bindings; see ../../FEHLENDE-COMPONENTS.md. Nothing is invented here.
+# without bindings; see ../FEHLENDE-COMPONENTS.md. Nothing is invented here.
 schema = 1
 kind = "frontend"
 id = "day"

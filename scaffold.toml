@@ -53,7 +53,7 @@ default = "freesynergy"
 # The main view is a forms description (written by task V-F); the board columns are a grouping over the progress states.
 [frontend]
 standard = "board"
-layout = "layout/board.toml"
+layout = "forms/board.toml"
 covers = ["Items.list", "Items.query", "Items.create", "Items.editIf", "Items.readiness"]
 
 # Exceptions: rules without a standard or module (list LISTE-tasks-regeln-ohne-standard, C07/C08/C11/C16/C17).
@@ -63,7 +63,7 @@ what = "Check command of a task: runs only for local origin and a trusted creato
 why = "executing code of a task is a security rule of the project; no module or standard describes it"
 checked = ["fs-todo", "fs-planning"]
 alternatives = ["rule set in fs-planning", "drop the check command"]
-talk = "conventions/talks/2026-11-xx-tasks-check-command.md"
+talk = "conventions/talks/2026-11-18-tasks-pruefbefehl-policy.md"
 paths = ["crates/fs-tasks-cli/src/policy.rs", "crates/fs-tasks-cli/src/check.rs"]
 
 [[exception]]
@@ -71,7 +71,7 @@ what = "Refuses titles, notes, commands and reports that carry recognisable key 
 why = "no module and no standard describes a secret guard for task texts; the scope is a user decision"
 checked = ["fs-todo", "fs-planning"]
 alternatives = ["rule set in fs-todo"]
-talk = "conventions/talks/2026-11-xx-tasks-secret-guard.md"
+talk = "conventions/talks/2026-11-18-tasks-geheimnis-sperre.md"
 paths = ["crates/fs-tasks-cli/src/secrets.rs"]
 
 [[exception]]
@@ -79,7 +79,7 @@ what = "Marks a participant as AI (vendor member freesynergy.net:ai) and holds t
 why = "the AI mark is a project rule (ADR 0054), not part of RFC 8984"
 checked = ["fs-todo", "fs-planning"]
 alternatives = ["claim part of fs-planning"]
-talk = "conventions/talks/2026-11-xx-tasks-ai-mark.md"
+talk = "conventions/talks/2026-11-18-tasks-ki-kennzeichen.md"
 paths = ["crates/fs-tasks-core/src/model/actor.rs"]
 
 [[exception]]
@@ -87,7 +87,7 @@ what = "Cost of a finished task in USD stored in its result"
 why = "money has no standard in this context (money waits for standards, priority rule 16.11.)"
 checked = ["fs-todo", "fs-planning"]
 alternatives = ["money kit of fs-types once it exists (ADR 0098)"]
-talk = "conventions/talks/2026-11-xx-tasks-cost.md"
+talk = "conventions/talks/2026-11-18-tasks-kosten.md"
 paths = ["crates/fs-tasks-cli/src/args_work.rs"]
 
 [[exception]]
@@ -95,5 +95,5 @@ what = "Execution fields of a runner (run, result, attempts, error, loop) with s
 why = "RFC 8984 only gives the form of vendor members; the content and size rules are ours"
 checked = ["fs-todo", "fs-planning"]
 alternatives = ["module fs-flow (not there yet)"]
-talk = "conventions/talks/2026-11-xx-tasks-exec-fields.md"
+talk = "conventions/talks/2026-11-18-tasks-ausfuehrungsfelder.md"
 paths = ["crates/fs-tasks-core/src/model/exec.rs"]

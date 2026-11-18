@@ -33,6 +33,12 @@ fs-tasks status <id> done --note 'built' --report out.md --cost 0.42
 
 `claim`, `release`, `note`, `check`, `list --project --status`, `add --objective CMD`: see `docs/worker-protocol.md` (EN + DE). A check command is code: it runs only for tasks made on this machine by a trusted actor, for allowed programs, without a shell. One process (the server) holds the store; the command line, the window and workers are all its clients, so they work together while the window is open.
 
+## Frontends as forms descriptions (prescribed, not yet imported)
+
+The three frontends (Board, Classic, Day list) are described as forms descriptions in `packaging/layout/` (components, slots, fields,
+menus, commands; import form, no code). What the component catalog cannot take yet is in `FEHLENDE-COMPONENTS.md`; open parts in
+`packaging/layout/PLATZHALTER.md`. The existing window code is unchanged.
+
 ## Notes for 0.0.10
 
 A task typed in the entry line of the Board or the Day list takes the project, status or day of the view you typed it in, so it stays in view. If the view cannot hold it (Someday, Logbook) or the store refuses it, the screen says so; nothing vanishes silently.

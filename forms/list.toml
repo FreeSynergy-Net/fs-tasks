@@ -2,7 +2,7 @@
 # IMPORT FORM ONLY (ADR 0096 point 6), Format 1; see board.toml for the rules. The old classic window was drawn by an external crate
 # (fs-components-workbenches 0.0.13, not in this repo), so interactions beyond the menus are UNPROVEN (LISTE-fs-tasks-funktionen-vorher
 # 2026-11-18, uncertainty 1). Blocks whose slots the catalog has not declared yet (accepts = []) are placed WITHOUT bindings; the
-# missing slots are named in ../../FEHLENDE-COMPONENTS.md. Nothing is invented here.
+# missing slots are named in ../FEHLENDE-COMPONENTS.md. Nothing is invented here.
 schema = 1
 kind = "frontend"
 id = "classic"

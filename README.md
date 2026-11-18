@@ -35,9 +35,9 @@ fs-tasks status <id> done --note 'built' --report out.md --cost 0.42
 
 ## Frontends as forms descriptions (prescribed, not yet imported)
 
-The three frontends (Board, Classic, Day list) are described as forms descriptions in `packaging/layout/` (components, slots, fields,
+The three frontends (Board, Classic, Day list) are described as forms descriptions in `forms/` (components, slots, fields,
 menus, commands; import form, no code). What the component catalog cannot take yet is in `FEHLENDE-COMPONENTS.md`; open parts in
-`packaging/layout/PLATZHALTER.md`. The existing window code is unchanged.
+`forms/PLATZHALTER.md`. The existing window code is unchanged.
 
 ## Notes for 0.0.10
 

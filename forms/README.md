@@ -14,8 +14,7 @@ This directory prescribes them from the existing views; the existing code (`crat
 Format: Format 1 of `fs-forms-exchange` (ids derived; export writes Format 2). Keys, words and rules are those of the reader on the
 probe branch `unreviewed/probe-forms-f1b-5` (ccfc58f0) of fs-forms; **fs-forms main (cf8502cc) has no exchange crate yet**, so no CI
 of any repo can import these files today. Components: block contract 0.4 of fs-components main 8ede4856 (`contract/blocks/*.toml`).
-Location of the files in the repo is **not fixed by fs-forms** (ADR 0096 point 7: a package `layout` carries the file): `packaging/layout/`
-is a proposal (open question 1).
+Location (decided by the strategy): `forms/` in the repo root next to `scaffold.toml`; the program IS the description.
 
 ## Coverage of the old list (LISTE-fs-tasks-funktionen-vorher-2026-11-18, 19 views)
 
@@ -74,7 +73,7 @@ the unbelegt old behaviour of Classic (external crate). Hash `forms_bind_v1` was
 
 ## Open questions
 
-1. Place of the files: `packaging/layout/` or inside a package `layout` made by the blueprint (ADR 0099)?
+1. (answered: `forms/`, next to `scaffold.toml`.)
 2. Frontend switch (Classic, Board, Day list) as a menu: host function or a menu kind in the format? Workflow targets: id format?
 3. Filters (labels, project, status): the filter tree is not read in the format cut (`filter` is `key-unknown` today); extend the format?
 4. Start list `--list` and `--plan`: host options or settings (`fs.shell.frontend`)?

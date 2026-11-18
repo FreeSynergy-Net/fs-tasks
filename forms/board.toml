@@ -2,7 +2,7 @@
 # lives as data in forms.db; this file is imported (Format 1, ids are derived; export writes Format 2) and is never read at run time.
 # Names (blocks, slots, commands, fields) are NAMES: no code, no expression. Component ids = contract/blocks/*.toml of
 # fs-components main 8ede4856 (block contract 0.4). Field names = provider names; the tasks TypeCatalog does not exist yet
-# (field names marked "unproven" in README.md). What the catalog cannot take yet: ../../FEHLENDE-COMPONENTS.md.
+# (field names marked "unproven" in README.md). What the catalog cannot take yet: ../FEHLENDE-COMPONENTS.md.
 schema = 1
 kind = "frontend"
 id = "board"

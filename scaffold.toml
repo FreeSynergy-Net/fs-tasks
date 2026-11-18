@@ -4,6 +4,7 @@ schema = 2
 
 [program]
 name = "tasks"
+version = "0.0.1"
 skeleton = "0.1.0"
 capability = "tasks"
 summary = { en = "Tasks, dependencies and boards", de = "Aufgaben, Abhängigkeiten und Boards" }

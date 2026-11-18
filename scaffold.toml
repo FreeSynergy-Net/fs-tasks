@@ -1,0 +1,99 @@
+# Blueprint of fs-tasks (schema 2, ADR 0099 addendum 2026-11-18). Target state after the conversion (plan V1 pilot);
+# written ahead: modules, bundle and layout are named as the plan names them and may not exist as tags yet.
+schema = 2
+
+[program]
+name = "tasks"
+skeleton = "0.1.0"
+capability = "tasks"
+summary = { en = "Tasks, dependencies and boards", de = "Aufgaben, Abhängigkeiten und Boards" }
+description = { en = "Plan and track tasks as JSCalendar tasks, with dependencies and boards.", de = "Aufgaben als JSCalendar-Aufgaben planen und verfolgen, mit Abhängigkeiten und Boards." }
+categories = ["Office", "ProjectManagement"]
+
+[contract]
+version = "0.1"
+id = "0xc04d258971543476"
+provides = ["dependency.evaluate", "dependency.cycle-check"]
+
+# Art 1: the to-do data module owns the type Task (JSCalendar Task, RFC 8984; VTODO, RFC 5545).
+[[module]]
+name = "fs-todo"
+kind = "standard"
+version = "0.0.1"
+
+# Art 3: display only, named for the frontend manifest.
+[[module]]
+name = "board"
+kind = "component"
+version = "0.0.29"
+
+[[module]]
+name = "task-card"
+kind = "component"
+version = "0.0.29"
+
+# Art 2: planning parts (dependencies RFC 9253, claim, rank, checklist, progress states) serve the type Task.
+[[bundle]]
+name = "fs-planning"
+version = "0.0.1"
+parts = ["readiness", "schedule", "progress", "rank", "checklist", "claim"]
+item = "Task"
+
+[[type]]
+name = "Task"
+module = "fs-todo"
+
+[[ruleset]]
+name = "progress"
+type = "Task"
+from = "fs-planning"
+presets = ["rfc8984", "freesynergy"]
+default = "freesynergy"
+
+# The main view is a forms description (written by task V-F); the board columns are a grouping over the progress states.
+[frontend]
+standard = "board"
+layout = "layout/board.toml"
+covers = ["Items.list", "Items.query", "Items.create", "Items.editIf", "Items.readiness"]
+
+# Exceptions: rules without a standard or module (list LISTE-tasks-regeln-ohne-standard, C07/C08/C11/C16/C17).
+# The talk records do not exist yet (no conversation was held): until then the check says talk-not-found, on purpose.
+[[exception]]
+what = "Check command of a task: runs only for local origin and a trusted creator, only listed programs without a shell, bash only for scripts/, time limit 1 to 3600 s"
+why = "executing code of a task is a security rule of the project; no module or standard describes it"
+checked = ["fs-todo", "fs-planning"]
+alternatives = ["rule set in fs-planning", "drop the check command"]
+talk = "conventions/talks/2026-11-xx-tasks-check-command.md"
+paths = ["crates/fs-tasks-cli/src/policy.rs", "crates/fs-tasks-cli/src/check.rs"]
+
+[[exception]]
+what = "Refuses titles, notes, commands and reports that carry recognisable key patterns"
+why = "no module and no standard describes a secret guard for task texts; the scope is a user decision"
+checked = ["fs-todo", "fs-planning"]
+alternatives = ["rule set in fs-todo"]
+talk = "conventions/talks/2026-11-xx-tasks-secret-guard.md"
+paths = ["crates/fs-tasks-cli/src/secrets.rs"]
+
+[[exception]]
+what = "Marks a participant as AI (vendor member freesynergy.net:ai) and holds the actor kinds of claims"
+why = "the AI mark is a project rule (ADR 0054), not part of RFC 8984"
+checked = ["fs-todo", "fs-planning"]
+alternatives = ["claim part of fs-planning"]
+talk = "conventions/talks/2026-11-xx-tasks-ai-mark.md"
+paths = ["crates/fs-tasks-core/src/model/actor.rs"]
+
+[[exception]]
+what = "Cost of a finished task in USD stored in its result"
+why = "money has no standard in this context (money waits for standards, priority rule 16.11.)"
+checked = ["fs-todo", "fs-planning"]
+alternatives = ["money kit of fs-types once it exists (ADR 0098)"]
+talk = "conventions/talks/2026-11-xx-tasks-cost.md"
+paths = ["crates/fs-tasks-cli/src/args_work.rs"]
+
+[[exception]]
+what = "Execution fields of a runner (run, result, attempts, error, loop) with size limits"
+why = "RFC 8984 only gives the form of vendor members; the content and size rules are ours"
+checked = ["fs-todo", "fs-planning"]
+alternatives = ["module fs-flow (not there yet)"]
+talk = "conventions/talks/2026-11-xx-tasks-exec-fields.md"
+paths = ["crates/fs-tasks-core/src/model/exec.rs"]

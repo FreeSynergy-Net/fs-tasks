@@ -1,5 +1,5 @@
 # Blueprint of fs-tasks (schema 2, ADR 0099 addendum 2026-11-18). Target state after the conversion (plan V1 pilot);
-# written ahead: modules, bundle and layout are named as the plan names them and may not exist as tags yet.
+# written ahead: module and layout are named as the plan names them and may not exist as tags yet.
 schema = 2
 
 [program]
@@ -16,9 +16,9 @@ version = "0.1"
 id = "0xc04d258971543476"
 provides = ["dependency.evaluate", "dependency.cycle-check"]
 
-# Art 1: the to-do data module owns the type Task (JSCalendar Task, RFC 8984; VTODO, RFC 5545).
+# Art 1: the planning module (fs-modules-planning) owns the type Task (JSCalendar Task, RFC 8984; VTODO, RFC 5545).
 [[module]]
-name = "fs-todo"
+name = "fs-modules-planning"
 kind = "standard"
 version = "0.0.1"
 
@@ -33,21 +33,14 @@ name = "task-card"
 kind = "component"
 version = "0.0.29"
 
-# Art 2: planning parts (dependencies RFC 9253, claim, rank, checklist, progress states) serve the type Task.
-[[bundle]]
-name = "fs-planning"
-version = "0.0.1"
-parts = ["readiness", "schedule", "progress", "rank", "checklist", "claim"]
-item = "Task"
-
 [[type]]
 name = "Task"
-module = "fs-todo"
+module = "fs-modules-planning"
 
 [[ruleset]]
 name = "progress"
 type = "Task"
-from = "fs-planning"
+from = "fs-modules-planning"
 presets = ["rfc8984", "freesynergy"]
 default = "freesynergy"
 
@@ -62,31 +55,23 @@ covers = ["Items.list", "Items.query", "Items.create", "Items.editIf", "Items.re
 [[exception]]
 what = "Check command of a task: runs only for local origin and a trusted creator, only listed programs without a shell, bash only for scripts/, time limit 1 to 3600 s"
 why = "executing code of a task is a security rule of the project; no module or standard describes it"
-checked = ["fs-todo", "fs-planning"]
-alternatives = ["rule set in fs-planning", "drop the check command"]
+checked = ["fs-modules-planning"]
+alternatives = ["rule set in fs-modules-planning", "drop the check command"]
 talk = "conventions/talks/2026-11-18-tasks-pruefbefehl-policy.md"
 paths = ["crates/fs-tasks-cli/src/policy.rs", "crates/fs-tasks-cli/src/check.rs"]
 
 [[exception]]
 what = "Refuses titles, notes, commands and reports that carry recognisable key patterns"
 why = "no module and no standard describes a secret guard for task texts; the scope is a user decision"
-checked = ["fs-todo", "fs-planning"]
-alternatives = ["rule set in fs-todo"]
+checked = ["fs-modules-planning"]
+alternatives = ["rule set in fs-modules-planning"]
 talk = "conventions/talks/2026-11-18-tasks-geheimnis-sperre.md"
 paths = ["crates/fs-tasks-cli/src/secrets.rs"]
 
 [[exception]]
-what = "Marks a participant as AI (vendor member freesynergy.net:ai) and holds the actor kinds of claims"
-why = "the AI mark is a project rule (ADR 0054), not part of RFC 8984"
-checked = ["fs-todo", "fs-planning"]
-alternatives = ["claim part of fs-planning"]
-talk = "conventions/talks/2026-11-18-tasks-ki-kennzeichen.md"
-paths = ["crates/fs-tasks-core/src/model/actor.rs"]
-
-[[exception]]
 what = "Cost of a finished task in USD stored in its result"
 why = "money has no standard in this context (money waits for standards, priority rule 16.11.)"
-checked = ["fs-todo", "fs-planning"]
+checked = ["fs-modules-planning"]
 alternatives = ["money kit of fs-types once it exists (ADR 0098)"]
 talk = "conventions/talks/2026-11-18-tasks-kosten.md"
 paths = ["crates/fs-tasks-cli/src/args_work.rs"]
@@ -94,7 +79,7 @@ paths = ["crates/fs-tasks-cli/src/args_work.rs"]
 [[exception]]
 what = "Execution fields of a runner (run, result, attempts, error, loop) with size limits"
 why = "RFC 8984 only gives the form of vendor members; the content and size rules are ours"
-checked = ["fs-todo", "fs-planning"]
+checked = ["fs-modules-planning"]
 alternatives = ["module fs-flow (not there yet)"]
 talk = "conventions/talks/2026-11-18-tasks-ausfuehrungsfelder.md"
 paths = ["crates/fs-tasks-core/src/model/exec.rs"]

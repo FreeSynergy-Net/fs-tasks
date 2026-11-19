@@ -33,6 +33,18 @@ async fn wait_for(socket: &Path) {
     panic!("the server did not come up");
 }
 
+/// The server binds the socket first and opens (and tightens) its data folder afterwards, so the socket can answer
+/// before the folder exists: a test that looks at the folder waits for it, with a bound and a clear message.
+async fn wait_for_path(path: &Path) {
+    for _ in 0..200 {
+        if path.exists() {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(25)).await;
+    }
+    panic!("the server did not create {}", path.display());
+}
+
 fn terminate(mut child: Child) {
     let status = Command::new("kill")
         .arg("-TERM")
@@ -75,6 +87,7 @@ async fn tasks_survive_a_restart_and_a_second_start_is_refused() {
 
             let first = start(&socket, &data);
             wait_for(&socket).await;
+            wait_for_path(&data).await;
             let mode = std::fs::metadata(&data).unwrap().permissions().mode();
             assert_eq!(mode & 0o777, 0o700, "the data is for this user alone");
 

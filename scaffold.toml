@@ -55,7 +55,7 @@ paths = ["crates/fs-tasks-cli/src/policy.rs", "crates/fs-tasks-cli/src/check.rs"
 
 [[exception]]
 what = "Refuses titles, notes, commands and reports that carry recognisable key patterns"
-why = "decision of the owner: a general building block for all programs with text input (modes off, warn, block; preset block), not only fs-tasks; pattern set from the gitleaks rules (licence to be checked), offer "move into the vault" (ADR 0067); the block does not come before V1, so the code stays here until it does"
+why = "decision of the owner: a general building block for all programs with text input (modes off, warn, block; preset block), not only fs-tasks; pattern set from the gitleaks rules (licence to be checked), offer move into the vault (ADR 0067); the block does not come before V1, so the code stays here until it does"
 checked = ["fs-modules-planning"]
 alternatives = ["general secret-guard building block for all programs with text input (modes off/warn/block, preset block)"]
 talk = "conventions/talks/2026-11-18-tasks-geheimnis-sperre.md"

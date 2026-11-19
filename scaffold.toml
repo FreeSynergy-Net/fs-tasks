@@ -37,13 +37,6 @@ version = "0.0.29"
 name = "Task"
 module = "fs-modules-planning"
 
-[[ruleset]]
-name = "progress"
-type = "Task"
-from = "fs-modules-planning"
-presets = ["rfc8984", "freesynergy"]
-default = "freesynergy"
-
 # The main view is a forms description (written by task V-F); the board columns are a grouping over the progress states.
 [frontend]
 standard = "board"

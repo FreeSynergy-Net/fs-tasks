@@ -1,0 +1,174 @@
+# forms description of the fs-tasks frontend "board" (the start frontend). IMPORT FORM ONLY (ADR 0096 point 6): the description
+# lives as data in forms.db; this file is imported (Format 1, ids are derived; export writes Format 2) and is never read at run time.
+# Names (blocks, slots, commands, fields) are NAMES: no code, no expression. Component ids = contract/blocks/*.toml of
+# fs-components main 8ede4856 (block contract 0.4). Field names = provider names; the tasks TypeCatalog does not exist yet
+# (field names marked "unproven" in README.md). What the catalog cannot take yet: ../FEHLENDE-COMPONENTS.md.
+schema = 1
+kind = "frontend"
+id = "board"
+extends = "net.freesynergy.Tasks"
+exec = "fs-forms-run"
+title = "tasks-board-title"
+style = "default"
+message = [
+  { key = "tasks-board-title", lang = "en", text = "Tasks" },
+  { key = "tasks-board-title", lang = "de", text = "Aufgaben" },
+  { key = "menu-task", lang = "en", text = "Task" },
+  { key = "menu-task", lang = "de", text = "Aufgabe" },
+  { key = "menu-view", lang = "en", text = "View" },
+  { key = "menu-view", lang = "de", text = "Ansicht" },
+  { key = "view-lanes", lang = "en", text = "Lanes by priority" },
+  { key = "view-lanes", lang = "de", text = "Bahnen nach Priorität" },
+  { key = "view-order-rank", lang = "en", text = "By hand" },
+  { key = "view-order-rank", lang = "de", text = "Von Hand" },
+  { key = "view-order-priority", lang = "en", text = "Priority first" },
+  { key = "view-order-priority", lang = "de", text = "Priorität zuerst" },
+  { key = "view-order-due", lang = "en", text = "By due date" },
+  { key = "view-order-due", lang = "de", text = "Nach Fälligkeit" },
+  { key = "tasks-side-title", lang = "en", text = "Projects and labels" },
+  { key = "tasks-side-title", lang = "de", text = "Projekte und Labels" },
+  { key = "tasks-board-empty-title", lang = "en", text = "No tasks here yet" },
+  { key = "tasks-board-empty-title", lang = "de", text = "Hier ist noch keine Aufgabe" },
+  { key = "tasks-board-empty-text", lang = "en", text = "What needs to be done?" },
+  { key = "tasks-board-empty-text", lang = "de", text = "Was ist zu tun?" },
+]
+
+[[requires]]
+contract = "tasks >=0.2 <0.3"
+
+# Source 1 = the tasks provider; "selected-list" = the list chosen in the sidebar (F-010).
+[[source]]
+n = 1
+contract = "tasks >=0.2 <0.3"
+type = "Task"
+scope = "selected-list"
+
+# ---- menu tree (M-001, M-002/M-003 as views, M-004..M-006 see PLATZHALTER.md: the frontend switch is a host function)
+[[menu]]
+kind = "standard-program"
+
+[[menu]]
+kind = "menu"
+label = "menu-task"
+entries = [
+  { kind = "command", source = 1, command = "create", key = "ctrl+n" },
+  { kind = "command", source = 1, command = "claim", on = "selected" },
+  { kind = "command", source = 1, command = "release", on = "selected" },
+  { kind = "command", source = 1, command = "note", on = "selected" },
+  { kind = "command", source = 1, command = "delete", on = "selected", key = "delete" },
+]
+
+[[menu]]
+kind = "menu"
+label = "menu-view"
+entries = [
+  { kind = "view", view = "lanes", label = "view-lanes" },
+  { kind = "view", view = "order-rank", label = "view-order-rank" },
+  { kind = "view", view = "order-priority", label = "view-order-priority" },
+  { kind = "view", view = "order-due", label = "view-order-due" },
+]
+
+[[menu]]
+kind = "standard-help"
+
+# ---- views (the board grouping "board" = the status columns F-006; the program provides the grouping by name)
+[[view]]
+view = "lanes"
+grouping = "priority"
+
+[[view]]
+view = "order-rank"
+grouping = "board"
+order = [{ by = "order", name = "rank" }]
+
+[[view]]
+view = "order-priority"
+grouping = "board"
+order = [{ by = "order", name = "priority" }, { by = "order", name = "rank" }]
+
+[[view]]
+view = "order-due"
+grouping = "board"
+order = [{ by = "field", name = "due" }, { by = "order", name = "rank" }]
+
+# ---- actions (confirm: only where data is lost, F-025 delete)
+[[action]]
+trigger = "quick-add"
+source = 1
+command = "create"
+
+[[action]]
+trigger = "drop"
+source = 1
+command = "move"
+
+[[action]]
+trigger = "menu"
+source = 1
+command = "delete"
+confirm = "confirm"
+
+# ---- page "board": F-006 board, F-007 card, F-008 side panel (list-detail), F-009 entry row, F-010 side list
+[[page]]
+page = "board"
+frame = "workbench"
+navigation = "list-detail"
+
+[[page.block]]
+place = "side"
+block = "sidebar"
+source = 1
+title = "tasks-side-title"
+
+[[page.block]]
+place = "main"
+block = "board"
+source = 1
+bind = [
+  { slot = "cards", nth = 0 },
+  { slot = "columns", nth = 0, grouping = "board" },
+  { slot = "order", nth = 0, order = "rank" },
+  { slot = "card-title", nth = 0, field = "title", role = "display" },
+  { slot = "card-facts", nth = 0, field = "due", role = "compact" },
+  { slot = "card-facts", nth = 1, field = "priority", role = "compact" },
+  { slot = "card-facts", nth = 2, field = "participants", role = "compact" },
+  { slot = "card-facts", nth = 3, field = "keywords", role = "compact" },
+  { slot = "card-lock", nth = 0, lock = true },
+  { slot = "move", nth = 0, command = "move" },
+  { slot = "quick-add", nth = 0, command = "create" },
+  { slot = "card-menu", nth = 0, command = "claim" },
+  { slot = "card-menu", nth = 1, command = "release" },
+  { slot = "card-menu", nth = 2, command = "note" },
+  { slot = "card-menu", nth = 3, command = "delete" },
+]
+
+[[page.block]]
+place = "detail"
+block = "board-detail"
+source = 1
+bind = [
+  { slot = "record", nth = 0 },
+  { slot = "title", nth = 0, field = "title", role = "display" },
+  { slot = "properties", nth = 0, field = "progress", role = "display" },
+  { slot = "properties", nth = 1, field = "priority", role = "display" },
+  { slot = "properties", nth = 2, field = "due", role = "display" },
+  { slot = "properties", nth = 3, field = "participants", role = "display" },
+  { slot = "properties", nth = 4, field = "keywords", role = "display" },
+  { slot = "properties", nth = 5, field = "note", role = "display" },
+  { slot = "properties", nth = 6, field = "description", role = "display" },
+  { slot = "lock", nth = 0, lock = true },
+  { slot = "actions", nth = 0, command = "claim" },
+  { slot = "actions", nth = 1, command = "release" },
+  { slot = "actions", nth = 2, command = "note" },
+]
+
+# states the host shows without code (accepts = []): a locked binding is shown as a notice, never an empty area
+[[page.block]]
+place = "partial"
+block = "partial-notice"
+
+[[page.block]]
+place = "empty"
+block = "empty-state"
+title = "tasks-board-empty-title"
+text = "tasks-board-empty-text"

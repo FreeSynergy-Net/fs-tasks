@@ -1,0 +1,190 @@
+# forms description of the fs-tasks frontend "classic" (F-001..F-005, M-001..M-003): list view, status view, task form.
+# IMPORT FORM ONLY (ADR 0096 point 6), Format 1; see board.toml for the rules. The old classic window was drawn by an external crate
+# (fs-components-workbenches 0.0.13, not in this repo), so interactions beyond the menus are UNPROVEN (LISTE-fs-tasks-funktionen-vorher
+# 2026-11-18, uncertainty 1). Blocks whose slots the catalog has not declared yet (accepts = []) are placed WITHOUT bindings; the
+# missing slots are named in ../FEHLENDE-COMPONENTS.md. Nothing is invented here.
+schema = 1
+kind = "frontend"
+id = "classic"
+extends = "net.freesynergy.Tasks"
+exec = "fs-forms-run"
+title = "tasks-classic-title"
+style = "default"
+message = [
+  { key = "tasks-classic-title", lang = "en", text = "FreeSynergy Tasks" },
+  { key = "tasks-classic-title", lang = "de", text = "FreeSynergy Aufgaben" },
+  { key = "menu-task", lang = "en", text = "Task" },
+  { key = "menu-task", lang = "de", text = "Aufgabe" },
+  { key = "menu-view", lang = "en", text = "View" },
+  { key = "menu-view", lang = "de", text = "Ansicht" },
+  { key = "view-list", lang = "en", text = "List" },
+  { key = "view-list", lang = "de", text = "Liste" },
+  { key = "view-status", lang = "en", text = "Status" },
+  { key = "view-status", lang = "de", text = "Status" },
+  { key = "tasks-edit-title", lang = "en", text = "Task" },
+  { key = "tasks-edit-title", lang = "de", text = "Aufgabe" },
+  { key = "tasks-classic-empty-title", lang = "en", text = "No tasks" },
+  { key = "tasks-classic-empty-title", lang = "de", text = "Keine Aufgaben" },
+  { key = "tasks-classic-empty-text", lang = "en", text = "Create one with Task, New." },
+  { key = "tasks-classic-empty-text", lang = "de", text = "Lege eine an mit Aufgabe, Neu." },
+]
+
+[[requires]]
+contract = "tasks >=0.2 <0.3"
+
+[[source]]
+n = 1
+contract = "tasks >=0.2 <0.3"
+type = "Task"
+scope = "all"
+
+# ---- menus: exactly the old five entries (tests/menus.rs): Task > New; View > List, Status. No delete entry in the menu (old rule:
+# "no menu that could do nothing"); delete stays a command of the form. The Frontend menu (M-004..M-006) is a host function.
+[[menu]]
+kind = "standard-program"
+
+[[menu]]
+kind = "menu"
+label = "menu-task"
+entries = [
+  { kind = "command", source = 1, command = "create", key = "ctrl+n" },
+]
+
+[[menu]]
+kind = "menu"
+label = "menu-view"
+entries = [
+  { kind = "view", view = "list", label = "view-list" },
+  { kind = "view", view = "status", label = "view-status" },
+]
+
+[[menu]]
+kind = "standard-help"
+
+# ---- views: list = one set (columns Title, Due, Priority, Status); status = the same tasks grouped by progress (F-002, F-003)
+[[view]]
+view = "list"
+order = [{ by = "order", name = "rank" }]
+
+[[view]]
+view = "status"
+grouping = "progress"
+order = [{ by = "order", name = "rank" }]
+
+# ---- actions: a task is started from the menu (new task); an unsaved change blocks "new" (rule of the form, F-005)
+[[action]]
+trigger = "menu"
+source = 1
+command = "create"
+
+[[action]]
+trigger = "button"
+source = 1
+command = "delete"
+confirm = "confirm"
+
+# ---- page "list": F-002, F-003 (the grid: head, rows, cells; its column slot is not declared yet)
+[[page]]
+page = "list"
+frame = "workbench"
+navigation = "list-detail"
+
+[[page.block]]
+place = "main"
+block = "grid"
+source = 1
+
+[[page.block]]
+place = "empty"
+block = "empty-state"
+title = "tasks-classic-empty-title"
+text = "tasks-classic-empty-text"
+
+[[page.block]]
+place = "partial"
+block = "partial-notice"
+
+# ---- page "edit": F-005, one form-field row per field of the old form (words.rs field:: list, 13 fields; "Extended status" = progressExtended, name unproven). Role input.
+# form-field is the only form block with declared slots (record, value). The field TYPES need field blocks the catalog lacks.
+[[page]]
+page = "edit"
+frame = "detail-page"
+navigation = "single"
+
+[[page.block]]
+place = "f-title"
+block = "form-field"
+source = 1
+bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "title", role = "input" }]
+
+[[page.block]]
+place = "f-description"
+block = "form-field"
+source = 1
+bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "description", role = "input" }]
+
+[[page.block]]
+place = "f-due"
+block = "form-field"
+source = 1
+bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "due", role = "input" }]
+
+[[page.block]]
+place = "f-zone"
+block = "form-field"
+source = 1
+bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "timeZone", role = "input" }]
+
+[[page.block]]
+place = "f-priority"
+block = "form-field"
+source = 1
+bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "priority", role = "input" }]
+
+[[page.block]]
+place = "f-status"
+block = "form-field"
+source = 1
+bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "progress", role = "input" }]
+
+[[page.block]]
+place = "f-status-ext"
+block = "form-field"
+source = 1
+bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "progressExtended", role = "input" }]
+
+[[page.block]]
+place = "f-percent"
+block = "form-field"
+source = 1
+bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "percentComplete", role = "input" }]
+
+[[page.block]]
+place = "f-labels"
+block = "form-field"
+source = 1
+bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "keywords", role = "input" }]
+
+[[page.block]]
+place = "f-repeat"
+block = "form-field"
+source = 1
+bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "recurrenceRules", role = "input" }]
+
+[[page.block]]
+place = "f-people"
+block = "form-field"
+source = 1
+bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "participants", role = "input" }]
+
+[[page.block]]
+place = "f-related"
+block = "form-field"
+source = 1
+bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "relatedTo", role = "input" }]
+
+[[page.block]]
+place = "f-sensitive"
+block = "form-field"
+source = 1
+bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "sensitive", role = "input" }]

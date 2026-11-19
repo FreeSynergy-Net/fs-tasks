@@ -1,0 +1,105 @@
+# forms description of the fs-tasks frontend "day" (Day list, F-011, F-012). IMPORT FORM ONLY (ADR 0096 point 6), Format 1.
+# Groups of the old list (plan_view/next.rs GROUPS): TODAY (due today or overdue, nothing blocking), READY (later or no date),
+# BLOCKED (waits for another task). They are a grouping the PROGRAM provides by name ("standing", unproven: no TypeCatalog yet);
+# the description only names it (rules are never in the description, ADR 0096 point 1). Blocks without declared slots are placed
+# without bindings; see ../FEHLENDE-COMPONENTS.md. Nothing is invented here.
+schema = 1
+kind = "frontend"
+id = "day"
+extends = "net.freesynergy.Tasks"
+exec = "fs-forms-run"
+title = "tasks-day-title"
+style = "default"
+message = [
+  { key = "menu-task", lang = "en", text = "Task" },
+  { key = "menu-task", lang = "de", text = "Aufgabe" },
+  { key = "tasks-day-title", lang = "en", text = "Tasks, day list" },
+  { key = "tasks-day-title", lang = "de", text = "Aufgaben, Tagesliste" },
+  { key = "tasks-day-side", lang = "en", text = "Lists" },
+  { key = "tasks-day-side", lang = "de", text = "Listen" },
+  { key = "tasks-day-add", lang = "en", text = "Quick add" },
+  { key = "tasks-day-add", lang = "de", text = "Schnell anlegen" },
+  { key = "tasks-day-empty-title", lang = "en", text = "Nothing to do here" },
+  { key = "tasks-day-empty-title", lang = "de", text = "Hier ist nichts zu tun" },
+  { key = "tasks-day-empty-text", lang = "en", text = "New to-do" },
+  { key = "tasks-day-empty-text", lang = "de", text = "Neue Aufgabe" },
+]
+
+[[requires]]
+contract = "tasks >=0.2 <0.3"
+
+[[source]]
+n = 1
+contract = "tasks >=0.2 <0.3"
+type = "Task"
+scope = "selected-list"
+
+# ---- menu: the old Day list shows only the Frontend menu (M-004..M-006), which is a host function (PLATZHALTER.md). What stays:
+# the shell's standard menus. The command "create" is reachable by the quick-add row and the key below.
+[[menu]]
+kind = "standard-program"
+
+[[menu]]
+kind = "menu"
+label = "menu-task"
+entries = [
+  { kind = "command", source = 1, command = "create", key = "ctrl+n" },
+]
+
+[[menu]]
+kind = "standard-help"
+
+# ---- view: one grouping "standing" (TODAY, READY, BLOCKED); the start list is "today" (F-012, option --list)
+[[view]]
+view = "today"
+grouping = "standing"
+order = [{ by = "field", name = "due" }, { by = "order", name = "rank" }]
+
+# ---- actions: tick = done / reopen (F-011), Enter in the entry line = create (F-009 analogue)
+[[action]]
+trigger = "button"
+source = 1
+command = "done"
+
+[[action]]
+trigger = "button"
+source = 1
+command = "reopen"
+
+[[action]]
+trigger = "quick-add"
+source = 1
+command = "create"
+
+# ---- page "day": side list (select list, F-012), rows (columns Task, When or why it waits, Who), entry row
+[[page]]
+page = "day"
+frame = "workbench"
+navigation = "single"
+
+[[page.block]]
+place = "side"
+block = "sidebar"
+source = 1
+title = "tasks-day-side"
+
+[[page.block]]
+place = "rows"
+block = "task-row"
+source = 1
+
+[[page.block]]
+place = "add"
+block = "quick-add"
+source = 1
+title = "tasks-day-add"
+
+[[page.block]]
+place = "partial"
+block = "partial-notice"
+
+[[page.block]]
+place = "empty"
+block = "empty-state"
+title = "tasks-day-empty-title"
+text = "tasks-day-empty-text"

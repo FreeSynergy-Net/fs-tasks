@@ -1,5 +1,5 @@
 # Blueprint of fs-tasks (schema 2, ADR 0099 addendum 2026-11-18). Target state after the conversion (plan V1 pilot);
-# written ahead: module and layout are named as the plan names them and may not exist as tags yet.
+# the module is fs-modules-planning (tag v0.0.1 exists); the forms description lies in forms/.
 schema = 2
 
 [program]
@@ -37,37 +37,37 @@ version = "0.0.29"
 name = "Task"
 module = "fs-modules-planning"
 
-# The main view is a forms description (written by task V-F); the board columns are a grouping over the progress states.
+# The main view is a forms description (written by task V-F); the board columns come from a column source (basic list: RFC 8984 progress; states belong to the run, ADR 0103).
 [frontend]
 standard = "board"
 layout = "forms/board.toml"
 covers = ["Items.list", "Items.query", "Items.create", "Items.editIf", "Items.readiness"]
 
-# Exceptions: rules without a standard or module (list LISTE-tasks-regeln-ohne-standard, C07/C08/C11/C16/C17).
-# The talk records do not exist yet (no conversation was held): until then the check says talk-not-found, on purpose.
+# Exceptions: rules without a standard or module (list LISTE-tasks-regeln-ohne-standard, C07/C08/C09/C11/C17).
+# The talk records lie in fs-documentation (conventions/talks/), decisions of the owner 2026-11-18/19; ADR 0103.
 [[exception]]
-what = "Check command of a task: runs only for local origin and a trusted creator, only listed programs without a shell, bash only for scripts/, time limit 1 to 3600 s"
-why = "executing code of a task is a security rule of the project; no module or standard describes it"
+what = "Status command of a task (more than yes/no: OK, WARNING, CRITICAL, UNKNOWN as in the Monitoring Plugins): runs only for local origin and a trusted creator, only listed programs without a shell, bash only for scripts/, time limit 1 to 3600 s"
+why = "decision of the owner: the status command is more than yes/no, and its safety rules belong to the workflow step, checked by the run (fs-flow); no module or standard describes it today, the code moves with the conversion"
 checked = ["fs-modules-planning"]
-alternatives = ["rule set in fs-modules-planning", "drop the check command"]
+alternatives = ["workflow step in fs-flow (status command)", "drop the check command"]
 talk = "conventions/talks/2026-11-18-tasks-pruefbefehl-policy.md"
 paths = ["crates/fs-tasks-cli/src/policy.rs", "crates/fs-tasks-cli/src/check.rs"]
 
 [[exception]]
 what = "Refuses titles, notes, commands and reports that carry recognisable key patterns"
-why = "no module and no standard describes a secret guard for task texts; the scope is a user decision"
+why = "decision of the owner: a general building block for all programs with text input (modes off, warn, block; preset block), not only fs-tasks; it does not exist yet, so the code stays here until it does"
 checked = ["fs-modules-planning"]
-alternatives = ["rule set in fs-modules-planning"]
+alternatives = ["general secret-guard building block for all programs with text input (modes off/warn/block, preset block)"]
 talk = "conventions/talks/2026-11-18-tasks-geheimnis-sperre.md"
 paths = ["crates/fs-tasks-cli/src/secrets.rs"]
 
 [[exception]]
-what = "Cost of a finished task in USD stored in its result"
-why = "money has no standard in this context (money waits for standards, priority rule 16.11.)"
+what = "Existing USD cost field of a finished task (`--cost`, `cost_usd`); it is removed, not carried over"
+why = "decision of the owner: no USD field; instead measure and booking lines (time measured, free quantity, own factor or rate, station, role, actor) in the run; invoices and evaluation only in fs-invoices (ADR 0103)"
 checked = ["fs-modules-planning"]
-alternatives = ["money kit of fs-types once it exists (ADR 0098)"]
+alternatives = ["booking lines in the run (fs-flow) and invoices in fs-invoices"]
 talk = "conventions/talks/2026-11-18-tasks-kosten.md"
-paths = ["crates/fs-tasks-cli/src/args_work.rs"]
+paths = ["crates/fs-tasks-cli/src/args_work.rs", "crates/fs-tasks-cli/src/work.rs", "crates/fs-tasks-cli/src/args.rs"]
 
 [[exception]]
 what = "Execution fields of a runner (run, result, attempts, error, loop) with size limits"

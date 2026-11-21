@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- CI callers (`check.yml`, `release.yml`, `typing-test.yml`) pinned to fs-release v0.0.17 (was v0.0.15). No code change.
+- CI-Aufrufer (`check.yml`, `release.yml`, `typing-test.yml`) auf fs-release v0.0.17 gehoben (vorher v0.0.15). Keine Code-Änderung.
+
 - Added (description only, no code changed): `forms/{board,list,day}.toml`, the forms descriptions of the three frontends (import form, Format 1), with `README.md` (coverage of the old views, menus, commands), `PLATZHALTER.md` and `FEHLENDE-COMPONENTS.md` (components the catalog lacks). Not imported or built: the exchange crate is not on fs-forms main yet.
 - Neu (nur Beschreibung, kein Code geändert): `forms/{board,list,day}.toml`, die forms-Beschreibungen der drei Frontends (Importform, Format 1), mit `README.md` (Abdeckung der alten Ansichten, Menüs, Befehle), `PLATZHALTER.md` und `FEHLENDE-COMPONENTS.md` (Components, die der Katalog nicht hat). Nicht importiert oder gebaut: das Austausch-Crate liegt noch nicht auf fs-forms main.
 - Sorted, not compiled (run S2b): the list rules (`standing_of`, `urgency`, `in_list`, `is_inbox`, `is_open`, `label_list`, `people_of`), the defaults of a new task (`defaults_for`, `fits`, `landing`) and `Day` moved from `fs-tasks-app` to `fs-tasks-core` (`lists/`, `day.rs`); the app calls them. No logic changed. Settings table in `DESIGN.md`.

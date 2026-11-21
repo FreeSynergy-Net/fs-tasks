@@ -14,7 +14,7 @@ categories = ["Office", "ProjectManagement"]
 [contract]
 version = "0.1"
 id = "0xc04d258971543476"
-provides = ["dependency.evaluate", "dependency.cycle-check"]
+provides = [{ contract = "dependency.evaluate", version = "0.1" }, { contract = "dependency.cycle-check", version = "0.1" }]
 
 # Art 1: the planning module (fs-modules-planning) owns the type Task (JSCalendar Task, RFC 8984; VTODO, RFC 5545).
 [[module]]

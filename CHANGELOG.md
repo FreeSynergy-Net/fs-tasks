@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `forms/board.toml`: the source is the module `planning` (the host finds a module by its name) with the range `>=0.0.1 <0.1` (was `tasks >=0.2 <0.3`). In 0.0.x every step may break; the range says which module versions this description was written against. `list.toml` and `day.toml` stay as they are (not part of this run). `scaffold.toml` `[contract] version = "0.1"` unchanged: see the report, the host reads only `Major.Minor`.
+- `forms/board.toml`: die Quelle ist das Modul `planning` (der Host findet ein Modul über seinen Namen) mit dem Bereich `>=0.0.1 <0.1` (vorher `tasks >=0.2 <0.3`). In 0.0.x darf jeder Schritt brechen; der Bereich nennt, gegen welche Modulversionen die Beschreibung geschrieben ist. `list.toml` und `day.toml` bleiben (nicht Teil dieses Laufs). `scaffold.toml` `[contract] version = "0.1"` unverändert: siehe Bericht, der Host liest nur `Major.Minor`.
+
 - CI callers (`check.yml`, `release.yml`, `typing-test.yml`) pinned to fs-release v0.0.17 (was v0.0.15). No code change.
 - CI-Aufrufer (`check.yml`, `release.yml`, `typing-test.yml`) auf fs-release v0.0.17 gehoben (vorher v0.0.15). Keine Code-Änderung.
 

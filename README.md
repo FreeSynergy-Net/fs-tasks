@@ -33,6 +33,10 @@ fs-tasks status <id> done --note 'built' --report out.md --cost 0.42
 
 `claim`, `release`, `note`, `check`, `list --project --status`, `add --objective CMD`: see `docs/worker-protocol.md` (EN + DE). A check command is code: it runs only for tasks made on this machine by a trusted actor, for allowed programs, without a shell. One process (the server) holds the store; the command line, the window and workers are all its clients, so they work together while the window is open.
 
+## Versions
+
+In 0.0.x every step may break (the module `planning` and this description); the range in `forms/board.toml` says against which versions of the module it was written. In 0.0.x darf jeder Schritt brechen.
+
 ## Frontends as forms descriptions (prescribed, not yet imported)
 
 The three frontends (Board, Classic, Day list) are described as forms descriptions in `forms/` (components, slots, fields,

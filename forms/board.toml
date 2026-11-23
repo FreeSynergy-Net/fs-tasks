@@ -1,9 +1,9 @@
-# Commands are the full ids of the module `planning` (`planning.create`, `planning.move`, `planning.delete`). claim, release and note are NOT here: the module has no such commands yet (forms/PLATZHALTER.md).
 # forms description of the fs-tasks frontend "board" (the start frontend). IMPORT FORM ONLY (ADR 0096 point 6): the description
 # lives as data in forms.db; this file is imported (Format 1, ids are derived; export writes Format 2) and is never read at run time.
 # Names (blocks, slots, commands, fields) are NAMES: no code, no expression. Component ids = contract/blocks/*.toml of
 # fs-components main 8ede4856 (block contract 0.4). Field names = provider names; the tasks TypeCatalog does not exist yet
 # (field names marked "unproven" in README.md). What the catalog cannot take yet: ../FEHLENDE-COMPONENTS.md.
+# Commands are the full ids of the module `planning`; only `planning.move` exists (a service serves it). create, column.create and delete are NOT here: no service behind them yet, writing follows with the write path (forms/PLATZHALTER.md).
 schema = 1
 kind = "frontend"
 id = "board"
@@ -50,14 +50,6 @@ kind = "standard-program"
 
 [[menu]]
 kind = "menu"
-label = "menu-task"
-entries = [
-  { kind = "command", source = 1, command = "planning.create", key = "ctrl+n" },
-  { kind = "command", source = 1, command = "planning.delete", on = "selected", key = "delete" },
-]
-
-[[menu]]
-kind = "menu"
 label = "menu-view"
 entries = [
   { kind = "view", view = "lanes", label = "view-lanes" },
@@ -89,22 +81,11 @@ view = "order-due"
 grouping = "board"
 order = [{ by = "field", name = "due" }, { by = "order", name = "rank" }]
 
-# ---- actions (confirm: only where data is lost, F-025 delete)
-[[action]]
-trigger = "quick-add"
-source = 1
-command = "planning.create"
-
+# ---- actions: drag a card (the one command a service serves)
 [[action]]
 trigger = "drop"
 source = 1
 command = "planning.move"
-
-[[action]]
-trigger = "menu"
-source = 1
-command = "planning.delete"
-confirm = "confirm"
 
 # ---- page "board": F-006 board, F-007 card, F-008 side panel (list-detail), F-009 entry row, F-010 side list
 [[page]]
@@ -133,8 +114,6 @@ bind = [
   { slot = "card-facts", nth = 3, field = "keywords", role = "compact" },
   { slot = "card-lock", nth = 0, lock = true },
   { slot = "move", nth = 0, command = "planning.move" },
-  { slot = "quick-add", nth = 0, command = "planning.create" },
-  { slot = "card-menu", nth = 0, command = "planning.delete" },
 ]
 
 [[page.block]]

@@ -35,7 +35,7 @@ fs-tasks status <id> done --note 'built' --report out.md --cost 0.42
 
 ## Versions
 
-In 0.0.x every step may break (the module `planning` and this description); the range in `forms/board.toml` says against which versions of the module it was written. In 0.0.x darf jeder Schritt brechen.
+In 0.0.x every step may break (the module `planning` and this description); the range in `forms/board.toml` says against which versions of the module it was written. In 0.0.x darf jeder Schritt brechen. The command set of `planning` (`catalog/commands.json`) has its own version (0.0.1), not the version of the crates (0.0.3): two numbers with two meanings.
 
 ## Frontends as forms descriptions (prescribed, not yet imported)
 

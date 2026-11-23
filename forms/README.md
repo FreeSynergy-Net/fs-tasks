@@ -24,12 +24,12 @@ Location (decided by the strategy): `forms/` in the repo root next to `scaffold.
 | F-002, F-003 | List, status view | `list.toml` page `list`, views `list`, `status` | grid placed WITHOUT column bindings (slot missing) |
 | F-004 | Compact variant | host (no second view, no menu) | PLATZHALTER |
 | F-005 | Task form | `list.toml` page `edit`: 13 `form-field` rows | bound; field blocks missing (see FEHLENDE-COMPONENTS.md) |
-| F-006 | Board | `board.toml` page `board`, block `board`, 12 bindings | bound |
+| F-006 | Board | `board.toml` page `board`, block `board`, 10 bindings | bound |
 | F-007 | Card | `board` slots `card-title`, `card-facts` (4), `card-lock`, `card-menu` | key "FS-n" and wait mark missing (slot) |
 | F-008 | Card side panel | `board.toml` place `detail`, block `board-detail`, 9 bindings | bound |
-| F-009 | Entry line per column | `board` slot `quick-add` + action `quick-add` | bound |
+| F-009 | Entry line per column | NOT bound: `planning.create` has no service (PLATZHALTER.md) | PLATZHALTER |
 | F-010 | Side list projects, labels | `board.toml`, `day.toml` block `sidebar` | placed WITHOUT bindings (slots missing) |
-| F-011 | Day list | `day.toml`: `task-row`, grouping `standing`, `quick-add` | placed WITHOUT bindings (slots missing) |
+| F-011 | Day list | `day.toml`: `task-row`, grouping `standing` (no entry row: PLATZHALTER.md) | placed WITHOUT bindings (slots missing) |
 | F-012 | Choose list, `--list` | `day.toml` view `today`, source scope `selected-list` | start list = open question 4 |
 | F-013, F-015, F-016 | Trash, search, calendar | not in the old window (UNPROVEN) | PLATZHALTER.md |
 | F-014 | Filters | filter tree not readable in this format cut | PLATZHALTER.md, open question 3 |
@@ -39,11 +39,11 @@ Location (decided by the strategy): `forms/` in the repo root next to `scaffold.
 
 | Old | Entry | New |
 |---|---|---|
-| M-001 | Task > New (`task-new`) | `list.toml` menu `menu-task` command `planning.create`, key `ctrl+n`; also board, day |
+| M-001 | Task > New (`task-new`) | NOT in any description yet: `planning.create` has no service behind it (PLATZHALTER.md); comes with the write path |
 | M-002, M-003 | View > List, Status | `list.toml` menu `menu-view`, entries `view` `list`, `status` |
 | M-004..M-006 | Frontend > Classic, Board, Day list | NOT expressible: the switch between descriptions is a host function (open question 2) |
 | M-007 | Problem window Yes / No / Close | host (`confirm-dialog`, `host-error-*`) |
-| new | Board: Task (create, delete; claim, release, note come later) and View (lanes, three orders) | `board.toml`, from the F1 sketch and the menu dossier; not in the old board |
+| new | Board: View (lanes, three orders); Task (create, delete, claim, release, note) comes later | `board.toml`, from the F1 sketch and the menu dossier; not in the old board |
 
 ## Commands to workflow blocks
 
@@ -53,9 +53,9 @@ A command of the program is a workflow block (rule "macros are workflows"; ADR 0
 
 | Old CLI | Command in the description | Used by |
 |---|---|---|
-| F-023 `add` | `planning.create` | menu, quick-add, `board` slot `quick-add` |
+| F-023 `add` | (none yet) | NOT in a description: `planning.create` has no service behind it (PLATZHALTER.md) |
 | F-024 `done`, (tick) | (none yet) | NOT in `day.toml`: the module `planning` has no `done`/`reopen` command (PLATZHALTER.md) |
-| F-025 `delete` | `planning.delete` with `confirm` | board menu, card menu, classic action |
+| F-025 `delete` | (none yet) | NOT in a description: `planning.delete` has no service behind it (PLATZHALTER.md) |
 | F-028 `claim`, F-029 `release` | (none yet) | NOT in `board.toml`: the module `planning` has no such command (PLATZHALTER.md) |
 | F-032 `note` | (none yet) | NOT in `board.toml`: no such command, no `note` member in the contract (PLATZHALTER.md) |
 | (drag, Move to) | `planning.move` | `board` slot `move`, action `drop` |

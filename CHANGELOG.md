@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fix after review (NEIN): the descriptions only name commands a service serves. `planning.create`, `planning.delete` (menus, buttons, entry rows of `board.toml`, `list.toml`, `day.toml`) are taken out; only `planning.move` stays (listed in `forms/PLATZHALTER.md`, they come back with the write path of `planning`). `forms/README.md` no longer says `list.toml` has `planning.create`. The comment of `board.toml` sits under the file header now.
+- Korrektur nach Review (NEIN): Die Beschreibungen nennen nur Befehle, die ein Dienst bedient. `planning.create`, `planning.delete` (Menues, Knoepfe, Eingabezeilen in `board.toml`, `list.toml`, `day.toml`) sind herausgenommen; nur `planning.move` bleibt (in `forms/PLATZHALTER.md`, sie kommen mit dem Schreibweg von `planning` zurueck). `forms/README.md` behauptet nicht mehr, `list.toml` habe `planning.create`. Der Kommentar von `board.toml` steht jetzt unter dem Dateikopf.
+
 - `forms/list.toml`, `forms/day.toml`: source and contract are the module `planning` with the range `>=0.0.1 <0.1` (was `tasks >=0.2 <0.3`; bridge spelling with a space); command names are the full ids of the module (`planning.create`, `planning.delete`). The buttons `done` and `reopen` of `day.toml` are taken out: `catalog/commands.json` of `planning` has no such commands (listed in `forms/PLATZHALTER.md`).
 - `forms/list.toml`, `forms/day.toml`: Quelle und Vertrag sind das Modul `planning` mit dem Bereich `>=0.0.1 <0.1` (vorher `tasks >=0.2 <0.3`; Brücken-Schreibweise mit Leerzeichen); Befehlsnamen sind die vollen ids des Moduls (`planning.create`, `planning.delete`). Die Knöpfe `done` und `reopen` in `day.toml` sind herausgenommen: `catalog/commands.json` von `planning` kennt sie nicht (in `forms/PLATZHALTER.md`).
 

@@ -35,16 +35,9 @@ type = "Task"
 scope = "selected-list"
 
 # ---- menu: the old Day list shows only the Frontend menu (M-004..M-006), which is a host function (PLATZHALTER.md). What stays:
-# the shell's standard menus. The command "planning.create" is reachable by the quick-add row and the key below.
+# the shell's standard menus. The entry row (quick-add) and Task > New are NOT here: no service behind `planning.create` yet (PLATZHALTER.md).
 [[menu]]
 kind = "standard-program"
-
-[[menu]]
-kind = "menu"
-label = "menu-task"
-entries = [
-  { kind = "command", source = 1, command = "planning.create", key = "ctrl+n" },
-]
 
 [[menu]]
 kind = "standard-help"
@@ -54,12 +47,6 @@ kind = "standard-help"
 view = "today"
 grouping = "standing"
 order = [{ by = "field", name = "due" }, { by = "order", name = "rank" }]
-
-# ---- actions: Enter in the entry line = create (F-009 analogue)
-[[action]]
-trigger = "quick-add"
-source = 1
-command = "planning.create"
 
 # ---- page "day": side list (select list, F-012), rows (columns Task, When or why it waits, Who), entry row
 [[page]]
@@ -77,12 +64,6 @@ title = "tasks-day-side"
 place = "rows"
 block = "task-row"
 source = 1
-
-[[page.block]]
-place = "add"
-block = "quick-add"
-source = 1
-title = "tasks-day-add"
 
 [[page.block]]
 place = "partial"

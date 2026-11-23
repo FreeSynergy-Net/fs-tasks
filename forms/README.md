@@ -24,9 +24,9 @@ Location (decided by the strategy): `forms/` in the repo root next to `scaffold.
 | F-002, F-003 | List, status view | `list.toml` page `list`, views `list`, `status` | grid placed WITHOUT column bindings (slot missing) |
 | F-004 | Compact variant | host (no second view, no menu) | PLATZHALTER |
 | F-005 | Task form | `list.toml` page `edit`: 13 `form-field` rows | bound; field blocks missing (see FEHLENDE-COMPONENTS.md) |
-| F-006 | Board | `board.toml` page `board`, block `board`, 15 bindings (all slots of the block) | bound |
+| F-006 | Board | `board.toml` page `board`, block `board`, 12 bindings | bound |
 | F-007 | Card | `board` slots `card-title`, `card-facts` (4), `card-lock`, `card-menu` | key "FS-n" and wait mark missing (slot) |
-| F-008 | Card side panel | `board.toml` place `detail`, block `board-detail`, 13 bindings | bound |
+| F-008 | Card side panel | `board.toml` place `detail`, block `board-detail`, 9 bindings | bound |
 | F-009 | Entry line per column | `board` slot `quick-add` + action `quick-add` | bound |
 | F-010 | Side list projects, labels | `board.toml`, `day.toml` block `sidebar` | placed WITHOUT bindings (slots missing) |
 | F-011 | Day list | `day.toml`: `task-row`, grouping `standing`, `quick-add` | placed WITHOUT bindings (slots missing) |
@@ -39,11 +39,11 @@ Location (decided by the strategy): `forms/` in the repo root next to `scaffold.
 
 | Old | Entry | New |
 |---|---|---|
-| M-001 | Task > New (`task-new`) | `list.toml` menu `menu-task` command `create`, key `ctrl+n`; also board, day |
+| M-001 | Task > New (`task-new`) | `list.toml` menu `menu-task` command `planning.create`, key `ctrl+n`; also board, day |
 | M-002, M-003 | View > List, Status | `list.toml` menu `menu-view`, entries `view` `list`, `status` |
 | M-004..M-006 | Frontend > Classic, Board, Day list | NOT expressible: the switch between descriptions is a host function (open question 2) |
 | M-007 | Problem window Yes / No / Close | host (`confirm-dialog`, `host-error-*`) |
-| new | Board: Task (create, claim, release, note, delete) and View (lanes, three orders) | `board.toml`, from the F1 sketch and the menu dossier; not in the old board |
+| new | Board: Task (create, delete; claim, release, note come later) and View (lanes, three orders) | `board.toml`, from the F1 sketch and the menu dossier; not in the old board |
 
 ## Commands to workflow blocks
 
@@ -56,8 +56,8 @@ A command of the program is a workflow block (rule "macros are workflows"; ADR 0
 | F-023 `add` | `create` | menu, quick-add, `board` slot `quick-add` |
 | F-024 `done`, (tick) | `done` (?), `reopen` (?) | `day.toml` actions |
 | F-025 `delete` | `delete` with `confirm` | board menu, card menu, classic action |
-| F-028 `claim`, F-029 `release` | `claim`, `release` | board menu, card menu, panel actions |
-| F-032 `note` | `note` | board menu, card menu, panel actions |
+| F-028 `claim`, F-029 `release` | (none yet) | NOT in `board.toml`: the module `planning` has no such command (PLATZHALTER.md) |
+| F-032 `note` | (none yet) | NOT in `board.toml`: no such command, no `note` member in the contract (PLATZHALTER.md) |
 | (drag, Move to) | `move` (?) | `board` slot `move`, action `drop` |
 | F-020 `capabilities`, F-021 `list`, F-022 `show`, F-030 `next`, F-031 `status`, F-033 `check`, F-026/F-027 `export`/`import`, F-034 `serve`, F-035 `app` | not frontend content: contract methods (the CLI is generated from the contract, ADR 0096 point 13) or the starter | none |
 

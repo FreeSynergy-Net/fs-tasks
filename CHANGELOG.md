@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `forms/board.toml`: command names are the full ids of the module (`planning.create`, `planning.move`, `planning.delete`); the buttons `claim`, `release`, `note` and the `note` field are taken out (no such command or member exists; listed in `forms/PLATZHALTER.md` as Comes later); `priority`, `participants`, `keywords`, `description` are served by the module now.
+- `forms/board.toml`: Befehlsnamen sind die vollen ids des Moduls (`planning.create`, `planning.move`, `planning.delete`); die Knoepfe `claim`, `release`, `note` und das Feld `note` sind herausgenommen (es gibt weder Befehl noch Member; in `forms/PLATZHALTER.md` als "Kommt spaeter"); `priority`, `participants`, `keywords`, `description` liefert das Modul jetzt.
+
 - `forms/board.toml`: the source is the module `planning` (the host finds a module by its name) with the range `>=0.0.1 <0.1` (was `tasks >=0.2 <0.3`). In 0.0.x every step may break; the range says which module versions this description was written against. `list.toml` and `day.toml` stay as they are (not part of this run). `scaffold.toml` `[contract] version = "0.1"` unchanged: see the report, the host reads only `Major.Minor`.
 - `forms/board.toml`: die Quelle ist das Modul `planning` (der Host findet ein Modul über seinen Namen) mit dem Bereich `>=0.0.1 <0.1` (vorher `tasks >=0.2 <0.3`). In 0.0.x darf jeder Schritt brechen; der Bereich nennt, gegen welche Modulversionen die Beschreibung geschrieben ist. `list.toml` und `day.toml` bleiben (nicht Teil dieses Laufs). `scaffold.toml` `[contract] version = "0.1"` unverändert: siehe Bericht, der Host liest nur `Major.Minor`.
 

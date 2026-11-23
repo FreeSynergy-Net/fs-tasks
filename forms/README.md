@@ -53,12 +53,12 @@ A command of the program is a workflow block (rule "macros are workflows"; ADR 0
 
 | Old CLI | Command in the description | Used by |
 |---|---|---|
-| F-023 `add` | `create` | menu, quick-add, `board` slot `quick-add` |
-| F-024 `done`, (tick) | `done` (?), `reopen` (?) | `day.toml` actions |
-| F-025 `delete` | `delete` with `confirm` | board menu, card menu, classic action |
+| F-023 `add` | `planning.create` | menu, quick-add, `board` slot `quick-add` |
+| F-024 `done`, (tick) | (none yet) | NOT in `day.toml`: the module `planning` has no `done`/`reopen` command (PLATZHALTER.md) |
+| F-025 `delete` | `planning.delete` with `confirm` | board menu, card menu, classic action |
 | F-028 `claim`, F-029 `release` | (none yet) | NOT in `board.toml`: the module `planning` has no such command (PLATZHALTER.md) |
 | F-032 `note` | (none yet) | NOT in `board.toml`: no such command, no `note` member in the contract (PLATZHALTER.md) |
-| (drag, Move to) | `move` (?) | `board` slot `move`, action `drop` |
+| (drag, Move to) | `planning.move` | `board` slot `move`, action `drop` |
 | F-020 `capabilities`, F-021 `list`, F-022 `show`, F-030 `next`, F-031 `status`, F-033 `check`, F-026/F-027 `export`/`import`, F-034 `serve`, F-035 `app` | not frontend content: contract methods (the CLI is generated from the contract, ADR 0096 point 13) or the starter | none |
 
 ## Checked and not checked

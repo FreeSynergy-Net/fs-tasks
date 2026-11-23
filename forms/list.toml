@@ -30,11 +30,11 @@ message = [
 ]
 
 [[requires]]
-contract = "tasks >=0.2 <0.3"
+contract = "planning >=0.0.1 <0.1"
 
 [[source]]
 n = 1
-contract = "tasks >=0.2 <0.3"
+contract = "planning >=0.0.1 <0.1"
 type = "Task"
 scope = "all"
 
@@ -47,7 +47,7 @@ kind = "standard-program"
 kind = "menu"
 label = "menu-task"
 entries = [
-  { kind = "command", source = 1, command = "create", key = "ctrl+n" },
+  { kind = "command", source = 1, command = "planning.create", key = "ctrl+n" },
 ]
 
 [[menu]]
@@ -75,12 +75,12 @@ order = [{ by = "order", name = "rank" }]
 [[action]]
 trigger = "menu"
 source = 1
-command = "create"
+command = "planning.create"
 
 [[action]]
 trigger = "button"
 source = 1
-command = "delete"
+command = "planning.delete"
 confirm = "confirm"
 
 # ---- page "list": F-002, F-003 (the grid: head, rows, cells; its column slot is not declared yet)

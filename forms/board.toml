@@ -3,7 +3,7 @@
 # Names (blocks, slots, commands, fields) are NAMES: no code, no expression. Component ids = contract/blocks/*.toml of
 # fs-components main 8ede4856 (block contract 0.4). Field names = provider names; the tasks TypeCatalog does not exist yet
 # (field names marked "unproven" in README.md). What the catalog cannot take yet: ../FEHLENDE-COMPONENTS.md.
-# Commands are the full ids of the module `planning`; only `planning.move` exists (a service serves it). create, column.create and delete are NOT here: no service behind them yet, writing follows with the write path (forms/PLATZHALTER.md).
+# Commands are the contract keys of tasks.capnp (card.move, task.create, task.delete), without module prefix; the host binds the prefix (`planning.card.move`). The channel of the form `cards-in-columns@1.1.0` (move, create, remove) is bound by the module (`catalog/forms.json`), never here; the description only chooses a trigger and a key (forms/README.md).
 schema = 1
 kind = "frontend"
 id = "board"
@@ -35,18 +35,26 @@ message = [
 ]
 
 [[requires]]
-contract = "planning >=0.0.1 <0.1"
+contract = "planning@>=0.0.1, <0.1.0"
 
 # Source 1 = the tasks provider; "selected-list" = the list chosen in the sidebar (F-010).
 [[source]]
 n = 1
-contract = "planning >=0.0.1 <0.1"
+contract = "planning@>=0.0.1, <0.1.0"
 type = "Task"
 scope = "selected-list"
 
 # ---- menu tree (M-001, M-002/M-003 as views, M-004..M-006 see PLATZHALTER.md: the frontend switch is a host function)
 [[menu]]
 kind = "standard-program"
+
+[[menu]]
+kind = "menu"
+label = "menu-task"
+entries = [
+  { kind = "command", source = 1, command = "task.create", key = "ctrl+n" },
+  { kind = "command", source = 1, command = "task.delete", on = "selected", key = "delete" },
+]
 
 [[menu]]
 kind = "menu"
@@ -81,11 +89,22 @@ view = "order-due"
 grouping = "board"
 order = [{ by = "field", name = "due" }, { by = "order", name = "rank" }]
 
-# ---- actions: drag a card (the one command a service serves)
+# ---- actions: drag a card (move), entry row (create), delete (confirm: only where data is lost, F-025)
+[[action]]
+trigger = "quick-add"
+source = 1
+command = "task.create"
+
 [[action]]
 trigger = "drop"
 source = 1
-command = "planning.move"
+command = "card.move"
+
+[[action]]
+trigger = "menu"
+source = 1
+command = "task.delete"
+confirm = "confirm"
 
 # ---- page "board": F-006 board, F-007 card, F-008 side panel (list-detail), F-009 entry row, F-010 side list
 [[page]]
@@ -113,7 +132,9 @@ bind = [
   { slot = "card-facts", nth = 2, field = "participants", role = "compact" },
   { slot = "card-facts", nth = 3, field = "keywords", role = "compact" },
   { slot = "card-lock", nth = 0, lock = true },
-  { slot = "move", nth = 0, command = "planning.move" },
+  { slot = "move", nth = 0, command = "card.move" },
+  { slot = "quick-add", nth = 0, command = "task.create" },
+  { slot = "card-menu", nth = 0, command = "task.delete" },
 ]
 
 [[page.block]]

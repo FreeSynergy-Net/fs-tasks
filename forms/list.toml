@@ -30,18 +30,25 @@ message = [
 ]
 
 [[requires]]
-contract = "planning >=0.0.1 <0.1"
+contract = "planning@>=0.0.1, <0.1.0"
 
 [[source]]
 n = 1
-contract = "planning >=0.0.1 <0.1"
+contract = "planning@>=0.0.1, <0.1.0"
 type = "Task"
 scope = "all"
 
-# ---- menus: the old entries View > List, Status (Task > New: PLATZHALTER.md). No delete entry in the menu (old rule:
-# "no menu that could do nothing"). Task > New and delete are NOT here: no service behind `planning.create`/`planning.delete` yet (PLATZHALTER.md). The Frontend menu (M-004..M-006) is a host function.
+# ---- menus: exactly the old five entries (tests/menus.rs): Task > New; View > List, Status. No delete entry in the menu (old rule:
+# "no menu that could do nothing"); delete stays a command of the form. Commands are contract keys (`task.create`, `task.delete`). The Frontend menu (M-004..M-006) is a host function.
 [[menu]]
 kind = "standard-program"
+
+[[menu]]
+kind = "menu"
+label = "menu-task"
+entries = [
+  { kind = "command", source = 1, command = "task.create", key = "ctrl+n" },
+]
 
 [[menu]]
 kind = "menu"
@@ -63,6 +70,18 @@ order = [{ by = "order", name = "rank" }]
 view = "status"
 grouping = "progress"
 order = [{ by = "order", name = "rank" }]
+
+# ---- actions: a task is started from the menu (new task); an unsaved change blocks "new" (rule of the form, F-005)
+[[action]]
+trigger = "menu"
+source = 1
+command = "task.create"
+
+[[action]]
+trigger = "button"
+source = 1
+command = "task.delete"
+confirm = "confirm"
 
 # ---- page "list": F-002, F-003 (the grid: head, rows, cells; its column slot is not declared yet)
 [[page]]

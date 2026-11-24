@@ -1,0 +1,74 @@
+# forms description of the fs-tasks frontend "board-wip" (second board frontend, WIP-oriented).
+# LAYOUT ONLY (Workflow frontend-beschreiben, rule 2): which components stand where, placeholder values only.
+# NO [[source]], NO [[requires]], NO bind, NO command, NO view, NO action: binding (channels and attributes of the
+# module form cards-in-columns) is added later in this same file. Theme: `style = "board-wip"` (tokens in styles/).
+# Shape (named after the form, not after any model program): columns with count and limit, cards with due chip,
+# priority tag, description mark; view tabs List | Gantt | Table | Kanban; filter button.
+# What the layout cannot express yet (no key in the reader for it): see FRONTENDS-tasks-attribute-board-wip.md and
+# FEHLENDE-COMPONENTS.md (tasks 24.11., Bahn C). Nothing here is a fake source.
+schema = 1
+kind = "frontend"
+id = "board-wip"
+extends = "net.freesynergy.Tasks"
+exec = "fs-forms-run"
+title = "board-wip-title"
+style = "board-wip"
+message = [
+  { key = "board-wip-title", lang = "en", text = "Tasks (work in progress)" },
+  { key = "board-wip-title", lang = "de", text = "Aufgaben (in Arbeit)" },
+  { key = "view-list", lang = "en", text = "List" },
+  { key = "view-list", lang = "de", text = "Liste" },
+  { key = "view-gantt", lang = "en", text = "Gantt" },
+  { key = "view-gantt", lang = "de", text = "Gantt" },
+  { key = "view-table", lang = "en", text = "Table" },
+  { key = "view-table", lang = "de", text = "Tabelle" },
+  { key = "view-kanban", lang = "en", text = "Kanban" },
+  { key = "view-kanban", lang = "de", text = "Kanban" },
+  { key = "filter-button", lang = "en", text = "Filters" },
+  { key = "filter-button", lang = "de", text = "Filter" },
+  { key = "tasks-side-title", lang = "en", text = "Projects and labels" },
+  { key = "tasks-side-title", lang = "de", text = "Projekte und Labels" },
+  { key = "tasks-board-empty-title", lang = "en", text = "No tasks here yet" },
+  { key = "tasks-board-empty-title", lang = "de", text = "Hier ist noch keine Aufgabe" },
+  { key = "tasks-board-empty-text", lang = "en", text = "What needs to be done?" },
+  { key = "tasks-board-empty-text", lang = "de", text = "Was ist zu tun?" },
+]
+
+# ---- menu tree: standard entries only (no command, no view switch here)
+[[menu]]
+kind = "standard-program"
+
+[[menu]]
+kind = "standard-help"
+
+# ---- page "board-wip": window shell, side strip, view tabs, board, states
+[[page]]
+page = "board-wip"
+frame = "app-window"
+navigation = "list-detail"
+
+[[page.block]]
+place = "side"
+block = "sidebar"
+title = "tasks-side-title"
+
+# view tabs (List, Gantt, Table, Kanban) and the filter button sit above the board
+[[page.block]]
+place = "bar"
+block = "tablist"
+
+# columns with head (name, count, limit), cards below; the card parts are the board block's own
+[[page.block]]
+place = "main"
+block = "board"
+
+# states the host shows without code
+[[page.block]]
+place = "partial"
+block = "partial-notice"
+
+[[page.block]]
+place = "empty"
+block = "empty-state"
+title = "tasks-board-empty-title"
+text = "tasks-board-empty-text"

@@ -52,3 +52,12 @@ Frontend switch (old menu Frontend): not a component; host or format (forms/READ
 Provider names unproven (no `TypeCatalog`): fields `progress`, `priority`, `due`, `participants`, `keywords`, `note`, `description`,
 `timeZone`, `percentComplete`, `recurrenceRules`, `relatedTo`, `sensitive`, `progressExtended`; groupings `board`, `priority`, `standing`;
 orders `rank`, `priority`, `due`; commands `create`, `claim`, `release`, `note`, `delete`, `move`, `done`, `reopen`.
+
+## Cards from round 3c (24.11.2026, C2)
+
+| # | Missing | Where it is needed | Owner |
+|---|---|---|---|
+| 18 | Tooltip "noch nicht fertig" on an empty, bound slot (lanes, grid, day rows) in `fs-components` | `board-swimlanes` slot `lanes`: planning has no lanes, so the lanes stay empty and must say why instead of "empty" | C4 (fs-components) |
+| 19 | `lane` channel served by `planning` (lanes of a board as data) | `board-swimlanes` grouping `lane` | C3 (fs-modules-planning) |
+| 20 | `timeZone` as a channel of `cards-in-columns` (RFC 8984: `due` is a LocalDateTime, the zone is a separate property) | the card shows `due` without a zone until the form names it | catalog (fs-interfaces) / C3 |
+| 21 | Seed of `priority` and `estimatedDuration` in the planning example `wp6_seed` | cards of `board-wip` and `board-swimlanes` stay without these facts in the picture run | C3 (fs-modules-planning examples) |

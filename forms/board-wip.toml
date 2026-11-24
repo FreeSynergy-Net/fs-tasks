@@ -43,13 +43,9 @@ kind = "standard-help"
 elem = "page:board-wip"
 page = "board-wip"
 frame = "app-window"
-navigation = "list-detail"
+navigation = "single"
 
-[[page.place]]
-elem = "block:board-wip/side"
-at = "side"
-block = "sidebar"
-title = "tasks-side-title"
+# No side strip here: its slots are not declared in the catalog; an unbound strip was an empty column beside the board (Runde 3c).
 
 # view tabs (List, Gantt, Table, Kanban) and the filter button sit above the board
 # (the texts view-list, view-gantt, view-table, view-kanban and filter-button below are kept for them: the block tablist has no declared

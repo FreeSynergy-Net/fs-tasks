@@ -59,15 +59,9 @@ scope = "selected-list"
 elem = "page:board-swimlanes"
 page = "board-swimlanes"
 frame = "workbench"
-navigation = "list-detail"
+navigation = "single"
 
-# Side list (projects, labels). Not bound: sidebar slots are not declared in the catalog (offen).
-[[page.place]]
-elem = "block:board-swimlanes/side"
-at = "side"
-block = "sidebar"
-source = 1
-title = "board-swimlanes-side-title"
+# No side list in this frontend: its slots are not declared in the catalog, and an empty strip beside the lanes was shown as a second, empty column (Runde 3c). It returns with the slots.
 
 # Main area: ONE board. Lanes are the first level (slot `lanes`), columns inside each lane (slot `columns`).
 [[page.place]]
@@ -202,18 +196,6 @@ elem = "message:board-swimlanes-empty-title/en"
 key = "board-swimlanes-empty-title"
 lang = "en"
 text = "No tasks in these lanes"
-
-[[message]]
-elem = "message:board-swimlanes-side-title/de"
-key = "board-swimlanes-side-title"
-lang = "de"
-text = "Projekte und Labels"
-
-[[message]]
-elem = "message:board-swimlanes-side-title/en"
-key = "board-swimlanes-side-title"
-lang = "en"
-text = "Projects and labels"
 
 [[message]]
 elem = "message:board-swimlanes-title/de"

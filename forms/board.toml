@@ -3,7 +3,7 @@
 # Names (blocks, slots, commands, fields) are NAMES: no code, no expression. Component ids = contract/blocks/*.toml of
 # fs-components main 8ede4856 (block contract 0.4). Field names = provider names; the tasks TypeCatalog does not exist yet
 # (field names marked "unproven" in README.md). What the catalog cannot take yet: ../FEHLENDE-COMPONENTS.md.
-# Commands are the contract keys of tasks.capnp (card.move, task.create, task.delete), without module prefix; the host binds the prefix (`planning.card.move`). The channel of the form `cards-in-columns@1.1.0` (move, create, remove) is bound by the module (`catalog/forms.json`), never here; the description only chooses a trigger and a key (forms/README.md).
+# Commands are the contract keys of tasks.capnp (card.move, task.create, task.delete), without module prefix; the host binds the prefix (`planning.card.move`). The channel of the form `cards-in-columns@1.2.0` (move writes column, after, before; create; remove) is bound by the module (`catalog/forms.json`), never here; the description only chooses a trigger and a key (forms/README.md).
 schema = 1
 kind = "frontend"
 id = "board"

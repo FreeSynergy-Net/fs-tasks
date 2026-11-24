@@ -3,7 +3,7 @@
 # Names (blocks, slots, commands, fields) are NAMES: no code, no expression. Component ids = contract/blocks/*.toml of
 # fs-components main 8ede4856 (block contract 0.4). Field names = provider names; the tasks TypeCatalog does not exist yet
 # (field names marked "unproven" in README.md). What the catalog cannot take yet: ../FEHLENDE-COMPONENTS.md.
-# Commands are the contract keys of tasks.capnp (card.move, task.create, task.delete), without module prefix; the host binds the prefix (`planning.card.move`). The channel of the form `cards-in-columns@1.2.0` (move writes column, after, before; create; remove) is bound by the module (`catalog/forms.json`), never here; the description only chooses a trigger and a key (forms/README.md).
+# Commands are the contract keys of tasks.capnp (card.move, task.create, task.delete), without module prefix; the host binds the prefix (`planning.card.move`). The channel of the form `cards-in-columns@1.3.0` (move writes column, after, before; create; remove) is bound by the module (`catalog/forms.json`), never here; the description only chooses a trigger and a key (forms/README.md).
 schema = 1
 kind = "frontend"
 id = "board"
@@ -122,6 +122,7 @@ title = "tasks-side-title"
 place = "main"
 block = "board"
 source = 1
+# card-facts nth 1 = priority: since cards-in-columns@1.3.0 its own channel (no longer a fact; the field name stays). Shown as a number until the P0-P3 mapping (Bündel 1b).
 bind = [
   { slot = "cards", nth = 0 },
   { slot = "columns", nth = 0, grouping = "board" },
@@ -141,15 +142,17 @@ bind = [
 place = "detail"
 block = "board-detail"
 source = 1
+# "progress" entfällt: das Feld heißt im Dienst `percent` (1.3.0), es gibt kein Feld `progress` mehr (tote Bindung).
+# description und color sind eigene Kanäle von cards-in-columns@1.3.0 (Daten, keine Farbe im Form-File).
 bind = [
   { slot = "record", nth = 0 },
   { slot = "title", nth = 0, field = "title", role = "display" },
-  { slot = "properties", nth = 0, field = "progress", role = "display" },
-  { slot = "properties", nth = 1, field = "priority", role = "display" },
-  { slot = "properties", nth = 2, field = "due", role = "display" },
-  { slot = "properties", nth = 3, field = "participants", role = "display" },
-  { slot = "properties", nth = 4, field = "keywords", role = "display" },
-  { slot = "properties", nth = 5, field = "description", role = "display" },
+  { slot = "properties", nth = 0, field = "priority", role = "display" },
+  { slot = "properties", nth = 1, field = "due", role = "display" },
+  { slot = "properties", nth = 2, field = "participants", role = "display" },
+  { slot = "properties", nth = 3, field = "keywords", role = "display" },
+  { slot = "properties", nth = 4, field = "description", role = "display" },
+  { slot = "properties", nth = 5, field = "color", role = "display" },
   { slot = "lock", nth = 0, lock = true },
 ]
 

@@ -61,14 +61,16 @@ entries = [
 [[menu]]
 kind = "standard-help"
 
-# ---- views: list = one set (columns Title, Due, Priority, Status); status = the same tasks grouped by progress (F-002, F-003)
+# ---- views: list = one set (columns Title, Due, Priority, Status); status = the same tasks grouped by status (F-002, F-003)
 [[view]]
 view = "list"
 order = [{ by = "order", name = "rank" }]
 
+# status: grouping "progress" entfällt (kein Gruppierungsname "progress" im Dienst oder in der Form 1.3.0; progress ist nur ein Zahlenkanal).
+# Ersatz "board" = die Statusspalten, wie in board.toml (Gruppierung "board"). Bedeutung nicht am Host geprüft.
 [[view]]
 view = "status"
-grouping = "progress"
+grouping = "board"
 order = [{ by = "order", name = "rank" }]
 
 # ---- actions: a task is started from the menu (new task); an unsaved change blocks "new" (rule of the form, F-005)
@@ -142,10 +144,10 @@ source = 1
 bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "priority", role = "input" }]
 
 [[page.block]]
+# f-status: ohne Bindung. Das Feld "progress" gibt es im Dienst nicht mehr (1.3.0: progress ist ein Kanal, das Feld heißt percent).
 place = "f-status"
 block = "form-field"
 source = 1
-bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "progress", role = "input" }]
 
 [[page.block]]
 place = "f-status-ext"

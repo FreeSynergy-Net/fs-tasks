@@ -1,15 +1,36 @@
 # Pattern: Composite – a tree of blocks (page, frame, block, place) as plain data; deviation: no trait, only data (the host reads it).
-# forms description of the fs-tasks frontend "board-swimlanes": LAYOUT ONLY (workflow frontend-beschreiben, rules 2 and 4).
-# Nach Gestalt benannt: Bahnen (Swimlanes) mit Klappkopf und Zähler, Spalten mit Zahl und Grenze, Karten mit Kartenton.
+# forms description of the fs-tasks frontend "board-swimlanes" (workflow frontend-beschreiben, step layout-schreiben, Runde 2: BINDEN).
+# Form: cards-in-columns@1.2.0 (fs-interfaces v0.1.1 schema/forms.txt). Source: module planning (contract planning@>=0.0.1, <0.1.0).
+# Pattern of the bindings: forms/board.toml (slot = block input, field = provider field, command = contract key, no module prefix).
+# Nach Gestalt benannt: Bahnen (Swimlanes) mit Klappkopf und Zähler, Spalten mit Zahl, Karten mit Faktenzeile.
 # Bewusst andere Daten als `board` (Status-Spalten) und `board-wip` (Schwester-Frontend): Bahnen sind eine Gruppierung je Karte.
 #
-# NOT in this file (rule 2, no fake source, no binding): no [[source]], no bind, no map, no command, no action, no menu.
-# The placement of the blocks below is the layout. The internal look that a block needs (slots, fields, placeholder values)
-# is written as comments under each block; it is bound later, when Scaffold and Forms stand. Open points: ../FEHLENDE-COMPONENTS.md
-# is not changed here; the cards are in the report (.scratch/woche-11-23/form/BERICHT-fe-tasks-board-swimlanes.md).
+# Bindings in this file: [[source]], bind arrays on the page blocks, and the three command actions (trigger and key only).
+# The channels of the form are bound here where a slot exists. Channels WITHOUT a slot are NOT faked; each is marked "offen" below.
+# Channel `after`/`before` of `move` is written by the MODULE (catalog/forms.json, key `map`), never by this file.
+#
+# Channel -> binding (form cards-in-columns@1.2.0):
+#   cards         -> slot `cards` (block board, records)                      BOUND
+#   column        -> slot `columns` grouping `board`                           BOUND (the column id is the grouping, not a field)
+#   title         -> slot `card-title` field `title`                           BOUND
+#   facts (0..4)  -> slot `card-facts` nth 0..3: due, priority, participants, keywords   BOUND (4 facts, not more)
+#   lane          -> slot `lanes` grouping `lane`                              BOUND, BUT NOT SERVED YET: the module maps `lane`
+#                    to board membership (ABGLEICH-frontends-tasks-attribute.md, point 7); the grouping by a named lane channel is
+#                    not in the host or module yet. Until then the lanes stay visibly empty (offen), never a fake lane.
+#   order         -> slot `order` order `rank` (read only, the sequence as shown)  BOUND
+#   move          -> slot `move` command `card.move`; writes column, after, before, lane (after/before by the module)  BOUND
+#   create        -> slot `quick-add` command `task.create`; needs title, column, lane  BOUND
+#   remove        -> slot `card-menu` command `task.delete`, confirm            BOUND
+#   column-label  -> NO slot (block board has no label slot for the column name; board-column has part `name` only)   offen
+#   progress      -> NO slot on block board/board-card (card-facts takes facts only; progress is a bar, not a fact)     offen
+#
+# NOT bound here, and why (offen, not faked): colour of a card (`color`, not a channel in 1.2.0, planned for 1.3.0; board-card
+# has no tone variant), estimated duration (`estimated`, not a channel in 1.2.0), column limit (`wip`, part of board-column
+# but no slot on block board), priority as P0-P3 label (the module gives the number; the label mapping is not in the contract),
+# search field and status filter (bar of the board has no slot). Details: ../FEHLENDE-COMPONENTS.md and the report
+# .scratch/woche-11-23/form/BERICHT-fe-tasks-bind-board-swimlanes.md.
 #
 # Theme: style = "office" (the layer of ADR 0074, tokens in styles/office.tokens.json). No colour, size or font in this file.
-# Layout placeholders: none can be shown without a bound slot (a card "Platzhalterwerte ohne Bindung" in the report).
 schema = 1
 kind = "frontend"
 id = "board-swimlanes"
@@ -31,34 +52,47 @@ message = [
 [[requires]]
 contract = "planning@>=0.0.1, <0.1.0"
 
+# Source 1 = the planning module (fs-modules-planning), the type Task (JSCalendar Task, RFC 8984).
+[[source]]
+n = 1
+contract = "planning@>=0.0.1, <0.1.0"
+type = "Task"
+scope = "selected-list"
+
 # ---- page "board-swimlanes": a workbench with the side list and the main area.
 [[page]]
 page = "board-swimlanes"
 frame = "workbench"
 navigation = "list-detail"
 
-# Side list (projects, labels). Nothing bound yet (sidebar slots are not declared in the catalog).
+# Side list (projects, labels). Not bound: sidebar slots are not declared in the catalog (offen).
 [[page.block]]
 place = "side"
 block = "sidebar"
+source = 1
 title = "board-swimlanes-side-title"
 
-# Main area: ONE board with the lanes as its first level (Bahnen), the columns inside each lane.
-# Look that the block needs, bound later (slots of block "board" in contract/blocks/widgets.toml):
-#   - Bahnen: slot `lanes` (grouping within cards) exists. Per lane: head with a disclosure (Klappkopf, parts
-#     `header`, `mark`, `title`, `panel` of block "disclosure") and a count of the cards in it (part `count`).
-#     Which field makes the lane: vorlaeufig, the grouping by "lane" needs a field of the task (not in the model yet).
-#   - Spalten: slot `columns` (grouping `board`, status). Column head: name and count (part `count`), limit (part `wip`,
-#     `wip-text`, `wip-symbol`, `over-limit` state) - the limit is not a slot of block "board" yet (offen).
-#   - Karten: `card-title` (title), `card-facts` (due, estimated duration, priority P0-P3, description mark).
-#     Card tone (the colour of the card as an attribute): block "board-card" and "task-card" have no tone variant (offen);
-#     vorlaeufig: block "board-card" stands in, its tone comes from the style layer only, not from the card.
-# Search field and status filter sit in the bar of the board: block "board" has a part `bar` but no slot for it (offen).
+# Main area: ONE board. Lanes are the first level (slot `lanes`), columns inside each lane (slot `columns`).
 [[page.block]]
 place = "main"
 block = "board"
+source = 1
+bind = [
+  { slot = "cards", nth = 0 },
+  { slot = "lanes", nth = 0, grouping = "lane" },
+  { slot = "columns", nth = 0, grouping = "board" },
+  { slot = "order", nth = 0, order = "rank" },
+  { slot = "card-title", nth = 0, field = "title", role = "display" },
+  { slot = "card-facts", nth = 0, field = "due", role = "compact" },
+  { slot = "card-facts", nth = 1, field = "priority", role = "compact" },
+  { slot = "card-facts", nth = 2, field = "participants", role = "compact" },
+  { slot = "card-facts", nth = 3, field = "keywords", role = "compact" },
+  { slot = "move", nth = 0, command = "card.move" },
+  { slot = "quick-add", nth = 0, command = "task.create" },
+  { slot = "card-menu", nth = 0, command = "task.delete" },
+]
 
-# Empty state (texts are keys of this file, nothing bound).
+# Empty state (texts are keys of this file).
 [[page.block]]
 place = "empty"
 block = "empty-state"
@@ -69,3 +103,20 @@ text = "board-swimlanes-empty-text"
 [[page.block]]
 place = "partial"
 block = "partial-notice"
+
+# ---- actions: drop a card (move), entry row (create), delete (confirm: data is lost)
+[[action]]
+trigger = "quick-add"
+source = 1
+command = "task.create"
+
+[[action]]
+trigger = "drop"
+source = 1
+command = "card.move"
+
+[[action]]
+trigger = "menu"
+source = 1
+command = "task.delete"
+confirm = "confirm"

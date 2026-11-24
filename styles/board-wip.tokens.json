@@ -1,0 +1,31 @@
+{
+  "$description": "Style layer of the fs-tasks frontend board-wip (ADR 0074, DTCG). Placeholder values, NOT measured from any model picture. The form file only names the style (style = \"board-wip\").",
+  "$license": "Own values; no source picture used. Reference: none.",
+  "color": {
+    "surface": { "$type": "color", "$value": "#ffffff" },
+    "surface-column": { "$type": "color", "$value": "#f3f4f6" },
+    "text": { "$type": "color", "$value": "#1f2933" },
+    "text-muted": { "$type": "color", "$value": "#616e7c" },
+    "accent": { "$type": "color", "$value": "#2563eb" },
+    "warning": { "$type": "color", "$value": "#b45309" },
+    "danger": { "$type": "color", "$value": "#b91c1c" },
+    "done": { "$type": "color", "$value": "#15803d" }
+  },
+  "space": {
+    "gap": { "$type": "dimension", "$value": "12px" },
+    "card-inset": { "$type": "dimension", "$value": "10px" }
+  },
+  "radius": {
+    "card": { "$type": "dimension", "$value": "6px" },
+    "chip": { "$type": "dimension", "$value": "999px" }
+  },
+  "font": {
+    "size-body": { "$type": "dimension", "$value": "14px" },
+    "size-count": { "$type": "dimension", "$value": "12px" }
+  },
+  "dark": {
+    "surface": { "$type": "color", "$value": "#1b1f24" },
+    "surface-column": { "$type": "color", "$value": "#252b33" },
+    "text": { "$type": "color", "$value": "#e5e7eb" }
+  }
+}

@@ -1,0 +1,45 @@
+# forms description of the fs-tasks frontend "board-plain" (plain board: cards show title and due date only).
+# LAYOUT ONLY (workflow frontend-beschreiben, rule 2): no [[source]], no [[action]], no command, no [[requires]],
+# no colour and no size in this file. Placeholder values only. The binding (source, map, commands) is added later
+# to this same file. The frontend id names the look (a plain board), not a model program.
+# Data: the module holds more (priority, participants, keywords, progress); this frontend shows only title and due.
+# Columns are the status grouping (`board`), without a border: that is the style `plain` (styles/plain/tokens.json).
+schema = 1
+kind = "frontend"
+id = "board-plain"
+extends = "net.freesynergy.Tasks"
+exec = "fs-forms-run"
+title = "tasks-board-plain-title"
+style = "plain"
+message = [
+  { key = "tasks-board-plain-title", lang = "en", text = "Tasks" },
+  { key = "tasks-board-plain-title", lang = "de", text = "Aufgaben" },
+  { key = "tasks-board-plain-empty-title", lang = "en", text = "No tasks here yet" },
+  { key = "tasks-board-plain-empty-title", lang = "de", text = "Hier ist noch keine Aufgabe" },
+  { key = "tasks-board-plain-empty-text", lang = "en", text = "What needs to be done?" },
+  { key = "tasks-board-plain-empty-text", lang = "de", text = "Was ist zu tun?" },
+]
+
+# ---- page "board": the board in the main area, nothing beside it
+[[page]]
+page = "board"
+frame = "workbench"
+
+[[page.block]]
+place = "main"
+block = "board"
+bind = [
+  { slot = "cards", nth = 0 },
+  { slot = "columns", nth = 0, grouping = "board" },
+  { slot = "order", nth = 0, order = "rank" },
+  { slot = "card-title", nth = 0, field = "title", role = "display" },
+  { slot = "card-facts", nth = 0, field = "due", role = "compact" },
+  { slot = "quick-add", nth = 0 },
+]
+
+# states the host shows without code
+[[page.block]]
+place = "empty"
+block = "empty-state"
+title = "tasks-board-plain-empty-title"
+text = "tasks-board-plain-empty-text"

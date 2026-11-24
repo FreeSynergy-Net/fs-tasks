@@ -1,0 +1,71 @@
+# Pattern: Composite – a tree of blocks (page, frame, block, place) as plain data; deviation: no trait, only data (the host reads it).
+# forms description of the fs-tasks frontend "board-swimlanes": LAYOUT ONLY (workflow frontend-beschreiben, rules 2 and 4).
+# Nach Gestalt benannt: Bahnen (Swimlanes) mit Klappkopf und Zähler, Spalten mit Zahl und Grenze, Karten mit Kartenton.
+# Bewusst andere Daten als `board` (Status-Spalten) und `board-wip` (Schwester-Frontend): Bahnen sind eine Gruppierung je Karte.
+#
+# NOT in this file (rule 2, no fake source, no binding): no [[source]], no bind, no map, no command, no action, no menu.
+# The placement of the blocks below is the layout. The internal look that a block needs (slots, fields, placeholder values)
+# is written as comments under each block; it is bound later, when Scaffold and Forms stand. Open points: ../FEHLENDE-COMPONENTS.md
+# is not changed here; the cards are in the report (.scratch/woche-11-23/form/BERICHT-fe-tasks-board-swimlanes.md).
+#
+# Theme: style = "office" (the layer of ADR 0074, tokens in styles/office.tokens.json). No colour, size or font in this file.
+# Layout placeholders: none can be shown without a bound slot (a card "Platzhalterwerte ohne Bindung" in the report).
+schema = 1
+kind = "frontend"
+id = "board-swimlanes"
+extends = "net.freesynergy.Tasks"
+exec = "fs-forms-run"
+title = "board-swimlanes-title"
+style = "office"
+message = [
+  { key = "board-swimlanes-title", lang = "en", text = "Tasks by lane" },
+  { key = "board-swimlanes-title", lang = "de", text = "Aufgaben nach Bahnen" },
+  { key = "board-swimlanes-side-title", lang = "en", text = "Projects and labels" },
+  { key = "board-swimlanes-side-title", lang = "de", text = "Projekte und Labels" },
+  { key = "board-swimlanes-empty-title", lang = "en", text = "No tasks in these lanes" },
+  { key = "board-swimlanes-empty-title", lang = "de", text = "Keine Aufgaben in diesen Bahnen" },
+  { key = "board-swimlanes-empty-text", lang = "en", text = "Create a task to start a lane." },
+  { key = "board-swimlanes-empty-text", lang = "de", text = "Lege eine Aufgabe an, dann entsteht eine Bahn." },
+]
+
+[[requires]]
+contract = "planning@>=0.0.1, <0.1.0"
+
+# ---- page "board-swimlanes": a workbench with the side list and the main area.
+[[page]]
+page = "board-swimlanes"
+frame = "workbench"
+navigation = "list-detail"
+
+# Side list (projects, labels). Nothing bound yet (sidebar slots are not declared in the catalog).
+[[page.block]]
+place = "side"
+block = "sidebar"
+title = "board-swimlanes-side-title"
+
+# Main area: ONE board with the lanes as its first level (Bahnen), the columns inside each lane.
+# Look that the block needs, bound later (slots of block "board" in contract/blocks/widgets.toml):
+#   - Bahnen: slot `lanes` (grouping within cards) exists. Per lane: head with a disclosure (Klappkopf, parts
+#     `header`, `mark`, `title`, `panel` of block "disclosure") and a count of the cards in it (part `count`).
+#     Which field makes the lane: vorlaeufig, the grouping by "lane" needs a field of the task (not in the model yet).
+#   - Spalten: slot `columns` (grouping `board`, status). Column head: name and count (part `count`), limit (part `wip`,
+#     `wip-text`, `wip-symbol`, `over-limit` state) - the limit is not a slot of block "board" yet (offen).
+#   - Karten: `card-title` (title), `card-facts` (due, estimated duration, priority P0-P3, description mark).
+#     Card tone (the colour of the card as an attribute): block "board-card" and "task-card" have no tone variant (offen);
+#     vorlaeufig: block "board-card" stands in, its tone comes from the style layer only, not from the card.
+# Search field and status filter sit in the bar of the board: block "board" has a part `bar` but no slot for it (offen).
+[[page.block]]
+place = "main"
+block = "board"
+
+# Empty state (texts are keys of this file, nothing bound).
+[[page.block]]
+place = "empty"
+block = "empty-state"
+title = "board-swimlanes-empty-title"
+text = "board-swimlanes-empty-text"
+
+# Partial state (a locked or missing binding is shown as a notice, never as an empty area).
+[[page.block]]
+place = "partial"
+block = "partial-notice"

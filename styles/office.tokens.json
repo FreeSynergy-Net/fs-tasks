@@ -1,0 +1,44 @@
+{
+  "$description": "Style layer (ADR 0074, W3C DTCG) for the tasks frontends, name Office, board parts only. Partial: other blocks take the system default. Values are estimates read by eye from the model picture (not measured, not copied); a dark variant is not written yet. Theme name in English; reference: Office (angelehnt an Jira, Confluence und Fluent, ADR 0074).",
+  "$name": "Office",
+  "board": {
+    "lane": {
+      "head": {
+        "background": { "$type": "color", "$value": "#eef1f5" },
+        "text": { "$type": "color", "$value": "#1f2933" },
+        "padding": { "$type": "dimension", "$value": "8px" },
+        "fontWeight": { "$type": "fontWeight", "$value": 600 }
+      },
+      "gap": { "$type": "dimension", "$value": "12px" }
+    },
+    "column": {
+      "head": {
+        "text": { "$type": "color", "$value": "#3e4c59" },
+        "count": { "$type": "color", "$value": "#616e7c" }
+      },
+      "limit-over": { "$type": "color", "$value": "#b42318" },
+      "gap": { "$type": "dimension", "$value": "8px" }
+    },
+    "card": {
+      "radius": { "$type": "dimension", "$value": "6px" },
+      "padding": { "$type": "dimension", "$value": "8px 10px" },
+      "border": { "$type": "color", "$value": "#d9dee5" },
+      "title": { "$type": "color", "$value": "#1f2933" },
+      "facts": { "$type": "color", "$value": "#616e7c" },
+      "tone": {
+        "1": { "$type": "color", "$value": "#fdf3c4" },
+        "2": { "$type": "color", "$value": "#d9f2e3" },
+        "3": { "$type": "color", "$value": "#dbe9fb" },
+        "4": { "$type": "color", "$value": "#ece1fb" },
+        "5": { "$type": "color", "$value": "#fde2d7" },
+        "6": { "$type": "color", "$value": "#e4e7eb" }
+      }
+    },
+    "priority": {
+      "P0": { "$type": "color", "$value": "#b42318" },
+      "P1": { "$type": "color", "$value": "#b54708" },
+      "P2": { "$type": "color", "$value": "#175cd3" },
+      "P3": { "$type": "color", "$value": "#616e7c" }
+    }
+  }
+}

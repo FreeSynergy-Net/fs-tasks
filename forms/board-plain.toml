@@ -1,9 +1,11 @@
 # forms description of the fs-tasks frontend "board-plain" (plain board: cards show title and due date only).
-# LAYOUT ONLY (workflow frontend-beschreiben, rule 2): no [[source]], no [[action]], no command, no [[requires]],
-# no colour and no size in this file. Placeholder values only. The binding (source, map, commands) is added later
-# to this same file. The frontend id names the look (a plain board), not a model program.
-# Data: the module holds more (priority, participants, keywords, progress); this frontend shows only title and due.
-# Columns are the status grouping (`board`), without a border: that is the style `plain` (styles/plain/tokens.json).
+# BINDING (round 2, workflow frontend-beschreiben, step layout-schreiben): source = module planning, pattern forms/board.toml.
+# No colour and no size in this file (style `plain` lives in the style layer). No fake source.
+# Form: cards-in-columns@1.2.0 (fs-interfaces v0.1.1 schema/forms.txt). Used channels: cards, column, title, facts (due only),
+# order (read), move (after/before written by the module), create, remove. NOT used on purpose: lane, progress, priority,
+# participants, keywords. The module holds more; this frontend does not show it.
+# Channels column-label, after, before are bound by the MODULE (catalog/forms.json), not here (forms/README.md).
+# The description only chooses the trigger and the command key: drop -> card.move, quick-add -> task.create, menu -> task.delete.
 schema = 1
 kind = "frontend"
 id = "board-plain"
@@ -20,6 +22,16 @@ message = [
   { key = "tasks-board-plain-empty-text", lang = "de", text = "Was ist zu tun?" },
 ]
 
+[[requires]]
+contract = "planning@>=0.0.1, <0.1.0"
+
+# Source 1 = the tasks provider (module planning, as in board.toml).
+[[source]]
+n = 1
+contract = "planning@>=0.0.1, <0.1.0"
+type = "Task"
+scope = "selected-list"
+
 # ---- page "board": the board in the main area, nothing beside it
 [[page]]
 page = "board"
@@ -28,14 +40,34 @@ frame = "workbench"
 [[page.block]]
 place = "main"
 block = "board"
+source = 1
 bind = [
   { slot = "cards", nth = 0 },
   { slot = "columns", nth = 0, grouping = "board" },
   { slot = "order", nth = 0, order = "rank" },
   { slot = "card-title", nth = 0, field = "title", role = "display" },
   { slot = "card-facts", nth = 0, field = "due", role = "compact" },
-  { slot = "quick-add", nth = 0 },
+  { slot = "move", nth = 0, command = "card.move" },
+  { slot = "quick-add", nth = 0, command = "task.create" },
+  { slot = "card-menu", nth = 0, command = "task.delete" },
 ]
+
+# actions: drag a card (move), entry row (create), delete (confirm: data is lost)
+[[action]]
+trigger = "quick-add"
+source = 1
+command = "task.create"
+
+[[action]]
+trigger = "drop"
+source = 1
+command = "card.move"
+
+[[action]]
+trigger = "menu"
+source = 1
+command = "task.delete"
+confirm = "confirm"
 
 # states the host shows without code
 [[page.block]]

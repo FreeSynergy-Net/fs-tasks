@@ -1,11 +1,12 @@
 # forms description of the fs-tasks frontend "board-wip" (second board frontend, WIP-oriented).
-# LAYOUT ONLY (Workflow frontend-beschreiben, rule 2): which components stand where, placeholder values only.
-# NO [[source]], NO [[requires]], NO bind, NO command, NO view, NO action: binding (channels and attributes of the
-# module form cards-in-columns) is added later in this same file. Theme: `style = "board-wip"` (tokens in styles/).
+# Round 2 (BINDING, Workflow frontend-beschreiben, order 24.11.): source 1 = planning (as forms/board.toml), binding
+# of the channels of cards-in-columns@1.2.0 that this layout shows; commands card.move, task.create, task.delete.
+# Channels NOT bound (no slot in the board block, or the layout does not show them): lane, progress, column-label
+# (the module map delivers them; no description key), description (not a fact, 1.3.0 of C1), WIP limit per column
+# (no channel), card colour, priority colour mapping (no field-choice). See FRONTENDS-tasks-attribute-board-wip.md.
+# Views and menus stay host functions (no [[view]], no view switch). Theme: `style = "board-wip"` (tokens in styles/).
 # Shape (named after the form, not after any model program): columns with count and limit, cards with due chip,
 # priority tag, description mark; view tabs List | Gantt | Table | Kanban; filter button.
-# What the layout cannot express yet (no key in the reader for it): see FRONTENDS-tasks-attribute-board-wip.md and
-# FEHLENDE-COMPONENTS.md (tasks 24.11., Bahn C). Nothing here is a fake source.
 schema = 1
 kind = "frontend"
 id = "board-wip"
@@ -34,12 +35,39 @@ message = [
   { key = "tasks-board-empty-text", lang = "de", text = "Was ist zu tun?" },
 ]
 
+[[requires]]
+contract = "planning@>=0.0.1, <0.1.0"
+
+# Source 1 = the tasks provider; "selected-list" = the list chosen in the sidebar (as in board.toml).
+[[source]]
+n = 1
+contract = "planning@>=0.0.1, <0.1.0"
+type = "Task"
+scope = "selected-list"
+
 # ---- menu tree: standard entries only (no command, no view switch here)
 [[menu]]
 kind = "standard-program"
 
 [[menu]]
 kind = "standard-help"
+
+# ---- actions: drop = card.move, quick-add = task.create, menu = task.delete (confirm: data is lost)
+[[action]]
+trigger = "quick-add"
+source = 1
+command = "task.create"
+
+[[action]]
+trigger = "drop"
+source = 1
+command = "card.move"
+
+[[action]]
+trigger = "menu"
+source = 1
+command = "task.delete"
+confirm = "confirm"
 
 # ---- page "board-wip": window shell, side strip, view tabs, board, states
 [[page]]
@@ -57,10 +85,26 @@ title = "tasks-side-title"
 place = "bar"
 block = "tablist"
 
-# columns with head (name, count, limit), cards below; the card parts are the board block's own
+# columns with head (name, count, limit), cards below; the card parts are the board block's own.
+# Binding as in board.toml; facts = the four module facts (due chip, priority tag, participants, keywords).
 [[page.block]]
 place = "main"
 block = "board"
+source = 1
+bind = [
+  { slot = "cards", nth = 0 },
+  { slot = "columns", nth = 0, grouping = "board" },
+  { slot = "order", nth = 0, order = "rank" },
+  { slot = "card-title", nth = 0, field = "title", role = "display" },
+  { slot = "card-facts", nth = 0, field = "due", role = "compact" },
+  { slot = "card-facts", nth = 1, field = "priority", role = "compact" },
+  { slot = "card-facts", nth = 2, field = "participants", role = "compact" },
+  { slot = "card-facts", nth = 3, field = "keywords", role = "compact" },
+  { slot = "card-lock", nth = 0, lock = true },
+  { slot = "move", nth = 0, command = "card.move" },
+  { slot = "quick-add", nth = 0, command = "task.create" },
+  { slot = "card-menu", nth = 0, command = "task.delete" },
+]
 
 # states the host shows without code
 [[page.block]]

@@ -24,7 +24,7 @@
 #   move          -> slot `move` command `card.move`; writes column, after, before, lane (after/before by the module)  BOUND
 #   create        -> slot `quick-add` command `task.create`; needs title, column, lane  BOUND
 #   remove        -> slot `card-menu` command `task.delete`, confirm            BOUND
-#   column-label  -> NO slot (block board has no label slot for the column name; board-column has part `name` only)   offen
+#   column-label  -> bound by the MODULE (catalog/forms.json, key `map`), no key in this file; NO slot to show it (block board has no label slot for the column name; board-column has part `name` only)   offen
 #   progress      -> NO slot on block board/board-card (card-facts takes facts only; progress is a bar, not a fact)     offen
 #
 # NOT bound here, and why (offen, not faked): colour of a card (`color`, 1.3.0 channel; board-card has no colour slot),
@@ -46,6 +46,7 @@ style = "office"
 elem = "requires:1"
 contract = "planning@>=0.0.1, <0.1.0"
 
+# Source 1 = the planning module (fs-modules-planning), the type Task (JSCalendar Task, RFC 8984).
 [[source]]
 elem = "source:1"
 n = 1
@@ -53,12 +54,14 @@ contract = "planning@>=0.0.1, <0.1.0"
 type = "Task"
 scope = "selected-list"
 
+# ---- page "board-swimlanes": a workbench with the side list and the main area.
 [[page]]
 elem = "page:board-swimlanes"
 page = "board-swimlanes"
 frame = "workbench"
 navigation = "list-detail"
 
+# Side list (projects, labels). Not bound: sidebar slots are not declared in the catalog (offen).
 [[page.place]]
 elem = "block:board-swimlanes/side"
 at = "side"
@@ -66,6 +69,7 @@ block = "sidebar"
 source = 1
 title = "board-swimlanes-side-title"
 
+# Main area: ONE board. Lanes are the first level (slot `lanes`), columns inside each lane (slot `columns`).
 [[page.place]]
 elem = "block:board-swimlanes/main"
 at = "main"
@@ -141,6 +145,7 @@ slot = "quick-add"
 nth = 0
 command = "task.create"
 
+# Empty state (texts are keys of this file).
 [[page.place]]
 elem = "block:board-swimlanes/empty"
 at = "empty"
@@ -148,11 +153,13 @@ block = "empty-state"
 title = "board-swimlanes-empty-title"
 text = "board-swimlanes-empty-text"
 
+# Partial state (a locked or missing binding is shown as a notice, never as an empty area).
 [[page.place]]
 elem = "block:board-swimlanes/partial"
 at = "partial"
 block = "partial-notice"
 
+# ---- actions: drop a card (move), entry row (create), delete (confirm: data is lost)
 [[action]]
 elem = "action:1"
 trigger = "quick-add"

@@ -16,6 +16,7 @@ style = "default"
 elem = "requires:1"
 contract = "planning@>=0.0.1, <0.1.0"
 
+# Source 1 = the tasks provider; "selected-list" = the list chosen in the sidebar (F-010).
 [[source]]
 elem = "source:1"
 n = 1
@@ -23,6 +24,7 @@ contract = "planning@>=0.0.1, <0.1.0"
 type = "Task"
 scope = "selected-list"
 
+# ---- menu tree (M-001, M-002/M-003 as views, M-004..M-006 see PLATZHALTER.md: the frontend switch is a host function)
 [[menu]]
 elem = "menu:0"
 kind = "standard-program"
@@ -80,6 +82,7 @@ view = "order-due"
 elem = "menu:3"
 kind = "standard-help"
 
+# ---- page "board": F-006 board, F-007 card, F-008 side panel (list-detail), F-009 entry row, F-010 side list
 [[page]]
 elem = "page:board"
 page = "board"
@@ -93,6 +96,7 @@ block = "sidebar"
 source = 1
 title = "tasks-side-title"
 
+# card-facts nth 1 = priority: since cards-in-columns@1.3.0 its own channel (no longer a fact; the field name stays). Shown as a number until the P0-P3 mapping (Bündel 1b).
 [[page.place]]
 elem = "block:board/main"
 at = "main"
@@ -175,6 +179,8 @@ slot = "quick-add"
 nth = 0
 command = "task.create"
 
+# "progress" entfällt: das Feld heißt im Dienst `percent` (1.3.0), es gibt kein Feld `progress` mehr (tote Bindung).
+# description und color sind eigene Kanäle von cards-in-columns@1.3.0 (Daten, keine Farbe im Form-File).
 [[page.place]]
 elem = "block:board/detail"
 at = "detail"
@@ -241,6 +247,7 @@ nth = 0
 field = "title"
 role = "display"
 
+# states the host shows without code (accepts = []): a locked binding is shown as a notice, never an empty area
 [[page.place]]
 elem = "block:board/partial"
 at = "partial"
@@ -253,6 +260,7 @@ block = "empty-state"
 title = "tasks-board-empty-title"
 text = "tasks-board-empty-text"
 
+# ---- actions: drag a card (move), entry row (create), delete (confirm: only where data is lost, F-025)
 [[action]]
 elem = "action:1"
 trigger = "quick-add"
@@ -272,6 +280,7 @@ source = 1
 command = "task.delete"
 confirm = "confirm"
 
+# ---- views (the board grouping "board" = the status columns F-006; the program provides the grouping by name)
 [[view]]
 elem = "view:lanes"
 view = "lanes"

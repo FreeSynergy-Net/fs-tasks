@@ -22,6 +22,8 @@ contract = "planning@>=0.0.1, <0.1.0"
 type = "Task"
 scope = "all"
 
+# ---- menus: exactly the old five entries (tests/menus.rs): Task > New; View > List, Status. No delete entry in the menu (old rule:
+# "no menu that could do nothing"); delete stays a command of the form. Commands are contract keys (`task.create`, `task.delete`). The Frontend menu (M-004..M-006) is a host function.
 [[menu]]
 elem = "menu:0"
 kind = "standard-program"
@@ -59,6 +61,7 @@ view = "status"
 elem = "menu:3"
 kind = "standard-help"
 
+# ---- page "list": F-002, F-003 (the grid: head, rows, cells; its column slot is not declared yet)
 [[page]]
 elem = "page:list"
 page = "list"
@@ -83,6 +86,8 @@ elem = "block:list/partial"
 at = "partial"
 block = "partial-notice"
 
+# ---- page "edit": F-005, one form-field row per field of the old form (words.rs field:: list, 13 fields; "Extended status" = progressExtended, name unproven). Role input.
+# form-field is the only form block with declared slots (record, value). The field TYPES need field blocks the catalog lacks.
 [[page]]
 elem = "page:edit"
 page = "edit"
@@ -179,6 +184,7 @@ nth = 0
 field = "priority"
 role = "input"
 
+# f-status: ohne Bindung. Das Feld "progress" gibt es im Dienst nicht mehr (1.3.0: progress ist ein Kanal, das Feld heißt percent).
 [[page.place]]
 elem = "block:edit/f-status"
 at = "f-status"
@@ -311,6 +317,7 @@ nth = 0
 field = "sensitive"
 role = "input"
 
+# ---- actions: a task is started from the menu (new task); an unsaved change blocks "new" (rule of the form, F-005)
 [[action]]
 elem = "action:1"
 trigger = "menu"
@@ -324,6 +331,7 @@ source = 1
 command = "task.delete"
 confirm = "confirm"
 
+# ---- views: list = one set (columns Title, Due, Priority, Status); status = the same tasks grouped by status (F-002, F-003)
 [[view]]
 elem = "view:list"
 view = "list"
@@ -334,6 +342,8 @@ by = "order"
 name = "rank"
 descending = false
 
+# status: grouping "progress" entfällt (kein Gruppierungsname "progress" im Dienst oder in der Form 1.3.0; progress ist nur ein Zahlenkanal).
+# Ersatz "board" = die Statusspalten, wie in board.toml (Gruppierung "board"). Bedeutung nicht am Host geprüft.
 [[view]]
 elem = "view:status"
 view = "status"
@@ -405,6 +415,7 @@ key = "tasks-classic-title"
 lang = "en"
 text = "FreeSynergy Tasks"
 
+# tasks-edit-title: not used by any place today (kept, offen)
 [[message]]
 elem = "message:tasks-edit-title/de"
 key = "tasks-edit-title"

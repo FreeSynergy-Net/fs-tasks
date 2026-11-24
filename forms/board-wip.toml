@@ -21,6 +21,7 @@ style = "board-wip"
 elem = "requires:1"
 contract = "planning@>=0.0.1, <0.1.0"
 
+# Source 1 = the tasks provider; "selected-list" = the list chosen in the sidebar (as in board.toml).
 [[source]]
 elem = "source:1"
 n = 1
@@ -28,6 +29,7 @@ contract = "planning@>=0.0.1, <0.1.0"
 type = "Task"
 scope = "selected-list"
 
+# ---- menu tree: standard entries only (no command, no view switch here)
 [[menu]]
 elem = "menu:0"
 kind = "standard-program"
@@ -36,6 +38,7 @@ kind = "standard-program"
 elem = "menu:1"
 kind = "standard-help"
 
+# ---- page "board-wip": window shell, side strip, view tabs, board, states
 [[page]]
 elem = "page:board-wip"
 page = "board-wip"
@@ -48,11 +51,16 @@ at = "side"
 block = "sidebar"
 title = "tasks-side-title"
 
+# view tabs (List, Gantt, Table, Kanban) and the filter button sit above the board
+# (the texts view-list, view-gantt, view-table, view-kanban and filter-button below are kept for them: the block tablist has no declared
+# binding yet, so no place uses these texts today – offen, not faked)
 [[page.place]]
 elem = "block:board-wip/bar"
 at = "bar"
 block = "tablist"
 
+# columns with head (name, count, limit), cards below; the card parts are the board block's own.
+# Binding as in board.toml; facts = the four module facts (due chip, priority tag, participants, keywords).
 [[page.place]]
 elem = "block:board-wip/main"
 at = "main"
@@ -135,6 +143,7 @@ slot = "quick-add"
 nth = 0
 command = "task.create"
 
+# states the host shows without code
 [[page.place]]
 elem = "block:board-wip/partial"
 at = "partial"
@@ -147,6 +156,7 @@ block = "empty-state"
 title = "tasks-board-empty-title"
 text = "tasks-board-empty-text"
 
+# ---- actions: drop = card.move, quick-add = task.create, menu = task.delete (confirm: data is lost)
 [[action]]
 elem = "action:1"
 trigger = "quick-add"

@@ -11,8 +11,7 @@ This directory prescribes them from the existing views; the existing code (`crat
 | `list.toml` | `classic` | Classic | `list` (list and status view), `edit` (task form, 13 rows) |
 | `day.toml` | `day` | Day list | `day` (side list, rows, quick add) |
 
-Format: Layout format 3 (`schema = 3`) of `fs-forms-exchange` (a tree of places `[[page.place]]`, every element carries its `elem` id; older formats are refused with `format-old`, not converted). Keys, words and rules are those of the reader in fs-forms (main 779c9518; `fs-forms-exchange` `read_layout`),
-`fs-forms-layout` `check`), range spelling `name@>=a.b.c, <d.e.f`. Components: block contract 0.4 of fs-components
+Format: Layout format 3 (`schema = 3`) of `fs-forms-exchange` (a tree of places `[[page.place]]`, every element carries its `elem` id; older formats are refused with `format-old`, not converted). Keys, words and rules are those of the reader in fs-forms (main 779c9518: `fs-forms-exchange` `read_layout`, `fs-forms-layout` `check`), range spelling `name@>=a.b.c, <d.e.f`. Components: block contract 0.4 of fs-components
 (`contract/blocks/*.toml`).
 Location (decided by the strategy): `forms/` in the repo root next to `scaffold.toml`; the program IS the description.
 
@@ -69,7 +68,7 @@ Checked by lint (reading, no build, no cargo): TOML syntax; closed key sets per 
 roles, `by`); menu pair rules (command needs command, view needs view); source numbers; block names, slot names, `nth` below the
 slot `repeat`, required slots against `contract/blocks/*.toml`; every text key used has `de` and `en`. The lint (a small script) mirrors
 `fs-forms-exchange/src/read.rs`, `fs-forms-layout/src/rules.rs`, `check.rs` and is **not** the real reader.
-**Not checked by machine:** the real import (no build allowed, no exchange crate on main), MF2 syntax of the texts, field names against
+**Checked by the real reader (24.11.2026):** every file passes `read_layout` (fs-forms-exchange, format 3) and `fs-starter --check-system --description <file>` (`red=0`). **Not checked by machine:** MF2 syntax of the texts, field names against
 the provider (no `TypeCatalog`), `choose(field, role)` against the catalog (not built), shortcuts against the keymap (`ctrl+n`, `delete`),
 the unbelegt old behaviour of Classic (external crate). Hash `forms_bind_v1` was not recomputed (needs a build).
 
@@ -80,3 +79,20 @@ the unbelegt old behaviour of Classic (external crate). Hash `forms_bind_v1` was
 3. Filters (labels, project, status): the filter tree is not read in the format cut (`filter` is `key-unknown` today); extend the format?
 4. Start list `--list` and `--plan`: host options or settings (`fs.shell.frontend`)?
 5. One description with three pages or three frontends? Chosen: three (matches the three old frontends, the unique key is (extends, frontend)).
+
+## Known gaps in the host (findings of the builder, 24.11.2026; belong on the host cards, not in these descriptions)
+
+The picture shows a strip "some parts are locked" (`partial-notice`). Which block the host has not built per file (the host builds
+only the blocks `board` and `sidebar` plus the states):
+
+| File | Strip names (blocks without a host component) |
+|---|---|
+| `board.toml` | `board-detail` |
+| `list.toml` | `grid`, `form-field` |
+| `day.toml` | `task-row`, `quick-add` |
+| `board-wip.toml` | `tablist` |
+| `board-swimlanes.toml`, `board-plain.toml` | none named: the cause of the strip is NOT proven (the strip hides it; probably lane not served or a locked binding) |
+
+Further findings, same host card (`fs-forms-run`): the status bar cuts off the strip (`board`, `board-plain`, `board-swimlanes`); the
+side list stays empty because `sidebar` is a frame in the host without slots in the catalog and `planning` delivers no lists or
+projects yet (so the "offen" notes in the files stay until a list record exists in `planning` and the sidebar slots exist in the catalog).

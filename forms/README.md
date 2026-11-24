@@ -11,8 +11,8 @@ This directory prescribes them from the existing views; the existing code (`crat
 | `list.toml` | `classic` | Classic | `list` (list and status view), `edit` (task form, 13 rows) |
 | `day.toml` | `day` | Day list | `day` (side list, rows, quick add) |
 
-Format: Format 1 of `fs-forms-exchange` (ids derived; export writes Format 2). Keys, words and rules are those of the reader in fs-forms 0.0.12
-(`fs-forms-exchange` `read_layout`, `fs-forms-layout` `check`), range spelling `name@>=a.b.c, <d.e.f`. Components: block contract 0.4 of fs-components
+Format: Layout format 3 (`schema = 3`) of `fs-forms-exchange` (a tree of places `[[page.place]]`, every element carries its `elem` id; older formats are refused with `format-old`, not converted). Keys, words and rules are those of the reader in fs-forms (main 779c9518; `fs-forms-exchange` `read_layout`),
+`fs-forms-layout` `check`), range spelling `name@>=a.b.c, <d.e.f`. Components: block contract 0.4 of fs-components
 (`contract/blocks/*.toml`).
 Location (decided by the strategy): `forms/` in the repo root next to `scaffold.toml`; the program IS the description.
 

@@ -1,192 +1,442 @@
 # forms description of the fs-tasks frontend "classic" (F-001..F-005, M-001..M-003): list view, status view, task form.
-# IMPORT FORM ONLY (ADR 0096 point 6), Format 1; see board.toml for the rules. The old classic window was drawn by an external crate
+# IMPORT FORM ONLY (ADR 0096 point 6), Format 3; see board.toml for the rules. The old classic window was drawn by an external crate
 # (fs-components-workbenches 0.0.13, not in this repo), so interactions beyond the menus are UNPROVEN (LISTE-fs-tasks-funktionen-vorher
 # 2026-11-18, uncertainty 1). Blocks whose slots the catalog has not declared yet (accepts = []) are placed WITHOUT bindings; the
 # missing slots are named in ../FEHLENDE-COMPONENTS.md. Nothing is invented here.
-schema = 1
+schema = 3
 kind = "frontend"
 id = "classic"
 extends = "net.freesynergy.Tasks"
 exec = "fs-forms-run"
 title = "tasks-classic-title"
 style = "default"
-message = [
-  { key = "tasks-classic-title", lang = "en", text = "FreeSynergy Tasks" },
-  { key = "tasks-classic-title", lang = "de", text = "FreeSynergy Aufgaben" },
-  { key = "menu-task", lang = "en", text = "Task" },
-  { key = "menu-task", lang = "de", text = "Aufgabe" },
-  { key = "menu-view", lang = "en", text = "View" },
-  { key = "menu-view", lang = "de", text = "Ansicht" },
-  { key = "view-list", lang = "en", text = "List" },
-  { key = "view-list", lang = "de", text = "Liste" },
-  { key = "view-status", lang = "en", text = "Status" },
-  { key = "view-status", lang = "de", text = "Status" },
-  { key = "tasks-edit-title", lang = "en", text = "Task" },
-  { key = "tasks-edit-title", lang = "de", text = "Aufgabe" },
-  { key = "tasks-classic-empty-title", lang = "en", text = "No tasks" },
-  { key = "tasks-classic-empty-title", lang = "de", text = "Keine Aufgaben" },
-  { key = "tasks-classic-empty-text", lang = "en", text = "Create one with Task, New." },
-  { key = "tasks-classic-empty-text", lang = "de", text = "Lege eine an mit Aufgabe, Neu." },
-]
 
 [[requires]]
+elem = "requires:1"
 contract = "planning@>=0.0.1, <0.1.0"
 
 [[source]]
+elem = "source:1"
 n = 1
 contract = "planning@>=0.0.1, <0.1.0"
 type = "Task"
 scope = "all"
 
-# ---- menus: exactly the old five entries (tests/menus.rs): Task > New; View > List, Status. No delete entry in the menu (old rule:
-# "no menu that could do nothing"); delete stays a command of the form. Commands are contract keys (`task.create`, `task.delete`). The Frontend menu (M-004..M-006) is a host function.
 [[menu]]
+elem = "menu:0"
 kind = "standard-program"
 
 [[menu]]
+elem = "menu:1"
 kind = "menu"
 label = "menu-task"
-entries = [
-  { kind = "command", source = 1, command = "task.create", key = "ctrl+n" },
-]
+
+[[menu.entries]]
+elem = "menu:1.0"
+kind = "command"
+source = 1
+command = "task.create"
+key = "ctrl+n"
 
 [[menu]]
+elem = "menu:2"
 kind = "menu"
 label = "menu-view"
-entries = [
-  { kind = "view", view = "list", label = "view-list" },
-  { kind = "view", view = "status", label = "view-status" },
-]
+
+[[menu.entries]]
+elem = "menu:2.0"
+kind = "view"
+label = "view-list"
+view = "list"
+
+[[menu.entries]]
+elem = "menu:2.1"
+kind = "view"
+label = "view-status"
+view = "status"
 
 [[menu]]
+elem = "menu:3"
 kind = "standard-help"
 
-# ---- views: list = one set (columns Title, Due, Priority, Status); status = the same tasks grouped by status (F-002, F-003)
-[[view]]
-view = "list"
-order = [{ by = "order", name = "rank" }]
+[[page]]
+elem = "page:list"
+page = "list"
+frame = "workbench"
+navigation = "list-detail"
 
-# status: grouping "progress" entfällt (kein Gruppierungsname "progress" im Dienst oder in der Form 1.3.0; progress ist nur ein Zahlenkanal).
-# Ersatz "board" = die Statusspalten, wie in board.toml (Gruppierung "board"). Bedeutung nicht am Host geprüft.
-[[view]]
-view = "status"
-grouping = "board"
-order = [{ by = "order", name = "rank" }]
+[[page.place]]
+elem = "block:list/main"
+at = "main"
+block = "grid"
+source = 1
 
-# ---- actions: a task is started from the menu (new task); an unsaved change blocks "new" (rule of the form, F-005)
+[[page.place]]
+elem = "block:list/empty"
+at = "empty"
+block = "empty-state"
+title = "tasks-classic-empty-title"
+text = "tasks-classic-empty-text"
+
+[[page.place]]
+elem = "block:list/partial"
+at = "partial"
+block = "partial-notice"
+
+[[page]]
+elem = "page:edit"
+page = "edit"
+frame = "detail-page"
+navigation = "single"
+
+[[page.place]]
+elem = "block:edit/f-title"
+at = "f-title"
+block = "form-field"
+source = 1
+
+[[page.place.bind]]
+elem = "binding:edit/f-title/record/0"
+slot = "record"
+nth = 0
+
+[[page.place.bind]]
+elem = "binding:edit/f-title/value/0"
+slot = "value"
+nth = 0
+field = "title"
+role = "input"
+
+[[page.place]]
+elem = "block:edit/f-description"
+at = "f-description"
+block = "form-field"
+source = 1
+
+[[page.place.bind]]
+elem = "binding:edit/f-description/record/0"
+slot = "record"
+nth = 0
+
+[[page.place.bind]]
+elem = "binding:edit/f-description/value/0"
+slot = "value"
+nth = 0
+field = "description"
+role = "input"
+
+[[page.place]]
+elem = "block:edit/f-due"
+at = "f-due"
+block = "form-field"
+source = 1
+
+[[page.place.bind]]
+elem = "binding:edit/f-due/record/0"
+slot = "record"
+nth = 0
+
+[[page.place.bind]]
+elem = "binding:edit/f-due/value/0"
+slot = "value"
+nth = 0
+field = "due"
+role = "input"
+
+[[page.place]]
+elem = "block:edit/f-zone"
+at = "f-zone"
+block = "form-field"
+source = 1
+
+[[page.place.bind]]
+elem = "binding:edit/f-zone/record/0"
+slot = "record"
+nth = 0
+
+[[page.place.bind]]
+elem = "binding:edit/f-zone/value/0"
+slot = "value"
+nth = 0
+field = "timeZone"
+role = "input"
+
+[[page.place]]
+elem = "block:edit/f-priority"
+at = "f-priority"
+block = "form-field"
+source = 1
+
+[[page.place.bind]]
+elem = "binding:edit/f-priority/record/0"
+slot = "record"
+nth = 0
+
+[[page.place.bind]]
+elem = "binding:edit/f-priority/value/0"
+slot = "value"
+nth = 0
+field = "priority"
+role = "input"
+
+[[page.place]]
+elem = "block:edit/f-status"
+at = "f-status"
+block = "form-field"
+source = 1
+
+[[page.place]]
+elem = "block:edit/f-status-ext"
+at = "f-status-ext"
+block = "form-field"
+source = 1
+
+[[page.place.bind]]
+elem = "binding:edit/f-status-ext/record/0"
+slot = "record"
+nth = 0
+
+[[page.place.bind]]
+elem = "binding:edit/f-status-ext/value/0"
+slot = "value"
+nth = 0
+field = "progressExtended"
+role = "input"
+
+[[page.place]]
+elem = "block:edit/f-percent"
+at = "f-percent"
+block = "form-field"
+source = 1
+
+[[page.place.bind]]
+elem = "binding:edit/f-percent/record/0"
+slot = "record"
+nth = 0
+
+[[page.place.bind]]
+elem = "binding:edit/f-percent/value/0"
+slot = "value"
+nth = 0
+field = "percentComplete"
+role = "input"
+
+[[page.place]]
+elem = "block:edit/f-labels"
+at = "f-labels"
+block = "form-field"
+source = 1
+
+[[page.place.bind]]
+elem = "binding:edit/f-labels/record/0"
+slot = "record"
+nth = 0
+
+[[page.place.bind]]
+elem = "binding:edit/f-labels/value/0"
+slot = "value"
+nth = 0
+field = "keywords"
+role = "input"
+
+[[page.place]]
+elem = "block:edit/f-repeat"
+at = "f-repeat"
+block = "form-field"
+source = 1
+
+[[page.place.bind]]
+elem = "binding:edit/f-repeat/record/0"
+slot = "record"
+nth = 0
+
+[[page.place.bind]]
+elem = "binding:edit/f-repeat/value/0"
+slot = "value"
+nth = 0
+field = "recurrenceRules"
+role = "input"
+
+[[page.place]]
+elem = "block:edit/f-people"
+at = "f-people"
+block = "form-field"
+source = 1
+
+[[page.place.bind]]
+elem = "binding:edit/f-people/record/0"
+slot = "record"
+nth = 0
+
+[[page.place.bind]]
+elem = "binding:edit/f-people/value/0"
+slot = "value"
+nth = 0
+field = "participants"
+role = "input"
+
+[[page.place]]
+elem = "block:edit/f-related"
+at = "f-related"
+block = "form-field"
+source = 1
+
+[[page.place.bind]]
+elem = "binding:edit/f-related/record/0"
+slot = "record"
+nth = 0
+
+[[page.place.bind]]
+elem = "binding:edit/f-related/value/0"
+slot = "value"
+nth = 0
+field = "relatedTo"
+role = "input"
+
+[[page.place]]
+elem = "block:edit/f-sensitive"
+at = "f-sensitive"
+block = "form-field"
+source = 1
+
+[[page.place.bind]]
+elem = "binding:edit/f-sensitive/record/0"
+slot = "record"
+nth = 0
+
+[[page.place.bind]]
+elem = "binding:edit/f-sensitive/value/0"
+slot = "value"
+nth = 0
+field = "sensitive"
+role = "input"
+
 [[action]]
+elem = "action:1"
 trigger = "menu"
 source = 1
 command = "task.create"
 
 [[action]]
+elem = "action:2"
 trigger = "button"
 source = 1
 command = "task.delete"
 confirm = "confirm"
 
-# ---- page "list": F-002, F-003 (the grid: head, rows, cells; its column slot is not declared yet)
-[[page]]
-page = "list"
-frame = "workbench"
-navigation = "list-detail"
+[[view]]
+elem = "view:list"
+view = "list"
 
-[[page.block]]
-place = "main"
-block = "grid"
-source = 1
+[[view.order]]
+elem = "view-order:list/1"
+by = "order"
+name = "rank"
+descending = false
 
-[[page.block]]
-place = "empty"
-block = "empty-state"
-title = "tasks-classic-empty-title"
-text = "tasks-classic-empty-text"
+[[view]]
+elem = "view:status"
+view = "status"
+grouping = "board"
 
-[[page.block]]
-place = "partial"
-block = "partial-notice"
+[[view.order]]
+elem = "view-order:status/1"
+by = "order"
+name = "rank"
+descending = false
 
-# ---- page "edit": F-005, one form-field row per field of the old form (words.rs field:: list, 13 fields; "Extended status" = progressExtended, name unproven). Role input.
-# form-field is the only form block with declared slots (record, value). The field TYPES need field blocks the catalog lacks.
-[[page]]
-page = "edit"
-frame = "detail-page"
-navigation = "single"
+[[message]]
+elem = "message:menu-task/de"
+key = "menu-task"
+lang = "de"
+text = "Aufgabe"
 
-[[page.block]]
-place = "f-title"
-block = "form-field"
-source = 1
-bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "title", role = "input" }]
+[[message]]
+elem = "message:menu-task/en"
+key = "menu-task"
+lang = "en"
+text = "Task"
 
-[[page.block]]
-place = "f-description"
-block = "form-field"
-source = 1
-bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "description", role = "input" }]
+[[message]]
+elem = "message:menu-view/de"
+key = "menu-view"
+lang = "de"
+text = "Ansicht"
 
-[[page.block]]
-place = "f-due"
-block = "form-field"
-source = 1
-bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "due", role = "input" }]
+[[message]]
+elem = "message:menu-view/en"
+key = "menu-view"
+lang = "en"
+text = "View"
 
-[[page.block]]
-place = "f-zone"
-block = "form-field"
-source = 1
-bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "timeZone", role = "input" }]
+[[message]]
+elem = "message:tasks-classic-empty-text/de"
+key = "tasks-classic-empty-text"
+lang = "de"
+text = "Lege eine an mit Aufgabe, Neu."
 
-[[page.block]]
-place = "f-priority"
-block = "form-field"
-source = 1
-bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "priority", role = "input" }]
+[[message]]
+elem = "message:tasks-classic-empty-text/en"
+key = "tasks-classic-empty-text"
+lang = "en"
+text = "Create one with Task, New."
 
-[[page.block]]
-# f-status: ohne Bindung. Das Feld "progress" gibt es im Dienst nicht mehr (1.3.0: progress ist ein Kanal, das Feld heißt percent).
-place = "f-status"
-block = "form-field"
-source = 1
+[[message]]
+elem = "message:tasks-classic-empty-title/de"
+key = "tasks-classic-empty-title"
+lang = "de"
+text = "Keine Aufgaben"
 
-[[page.block]]
-place = "f-status-ext"
-block = "form-field"
-source = 1
-bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "progressExtended", role = "input" }]
+[[message]]
+elem = "message:tasks-classic-empty-title/en"
+key = "tasks-classic-empty-title"
+lang = "en"
+text = "No tasks"
 
-[[page.block]]
-place = "f-percent"
-block = "form-field"
-source = 1
-bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "percentComplete", role = "input" }]
+[[message]]
+elem = "message:tasks-classic-title/de"
+key = "tasks-classic-title"
+lang = "de"
+text = "FreeSynergy Aufgaben"
 
-[[page.block]]
-place = "f-labels"
-block = "form-field"
-source = 1
-bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "keywords", role = "input" }]
+[[message]]
+elem = "message:tasks-classic-title/en"
+key = "tasks-classic-title"
+lang = "en"
+text = "FreeSynergy Tasks"
 
-[[page.block]]
-place = "f-repeat"
-block = "form-field"
-source = 1
-bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "recurrenceRules", role = "input" }]
+[[message]]
+elem = "message:tasks-edit-title/de"
+key = "tasks-edit-title"
+lang = "de"
+text = "Aufgabe"
 
-[[page.block]]
-place = "f-people"
-block = "form-field"
-source = 1
-bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "participants", role = "input" }]
+[[message]]
+elem = "message:tasks-edit-title/en"
+key = "tasks-edit-title"
+lang = "en"
+text = "Task"
 
-[[page.block]]
-place = "f-related"
-block = "form-field"
-source = 1
-bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "relatedTo", role = "input" }]
+[[message]]
+elem = "message:view-list/de"
+key = "view-list"
+lang = "de"
+text = "Liste"
 
-[[page.block]]
-place = "f-sensitive"
-block = "form-field"
-source = 1
-bind = [{ slot = "record", nth = 0 }, { slot = "value", nth = 0, field = "sensitive", role = "input" }]
+[[message]]
+elem = "message:view-list/en"
+key = "view-list"
+lang = "en"
+text = "List"
+
+[[message]]
+elem = "message:view-status/de"
+key = "view-status"
+lang = "de"
+text = "Status"
+
+[[message]]
+elem = "message:view-status/en"
+key = "view-status"
+lang = "en"
+text = "Status"

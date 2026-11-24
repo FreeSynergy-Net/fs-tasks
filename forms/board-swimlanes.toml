@@ -34,91 +34,188 @@
 # .scratch/woche-11-23/form/BERICHT-fe-tasks-bind-board-swimlanes.md.
 #
 # Theme: style = "office" (the layer of ADR 0074, tokens in styles/office.tokens.json). No colour, size or font in this file.
-schema = 1
+schema = 3
 kind = "frontend"
 id = "board-swimlanes"
 extends = "net.freesynergy.Tasks"
 exec = "fs-forms-run"
 title = "board-swimlanes-title"
 style = "office"
-message = [
-  { key = "board-swimlanes-title", lang = "en", text = "Tasks by lane" },
-  { key = "board-swimlanes-title", lang = "de", text = "Aufgaben nach Bahnen" },
-  { key = "board-swimlanes-side-title", lang = "en", text = "Projects and labels" },
-  { key = "board-swimlanes-side-title", lang = "de", text = "Projekte und Labels" },
-  { key = "board-swimlanes-empty-title", lang = "en", text = "No tasks in these lanes" },
-  { key = "board-swimlanes-empty-title", lang = "de", text = "Keine Aufgaben in diesen Bahnen" },
-  { key = "board-swimlanes-empty-text", lang = "en", text = "Create a task to start a lane." },
-  { key = "board-swimlanes-empty-text", lang = "de", text = "Lege eine Aufgabe an, dann entsteht eine Bahn." },
-]
 
 [[requires]]
+elem = "requires:1"
 contract = "planning@>=0.0.1, <0.1.0"
 
-# Source 1 = the planning module (fs-modules-planning), the type Task (JSCalendar Task, RFC 8984).
 [[source]]
+elem = "source:1"
 n = 1
 contract = "planning@>=0.0.1, <0.1.0"
 type = "Task"
 scope = "selected-list"
 
-# ---- page "board-swimlanes": a workbench with the side list and the main area.
 [[page]]
+elem = "page:board-swimlanes"
 page = "board-swimlanes"
 frame = "workbench"
 navigation = "list-detail"
 
-# Side list (projects, labels). Not bound: sidebar slots are not declared in the catalog (offen).
-[[page.block]]
-place = "side"
+[[page.place]]
+elem = "block:board-swimlanes/side"
+at = "side"
 block = "sidebar"
 source = 1
 title = "board-swimlanes-side-title"
 
-# Main area: ONE board. Lanes are the first level (slot `lanes`), columns inside each lane (slot `columns`).
-[[page.block]]
-place = "main"
+[[page.place]]
+elem = "block:board-swimlanes/main"
+at = "main"
 block = "board"
 source = 1
-bind = [
-  { slot = "cards", nth = 0 },
-  { slot = "lanes", nth = 0, grouping = "lane" },
-  { slot = "columns", nth = 0, grouping = "board" },
-  { slot = "order", nth = 0, order = "rank" },
-  { slot = "card-title", nth = 0, field = "title", role = "display" },
-  { slot = "card-facts", nth = 0, field = "due", role = "compact" },
-  { slot = "card-facts", nth = 1, field = "priority", role = "compact" },
-  { slot = "card-facts", nth = 2, field = "estimated", role = "compact" },
-  { slot = "move", nth = 0, command = "card.move" },
-  { slot = "quick-add", nth = 0, command = "task.create" },
-  { slot = "card-menu", nth = 0, command = "task.delete" },
-]
 
-# Empty state (texts are keys of this file).
-[[page.block]]
-place = "empty"
+[[page.place.bind]]
+elem = "binding:board-swimlanes/main/card-facts/0"
+slot = "card-facts"
+nth = 0
+field = "due"
+role = "compact"
+
+[[page.place.bind]]
+elem = "binding:board-swimlanes/main/card-facts/1"
+slot = "card-facts"
+nth = 1
+field = "priority"
+role = "compact"
+
+[[page.place.bind]]
+elem = "binding:board-swimlanes/main/card-facts/2"
+slot = "card-facts"
+nth = 2
+field = "estimated"
+role = "compact"
+
+[[page.place.bind]]
+elem = "binding:board-swimlanes/main/card-menu/0"
+slot = "card-menu"
+nth = 0
+command = "task.delete"
+
+[[page.place.bind]]
+elem = "binding:board-swimlanes/main/card-title/0"
+slot = "card-title"
+nth = 0
+field = "title"
+role = "display"
+
+[[page.place.bind]]
+elem = "binding:board-swimlanes/main/cards/0"
+slot = "cards"
+nth = 0
+
+[[page.place.bind]]
+elem = "binding:board-swimlanes/main/columns/0"
+slot = "columns"
+nth = 0
+grouping = "board"
+
+[[page.place.bind]]
+elem = "binding:board-swimlanes/main/lanes/0"
+slot = "lanes"
+nth = 0
+grouping = "lane"
+
+[[page.place.bind]]
+elem = "binding:board-swimlanes/main/move/0"
+slot = "move"
+nth = 0
+command = "card.move"
+
+[[page.place.bind]]
+elem = "binding:board-swimlanes/main/order/0"
+slot = "order"
+nth = 0
+order = "rank"
+
+[[page.place.bind]]
+elem = "binding:board-swimlanes/main/quick-add/0"
+slot = "quick-add"
+nth = 0
+command = "task.create"
+
+[[page.place]]
+elem = "block:board-swimlanes/empty"
+at = "empty"
 block = "empty-state"
 title = "board-swimlanes-empty-title"
 text = "board-swimlanes-empty-text"
 
-# Partial state (a locked or missing binding is shown as a notice, never as an empty area).
-[[page.block]]
-place = "partial"
+[[page.place]]
+elem = "block:board-swimlanes/partial"
+at = "partial"
 block = "partial-notice"
 
-# ---- actions: drop a card (move), entry row (create), delete (confirm: data is lost)
 [[action]]
+elem = "action:1"
 trigger = "quick-add"
 source = 1
 command = "task.create"
 
 [[action]]
+elem = "action:2"
 trigger = "drop"
 source = 1
 command = "card.move"
 
 [[action]]
+elem = "action:3"
 trigger = "menu"
 source = 1
 command = "task.delete"
 confirm = "confirm"
+
+[[message]]
+elem = "message:board-swimlanes-empty-text/de"
+key = "board-swimlanes-empty-text"
+lang = "de"
+text = "Lege eine Aufgabe an, dann entsteht eine Bahn."
+
+[[message]]
+elem = "message:board-swimlanes-empty-text/en"
+key = "board-swimlanes-empty-text"
+lang = "en"
+text = "Create a task to start a lane."
+
+[[message]]
+elem = "message:board-swimlanes-empty-title/de"
+key = "board-swimlanes-empty-title"
+lang = "de"
+text = "Keine Aufgaben in diesen Bahnen"
+
+[[message]]
+elem = "message:board-swimlanes-empty-title/en"
+key = "board-swimlanes-empty-title"
+lang = "en"
+text = "No tasks in these lanes"
+
+[[message]]
+elem = "message:board-swimlanes-side-title/de"
+key = "board-swimlanes-side-title"
+lang = "de"
+text = "Projekte und Labels"
+
+[[message]]
+elem = "message:board-swimlanes-side-title/en"
+key = "board-swimlanes-side-title"
+lang = "en"
+text = "Projects and labels"
+
+[[message]]
+elem = "message:board-swimlanes-title/de"
+key = "board-swimlanes-title"
+lang = "de"
+text = "Aufgaben nach Bahnen"
+
+[[message]]
+elem = "message:board-swimlanes-title/en"
+key = "board-swimlanes-title"
+lang = "en"
+text = "Tasks by lane"

@@ -100,11 +100,16 @@ fn the_program_draws_through_picture_and_through_the_live_build_alike() {
     let _one = serial();
     let w = world();
     let app = fs_tasks_app::app_widget(w.adapter.clone()).unwrap();
-    let Some(once) = draw(&app, "tasks-once.png", (1300, 800)) else {
+    // The first picture of a process differs from every later one by 159 pixels at the left edge of the search field
+    // (found 26.11.; card to fs-components: Blinc state carried from the first picture). So one picture is drawn and
+    // thrown away; the two paths are then compared from the same state.
+    if draw(&app, "tasks-warmup.png", (1300, 800)).is_none() {
         return;
-    };
+    }
+    let once = draw(&app, "tasks-once.png", (1300, 800)).unwrap();
     let live = out("tasks-live.png");
-    let canvas = Canvas::new(1300, 800, app.styles());
+    // As the window has it: the default look of Blinc's own widgets goes with the window (`AppWidget::picture` does the same).
+    let canvas = Canvas::new(1300, 800, app.styles()).with_window_styles();
     draw_to_png(
         &canvas,
         |width, height| app.build(width, height),

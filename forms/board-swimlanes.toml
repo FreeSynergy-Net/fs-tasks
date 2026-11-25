@@ -1,6 +1,6 @@
 # Pattern: Composite – a tree of blocks (page, frame, block, place) as plain data; deviation: no trait, only data (the host reads it).
 # forms description of the fs-tasks frontend "board-swimlanes" (workflow frontend-beschreiben, step layout-schreiben, Runde 2: BINDEN).
-# Form: cards-in-columns@1.3.0 (fs-interfaces main 7bbad2ff schema/forms.txt). Source: module planning (contract planning@>=0.0.1, <0.1.0).
+# Form: cards-in-columns@1.4.0 (fs-interfaces main 83b96e30 schema/forms.txt; module planning main 908f1c1f). Source: module planning (contract planning@>=0.0.1, <0.1.0).
 # Pattern of the bindings: forms/board.toml (slot = block input, field = provider field, command = contract key, no module prefix).
 # Nach Gestalt benannt: Bahnen (Swimlanes) mit Klappkopf und Zähler, Spalten mit Zahl, Karten mit Faktenzeile.
 # Bewusst andere Daten als `board` (Status-Spalten) und `board-wip` (Schwester-Frontend): Bahnen sind eine Gruppierung je Karte.
@@ -9,29 +9,44 @@
 # The channels of the form are bound here where a slot exists. Channels WITHOUT a slot are NOT faked; each is marked "offen" below.
 # Channel `after`/`before` of `move` is written by the MODULE (catalog/forms.json, key `map`), never by this file.
 #
-# Channel -> binding (form cards-in-columns@1.3.0):
+# Channel -> binding (form cards-in-columns@1.4.0):
 #   cards         -> slot `cards` (block board, records)                      BOUND
 #   column        -> slot `columns` grouping `board`                           BOUND (the column id is the grouping, not a field)
 #   title         -> slot `card-title` field `title`                           BOUND
 #   facts (0..4)  -> slot `card-facts` nth 0: due (the only fact this frontend takes)                  BOUND
 #   priority      -> slot `card-facts` nth 1 (own channel since 1.3.0, shown as a number until Bündel 1b)  BOUND
-#   estimated     -> slot `card-facts` nth 2 (own channel since 1.3.0, ISO 8601 text)                    BOUND
-#                    participants and keywords are NOT bound here (this frontend does not show them; card-facts holds 4 at most)
-#   lane          -> slot `lanes` grouping `lane`                              BOUND, BUT NOT SERVED YET: the module maps `lane`
-#                    to board membership (ABGLEICH-frontends-tasks-attribute.md, point 7); the grouping by a named lane channel is
-#                    not in the host or module yet. Until then the lanes stay visibly empty (offen), never a fake lane.
+#   estimated     -> slot `card-facts` nth 2, provider field `estimatedDuration` (ISO 8601 text; planning renamed the field from `estimated`)  BOUND
+#   state         -> slot `card-facts` nth 3, provider field `progress` (the status word of JSCalendar progress; no value for an invalid stored word).
+#                    Shown as the raw word until the label mapping (Bündel 1b).                          BOUND
+#   assignee      -> slot `lanes` grouping `assignee`: the lanes are the people in charge (role chair; one card with two people stands in both lanes).
+#                    BOUND, BUT NOT FULLY SERVED YET (offen): the host (fs-forms-run) keeps only the LAST of the repeated `assignee` values
+#                    (fs-starter P9, C1); a lane head shows the IRI, not the name (the name belongs to the people module, no slot to ask for it);
+#                    a card without a person has no value, so a lane "nobody" is not drawn (the frontend would have to name it; no slot).
+#                    The card itself does NOT show the people in charge: card-facts is full, no other card slot (offen).
+#   lane          -> NOT bound. In 1.4.0 `lane` is the BOARD of the card (unchanged), no longer the lane of the swimlane view.
 #   order         -> slot `order` order `rank` (read only, the sequence as shown)  BOUND
 #   move          -> slot `move` command `card.move`; writes column, after, before, lane (after/before by the module)  BOUND
 #   create        -> slot `quick-add` command `task.create`; needs title, column, lane  BOUND
 #   remove        -> slot `card-menu` command `task.delete`, confirm            BOUND
 #   column-label  -> bound by the MODULE (catalog/forms.json, key `map`), no key in this file; NO slot to show it (block board has no label slot for the column name; board-column has part `name` only)   offen
-#   progress      -> NO slot on block board/board-card (card-facts takes facts only; progress is a bar, not a fact)     offen
+#   progress      -> (number, percentComplete) NO slot on block board/board-card (card-facts takes facts only; progress is a bar, not a fact)     offen
+#   time-zone     -> NO slot on the card (card-facts full); `due` stays an instant with Z, showing it in the zone is the host's job            offen
+#
+# LANE LIST (empty lanes, name, order) -- offen, NOT bindable with the format as it is: planning 908f1c1f serves the list as a SECOND source,
+# form `rows@1.0.0` type `Lane`, scope `lanes:<axis>[:<board>]` (axes state, assignee, lane). Three things are missing and none lies in this file:
+#   (1) the scope of `[[source]]` is a closed word (`all`, `selected-list`; fs-forms-layout words.rs), `lanes:assignee` is refused by the reader;
+#       a Lane source with `selected-list` would be answered by the module with form-source-unknown-scope (404) -- so no second source is declared;
+#   (2) a binding names no source (only the block has `source = n`), so slot `lanes` cannot be told to take its heads from source 2;
+#   (3) the host does not yet choose the `rows` entry by the source `type` (Task/Lane) nor draw lane heads from a second source (fs-starter P9).
+# Because of this the old hint "lanes stay empty" is replaced by this paragraph: lanes WITH cards come from the cards (grouping `assignee`);
+# lanes WITHOUT a card (the stored empty lane) are not drawn. Known gaps of the module (planning 908f1c1f, not hidden): column `recurrenceRule`
+# of rows@1.0.0 stays empty, `relatedTo` carries one value only, and the seed has no empty assignee lane.
 #
 # NOT bound here, and why (offen, not faked): colour of a card (`color`, 1.3.0 channel; board-card has no colour slot),
 # description (1.3.0 channel; no slot on the card, card-facts is full), column limit (`column-limit`, 1.3.0 channel; no slot on
 # block board), priority as P0-P3 label (the module gives the number; the label mapping is not in the contract),
 # search field and status filter (bar of the board has no slot). Details: ../FEHLENDE-COMPONENTS.md and the report
-# .scratch/woche-11-23/form/BERICHT-fe-tasks-bind-board-swimlanes.md.
+# .scratch/woche-11-23/form/BERICHT-p8.md.
 #
 # Theme: style = "office" (the layer of ADR 0074, tokens in styles/office.tokens.json). No colour, size or font in this file.
 schema = 3
@@ -88,7 +103,14 @@ role = "compact"
 elem = "binding:board-swimlanes/main/card-facts/2"
 slot = "card-facts"
 nth = 2
-field = "estimated"
+field = "estimatedDuration"
+role = "compact"
+
+[[page.place.bind]]
+elem = "binding:board-swimlanes/main/card-facts/3"
+slot = "card-facts"
+nth = 3
+field = "progress"
 role = "compact"
 
 [[page.place.bind]]
@@ -119,7 +141,7 @@ grouping = "board"
 elem = "binding:board-swimlanes/main/lanes/0"
 slot = "lanes"
 nth = 0
-grouping = "lane"
+grouping = "assignee"
 
 [[page.place.bind]]
 elem = "binding:board-swimlanes/main/move/0"

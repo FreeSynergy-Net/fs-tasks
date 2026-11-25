@@ -1,9 +1,10 @@
 # forms description of the fs-tasks frontend "board-plain" (plain board: cards show title and due date only).
 # BINDING (round 2, workflow frontend-beschreiben, step layout-schreiben): source = module planning, pattern forms/board.toml.
 # No colour and no size in this file (style `plain` lives in the style layer). No fake source.
-# Form: cards-in-columns@1.3.0 (fs-interfaces main 7bbad2ff schema/forms.txt). Used channels: cards, column, title, facts (due only),
+# Form: cards-in-columns@1.4.0 (fs-interfaces main 83b96e30 schema/forms.txt). Used channels: cards, column, title, facts (due only),
 # order (read), move (after/before written by the module), create, remove. NOT used on purpose: lane, progress, priority,
-# participants, keywords, and since 1.3.0 description, color, estimated, column-limit. The module holds more; this frontend does not show it.
+# participants, keywords, description, color, estimated, column-limit (1.3.0) and state, assignee, time-zone (1.4.0). The module holds more; this frontend
+# does not show it (on purpose, not `offen`: the plain board is title and due date only).
 # Channels column-label, after, before are bound by the MODULE (catalog/forms.json), not here (forms/README.md).
 # The description only chooses the trigger and the command key: drop -> card.move, quick-add -> task.create, menu -> task.delete.
 schema = 3

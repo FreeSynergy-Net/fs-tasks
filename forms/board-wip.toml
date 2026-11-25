@@ -1,10 +1,11 @@
 # forms description of the fs-tasks frontend "board-wip" (second board frontend, WIP-oriented).
-# Round 3 (1.3.0, Workflow frontend-beschreiben, Schritt layout-schreiben): source 1 = planning (as forms/board.toml), binding
-# of the channels of cards-in-columns@1.3.0 that this layout shows; commands card.move, task.create, task.delete.
+# Round 3, lifted to 1.4.0 (workflow frontend-round, step layout-schreiben, P8): source 1 = planning (as forms/board.toml), binding
+# of the channels of cards-in-columns@1.4.0 that this layout shows; commands card.move, task.create, task.delete.
 # priority is an own channel since 1.3.0 (no longer a fact); the field name stays; shown as a number until the P0-P3 mapping (Bündel 1b).
 # Channels NOT bound (no slot in the board block, or the layout does not show them): lane, progress, column-label
 # (the module map delivers them; no description key); column-limit (1.3.0): no slot (block board has none, board-column accepts = []),
 # so it stays open; description, color, estimated: no slot on board-card (card-facts is full: due, priority, participants, keywords).
+# 1.4.0 channels state, assignee (repeats), time-zone: `offen`, same reason (card-facts full, no other card slot); the card shows NOT the people in charge.
 # See FRONTENDS-tasks-attribute-board-wip.md.
 # Views and menus stay host functions (no [[view]], no view switch). Theme: `style = "board-wip"` (tokens in styles/).
 # Shape (named after the form, not after any model program): columns with count and limit, cards with due chip,

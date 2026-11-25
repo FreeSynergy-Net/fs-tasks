@@ -3,7 +3,7 @@
 # Names (blocks, slots, commands, fields) are NAMES: no code, no expression. Component ids = contract/blocks/*.toml of
 # fs-components main 8ede4856 (block contract 0.4). Field names = provider names; the tasks TypeCatalog does not exist yet
 # (field names marked "unproven" in README.md). What the catalog cannot take yet: ../FEHLENDE-COMPONENTS.md.
-# Commands are the contract keys of tasks.capnp (card.move, task.create, task.delete), without module prefix; the host binds the prefix (`planning.card.move`). The channel of the form `cards-in-columns@1.3.0` (move writes column, after, before; create; remove) is bound by the module (`catalog/forms.json`), never here; the description only chooses a trigger and a key (forms/README.md).
+# Commands are the contract keys of tasks.capnp (card.move, task.create, task.delete), without module prefix; the host binds the prefix (`planning.card.move`). The channel of the form `cards-in-columns@1.4.0` (move writes column, after, before; create; remove) is bound by the module (`catalog/forms.json`), never here; the description only chooses a trigger and a key (forms/README.md).
 schema = 3
 kind = "frontend"
 id = "board"
@@ -97,6 +97,9 @@ source = 1
 title = "tasks-side-title"
 
 # card-facts nth 1 = priority: since cards-in-columns@1.3.0 its own channel (no longer a fact; the field name stays). Shown as a number until the P0-P3 mapping (Bündel 1b).
+# Form 1.4.0 (fs-interfaces 83b96e30, module planning 908f1c1f): new channels state, assignee (repeats), time-zone. The four card-facts
+# slots are full (due, priority, participants, keywords), so on the CARD these three are `offen` (no slot, nothing faked): the card
+# does NOT show the people in charge; state, assignee and time zone appear only in the detail panel below.
 [[page.place]]
 elem = "block:board/main"
 at = "main"
@@ -179,8 +182,12 @@ slot = "quick-add"
 nth = 0
 command = "task.create"
 
-# "progress" entfällt: das Feld heißt im Dienst `percent` (1.3.0), es gibt kein Feld `progress` mehr (tote Bindung).
-# description und color sind eigene Kanäle von cards-in-columns@1.3.0 (Daten, keine Farbe im Form-File).
+# Detail panel, form 1.4.0 (fields of planning catalog/forms.json, map): `progress` = the status word (channel `state`, JSCalendar progress;
+# missing for an invalid stored word), `percentComplete` = the number (channel `progress`), `estimatedDuration` (channel `estimated`),
+# `timeZone` (channel `time-zone`; due stays an instant with Z, the zone says where it was set; showing it in the zone of the viewer is the host's job, `offen`),
+# `assignee` (channel `assignee`, one value per person in charge = role chair; the value is the IRI, the name belongs to the people module;
+# `offen`: the host keeps only the last repeated value until fs-starter P9 lands, so only one person may show).
+# description and color are own channels since 1.3.0 (data, no colour in the form file).
 [[page.place]]
 elem = "block:board/detail"
 at = "detail"
@@ -233,6 +240,41 @@ elem = "binding:board/detail/properties/5"
 slot = "properties"
 nth = 5
 field = "color"
+role = "display"
+
+[[page.place.bind]]
+elem = "binding:board/detail/properties/6"
+slot = "properties"
+nth = 6
+field = "progress"
+role = "display"
+
+[[page.place.bind]]
+elem = "binding:board/detail/properties/7"
+slot = "properties"
+nth = 7
+field = "percentComplete"
+role = "display"
+
+[[page.place.bind]]
+elem = "binding:board/detail/properties/8"
+slot = "properties"
+nth = 8
+field = "estimatedDuration"
+role = "display"
+
+[[page.place.bind]]
+elem = "binding:board/detail/properties/9"
+slot = "properties"
+nth = 9
+field = "timeZone"
+role = "display"
+
+[[page.place.bind]]
+elem = "binding:board/detail/properties/10"
+slot = "properties"
+nth = 10
+field = "assignee"
 role = "display"
 
 [[page.place.bind]]

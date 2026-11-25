@@ -184,12 +184,26 @@ nth = 0
 field = "priority"
 role = "input"
 
-# f-status: ohne Bindung. Das Feld "progress" gibt es im Dienst nicht mehr (1.3.0: progress ist ein Kanal, das Feld heißt percent).
+# Field names of the planning catalog 908f1c1f (rows@1.0.0 type Task, ENTSCHEID cards-1-4-0 (e)): `progress` = the status word (JSCalendar progress),
+# `taskStatus` = the fine status (RFC 10051), `percentComplete`, `recurrenceRule`, `privacy` (was `sensitive`). `offen`: the module leaves the
+# column `recurrenceRule` empty (no RRULE text yet) and sends ONE `relatedTo` value only; the grid has no column slot, so rows@1.0.0 is not bound here.
 [[page.place]]
 elem = "block:edit/f-status"
 at = "f-status"
 block = "form-field"
 source = 1
+
+[[page.place.bind]]
+elem = "binding:edit/f-status/record/0"
+slot = "record"
+nth = 0
+
+[[page.place.bind]]
+elem = "binding:edit/f-status/value/0"
+slot = "value"
+nth = 0
+field = "progress"
+role = "input"
 
 [[page.place]]
 elem = "block:edit/f-status-ext"
@@ -206,7 +220,7 @@ nth = 0
 elem = "binding:edit/f-status-ext/value/0"
 slot = "value"
 nth = 0
-field = "progressExtended"
+field = "taskStatus"
 role = "input"
 
 [[page.place]]
@@ -260,7 +274,7 @@ nth = 0
 elem = "binding:edit/f-repeat/value/0"
 slot = "value"
 nth = 0
-field = "recurrenceRules"
+field = "recurrenceRule"
 role = "input"
 
 [[page.place]]
@@ -314,7 +328,7 @@ nth = 0
 elem = "binding:edit/f-sensitive/value/0"
 slot = "value"
 nth = 0
-field = "sensitive"
+field = "privacy"
 role = "input"
 
 # ---- actions: a task is started from the menu (new task); an unsaved change blocks "new" (rule of the form, F-005)
@@ -342,7 +356,7 @@ by = "order"
 name = "rank"
 descending = false
 
-# status: grouping "progress" entfällt (kein Gruppierungsname "progress" im Dienst oder in der Form 1.3.0; progress ist nur ein Zahlenkanal).
+# status: grouping "progress" entfällt (progress ist in 1.4.0 weiter der Zahlenkanal; das Statuswort ist der Kanal `state`).
 # Ersatz "board" = die Statusspalten, wie in board.toml (Gruppierung "board"). Bedeutung nicht am Host geprüft.
 [[view]]
 elem = "view:status"

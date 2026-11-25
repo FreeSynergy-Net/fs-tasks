@@ -7,7 +7,7 @@ This directory prescribes them from the existing views; the existing code (`crat
 
 | File | Frontend id | Old frontend | Pages |
 |---|---|---|---|
-| `board.toml` | `board` (start frontend) | Board | `board` (side list, board, side panel, notice, empty) |
+| `board.toml` | `board` (start frontend) | Board | `board` (side list, board, notice, empty; the side panel is part of the board) |
 | `list.toml` | `classic` | Classic | `list` (list and status view), `edit` (task form, 13 rows) |
 | `day.toml` | `day` | Day list | `day` (side list, rows, quick add) |
 
@@ -25,7 +25,7 @@ Location (decided by the strategy): `forms/` in the repo root next to `scaffold.
 | F-005 | Task form | `list.toml` page `edit`: 13 `form-field` rows | bound; field blocks missing (see FEHLENDE-COMPONENTS.md) |
 | F-006 | Board | `board.toml` page `board`, block `board`, 12 bindings | bound |
 | F-007 | Card | `board` slots `card-title`, `card-facts` (4), `card-lock`, `card-menu` | key "FS-n" and wait mark missing (slot) |
-| F-008 | Card side panel | `board.toml` place `detail`, block `board-detail`, 9 bindings | bound |
+| F-008 | Card side panel | part of the block `board` (`board-detail` has no place and no bindings of its own since fs-components 81367489); the properties come from the channels of the rows | bound by the form |
 | F-009 | Entry line per column | `board` slot `quick-add` + action `quick-add`, key `task.create`; `day.toml` block `quick-add` | bound (the write works only with a service that serves `task.create`, see below) |
 | F-010 | Side list projects, labels | `board.toml`, `day.toml` block `sidebar` | placed WITHOUT bindings (slots missing) |
 | F-011 | Day list | `day.toml`: `task-row`, grouping `standing`, `quick-add` | placed WITHOUT bindings (slots missing) |
@@ -87,7 +87,7 @@ only the blocks `board` and `sidebar` plus the states):
 
 | File | Strip names (blocks without a host component) |
 |---|---|
-| `board.toml` | `board-detail` |
+| `board.toml` | none (the board is drawn; the side panel is part of it) |
 | `list.toml` | `grid`, `form-field` |
 | `day.toml` | `task-row`, `quick-add` |
 | `board-wip.toml` | `tablist` |

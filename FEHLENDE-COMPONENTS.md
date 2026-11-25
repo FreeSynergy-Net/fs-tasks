@@ -34,7 +34,7 @@ priority, participants, keywords). Not an error of the descriptions: the binding
 |---|---|---|---|---|---|
 | 14 | `board`: `card-key` (value, text) | Identifier "FS-n" on the card (F-007) | `board` | `card-facts` (limit 4, full) | open (the key is a provider field) |
 | 15 | `board`: `card-mark` (derived, display) | Mark "why it waits" for a blocked card (F-007, F-008) | `board` | `card-lock` (claims only) | open (RFC 8984 has relations, no wait reason) |
-| 16 | `task-row`: inline open | Open and close of a row in the day list (F-011) | `task-row` | `board-detail` (side frame) | open |
+| 16 | `task-row`: inline open | Open and close of a row in the day list (F-011) | `task-row` | the side panel inside `board` (`board-detail` is part of it) | open |
 | 17 | Filter bar (slot kind `condition`) | Inputs bound to a field (label, project, status) | new | `searchbox`, `tag`, `tablist` | open |
 
 ### C. Blocks whose slots are not declared (`accepts = []`), placed without bindings

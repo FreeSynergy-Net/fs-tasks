@@ -58,6 +58,7 @@ block = "sidebar"
 source = 1
 title = "tasks-day-side"
 
+# `task-row` needs no bindings: its fields (`facts`, `checked`, `code`, `described`) come over `forms=` from the module (fs-components 81367489).
 [[page.place]]
 elem = "block:day/rows"
 at = "rows"

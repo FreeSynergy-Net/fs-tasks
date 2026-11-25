@@ -116,7 +116,7 @@ fn line(snapshot: &Snapshot, e: &TaskEntry, opened: &[String]) -> TaskLine {
     let mut sub = label_list(&e.task);
     sub.extend(people(&e.task));
     l.sub = (!sub.is_empty()).then(|| sub.join("  \u{b7}  "));
-    l.chip = due_chip(&e.task, snapshot.today);
+    l.facts = due_chip(&e.task, snapshot.today).into_iter().collect();
     l.checked = standing(snapshot, e) == Standing::Finished;
     let reason = snapshot.readiness(&key).and_then(|r| why(snapshot, r));
     if standing(snapshot, e) == Standing::Blocked {

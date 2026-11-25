@@ -20,4 +20,8 @@ piece that is not yet in a module has a card (M1 to M14) in the FreeSynergy chec
 command line (`fs-tasks add/list/claim/next`), iCalendar import/export in the window and the status command check are not
 available from this package.
 
+## Licence and rules
+
+Dual licensed `MIT OR Apache-2.0` (`LICENSE-MIT`, `LICENSE-APACHE`). `.fs-rules.toml` sets the coding rules the CI gate reads (`blinc = "components-only"`: Blinc is used only through `fs-components`; this package has no code, the rule keeps it so).
+
 Written with the help of Claude (Anthropic).

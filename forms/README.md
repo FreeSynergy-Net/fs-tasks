@@ -3,7 +3,7 @@
 Rule (user rules, ADR 0096, entscheid 45/49): a program is a blueprint plus a forms description. The frontends of fs-tasks are
 **descriptions**, never a hand-written frontend crate: names of components, slots, fields, commands and MF2 text keys, no code,
 no expression. These files are the **import form**; the description lives as data in `forms.db` (no TOML as storage or config).
-This directory prescribes them from the existing views; the existing code (`crates/fs-tasks-app`) is untouched.
+This directory prescribes them from the views of the former program; its code is gone (archive tag `archive/pre-data-only`, commit `2f24768f967a5c42541aba8b9fd233772e2d3e1c`), only these descriptions remain.
 
 | File | Frontend id | Old frontend | Pages |
 |---|---|---|---|

@@ -9,4 +9,6 @@ permissions:
 
 jobs:
   check:
-    uses: FreeSynergy-Net/fs-release/.github/workflows/check.yml@ccb018e91d8ee12e4b804225b8226b50a129ab6e
+    uses: FreeSynergy-Net/fs-release/.github/workflows/check.yml@e6b9ed0622222ed973987a01c4bd4170bc53be3f
+    with:
+      blueprint: warn

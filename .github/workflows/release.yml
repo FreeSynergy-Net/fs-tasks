@@ -10,7 +10,7 @@ permissions:
   packages: write
 jobs:
   release:
-    uses: FreeSynergy-Net/fs-release/.github/workflows/release.yml@05a4a6a4e927931410d7ff262ac8f5af084f6766
+    uses: FreeSynergy-Net/fs-release/.github/workflows/release.yml@e6b9ed0622222ed973987a01c4bd4170bc53be3f
     with:
       kind: data
       name: fs-tasks

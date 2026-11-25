@@ -6,10 +6,10 @@
 use std::ffi::OsString;
 use std::sync::Arc;
 
-use fs_interfaces::rpc::{
+use fs_objects::{Store, TursoStore};
+use fs_rpc::{
     ServerIdentity, ServerOptions, default_data_dir, prepare_data_dir, run_until_signal_as,
 };
-use fs_objects::{Store, TursoStore};
 use fs_tasks_core::TaskRepo;
 
 use crate::TasksServer;

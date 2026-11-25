@@ -5,8 +5,8 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fs_interfaces::rpc::{check_answer, check_intake, read_object_id, run_to_end};
 use fs_interfaces::tasks_capnp::items;
+use fs_rpc::{check_answer, check_intake, read_object_id, run_to_end};
 use fs_tasks_core::contract::relation_from_wire;
 use fs_tasks_core::{TaskItems, TaskQuery};
 

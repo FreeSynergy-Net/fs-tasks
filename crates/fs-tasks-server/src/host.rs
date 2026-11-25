@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::sync::mpsc::Receiver;
 use std::time::Duration;
 
-use fs_interfaces::rpc::{bind_socket, serve};
+use fs_rpc::{bind_socket, serve};
 use fs_tasks_core::TaskRepo;
 use tokio::sync::oneshot;
 

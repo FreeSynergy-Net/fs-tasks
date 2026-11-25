@@ -76,7 +76,7 @@ fn stop_what_we_started(p: &Place, pids: &Arc<Mutex<Vec<u32>>>) {
         .build()
         .unwrap();
     let local = tokio::task::LocalSet::new();
-    let _ = local.block_on(&runtime, fs_interfaces::rpc::stop_server(&p.socket));
+    let _ = local.block_on(&runtime, fs_rpc::stop_server(&p.socket));
     std::thread::sleep(Duration::from_millis(300));
     for pid in pids.lock().unwrap().iter() {
         stub::kill_own_child(*pid);
@@ -212,9 +212,9 @@ fn a_server_of_another_program_is_named_and_left_alone() {
     let (p, pids) = (place(), Arc::new(Mutex::new(Vec::new())));
     let socket = p.socket.clone();
     let server = std::thread::spawn(move || {
-        fs_interfaces::rpc::run_until_signal_as(
+        fs_rpc::run_until_signal_as(
             &socket,
-            fs_interfaces::rpc::ServerIdentity::new("fs-other", "1"),
+            fs_rpc::ServerIdentity::new("fs-other", "1"),
             || async {
                 let store: Arc<dyn fs_objects::Store> = Arc::new(
                     fs_objects::TursoStore::open_in_memory()

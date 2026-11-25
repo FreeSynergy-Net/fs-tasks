@@ -4,10 +4,10 @@
 //! keeps the trait's explicit "not possible" or its default (`readiness_many` asks one by one).
 
 use async_trait::async_trait;
-use fs_interfaces::rpc::write_uuid;
 use fs_interfaces::tasks_capnp::items;
 use fs_interfaces::{Capabilities, Unsupported};
 use fs_objects::ObjectId;
+use fs_rpc::write_uuid;
 use fs_tasks_core::contract::{readiness_from_wire, relation_to_wire};
 use fs_tasks_core::plan::Readiness;
 use fs_tasks_core::{

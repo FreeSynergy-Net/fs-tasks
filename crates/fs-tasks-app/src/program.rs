@@ -15,7 +15,7 @@ use crate::sample::by_name as sample_by_name;
 use crate::{TaskAdapter, export_all, import_file, labels, labels_next, screen_widget};
 use fs_components_app::{Status, WindowOptions, launch};
 use fs_components_workbenches::tasks::{TaskView, TasksWidget};
-use fs_interfaces::rpc::default_socket;
+use fs_rpc::default_socket;
 use fs_tasks_core::Day;
 use fs_tasks_core::TaskItems;
 use fs_tasks_server::{Changes, Lang, StartError};

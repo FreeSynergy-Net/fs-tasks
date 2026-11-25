@@ -4,8 +4,8 @@
 mod common;
 
 use common::{create, edit_if, items_of, json, json_with, read_now, set_id, with_server};
-use fs_interfaces::rpc::{Problem, TOO_LARGE, write_uuid};
 use fs_objects::Envelope;
+use fs_rpc::{Problem, TOO_LARGE, write_uuid};
 use fs_tasks_core::MAX_TASK_BYTES;
 
 const INVALID: &str = "https://freesynergy.net/problems/tasks/invalid";
@@ -102,16 +102,13 @@ async fn a_text_that_is_no_json_and_an_empty_required_text_give_an_issue() {
 async fn too_large_carries_size_and_limit_for_the_intake_and_for_the_task() {
     with_server(|root| async move {
         let items = items_of(&root).await;
-        let huge = "x".repeat(fs_interfaces::rpc::MAX_INTAKE_BYTES + 1);
+        let huge = "x".repeat(fs_rpc::MAX_INTAKE_BYTES + 1);
         let mut call = items.create_request();
         call.get().set_jscalendar(huge.as_str());
         let p = problem_of(call.send().promise.await);
         assert_eq!(p.problem_type, TOO_LARGE);
         assert_eq!(p.ext_u64("size"), Some(huge.len() as u64));
-        assert_eq!(
-            p.ext_u64("limit"),
-            Some(fs_interfaces::rpc::MAX_INTAKE_BYTES as u64)
-        );
+        assert_eq!(p.ext_u64("limit"), Some(fs_rpc::MAX_INTAKE_BYTES as u64));
 
         // Under the intake, over what a task may weigh with its name: the core refuses it.
         let title = "y".repeat(MAX_TASK_BYTES / 2 + 1);

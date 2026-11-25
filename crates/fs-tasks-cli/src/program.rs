@@ -6,8 +6,8 @@
 
 use crate::start::ensure_server;
 use crate::{Failure, HELP, parse, run};
-use fs_interfaces::rpc::{connect, default_socket};
 use fs_interfaces::tasks_capnp::tasks;
+use fs_rpc::{connect, default_socket};
 use serde_json::json;
 
 /// Run the command line `words` (after the program name); the exit code.

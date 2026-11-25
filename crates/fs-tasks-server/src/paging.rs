@@ -4,8 +4,8 @@
 //! cut by weight so the answer always fits a message, with the cursor of the place the page ends
 //! at. The page was cut in the provider's store; here only its weight is looked at.
 
-use fs_interfaces::rpc::{MAX_ITEM_BYTES, MAX_PAGE_BYTES, Problem, TOO_LARGE, envelope_weight};
 use fs_interfaces::tasks_capnp;
+use fs_rpc::{MAX_ITEM_BYTES, MAX_PAGE_BYTES, Problem, TOO_LARGE, envelope_weight};
 use fs_tasks_core::{Placed, TaskItems, TaskPage, TaskQuery};
 
 use crate::cursor::{decode, encode};

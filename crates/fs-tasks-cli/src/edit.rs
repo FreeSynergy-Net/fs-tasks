@@ -4,9 +4,9 @@
 //! window, many workers) change tasks at the same time; whoever loses the race reads again and decides again,
 //! so a claim is decided on what is stored, never on what was stored a moment ago.
 
-use fs_interfaces::rpc::write_uuid;
 use fs_interfaces::tasks_capnp::items;
 use fs_objects::ObjectId;
+use fs_rpc::write_uuid;
 use fs_tasks_core::Task;
 use serde_json::{Value, json};
 

@@ -8,8 +8,8 @@ use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
-use fs_interfaces::rpc::{connect, read_envelope};
 use fs_interfaces::tasks_capnp::tasks;
+use fs_rpc::{connect, read_envelope};
 
 fn start(socket: &Path, data: &Path) -> Child {
     Command::new(env!("CARGO_BIN_EXE_fs-tasks"))

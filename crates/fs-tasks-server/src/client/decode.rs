@@ -3,9 +3,9 @@
 //! Pattern: Adapter — the JSCalendar text stays authoritative; the envelope is read for the id and the routing data.
 
 use fs_interfaces::Unsupported;
-use fs_interfaces::rpc::{read_envelope, read_object_id};
 use fs_interfaces::tasks_capnp::task;
 use fs_objects::ObjectId;
+use fs_rpc::{read_envelope, read_object_id};
 use fs_tasks_core::{Error, ImportReport, Result, Task, TaskEntry};
 
 /// A refusal of the server as a core error: "not implemented" is `Unsupported`, a conflict stays one, the rest is

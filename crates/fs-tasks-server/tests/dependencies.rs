@@ -4,8 +4,8 @@
 mod common;
 
 use common::{create, items_of, set_id, with_server};
-use fs_interfaces::rpc::Problem;
 use fs_interfaces::tasks_capnp::{Readiness, Relation};
+use fs_rpc::Problem;
 
 const CYCLE: &str = "https://freesynergy.net/problems/tasks/cycle";
 

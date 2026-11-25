@@ -43,11 +43,15 @@ async fn a_file_made_before_the_day_columns_gets_them_in_step_6() {
     }
     let who = common::known(1);
     let (list, task) = {
-        let old = fs_objects::v5::registry::Domain {
-            tables: &OLD_TABLES,
-            steps: &OLD_STEPS,
-            ..DOMAIN
-        };
+        let old = fs_objects::v5::registry::Domain::new(
+            DOMAIN.prefix,
+            DOMAIN.about,
+            &OLD_TABLES,
+            &OLD_STEPS,
+        )
+        .with_channels(DOMAIN.channels)
+        .with_children(DOMAIN.children)
+        .with_expiries(DOMAIN.expiries);
         let store = Store::open(&path, START_MS).await.unwrap();
         store.register_domain(&old, START_MS).await.unwrap();
         let c = store.begin().await.unwrap();

@@ -3,8 +3,8 @@
 mod common;
 
 use common::{create, items_of, json, set_id, task_json, with_server};
-use fs_interfaces::rpc::{Problem, TOO_LARGE, read_envelope};
 use fs_interfaces::tasks_capnp::items;
+use fs_rpc::{Problem, TOO_LARGE, read_envelope};
 use fs_tasks_core::MAX_TASK_BYTES;
 
 const INVALID: &str = "https://freesynergy.net/problems/tasks/invalid";

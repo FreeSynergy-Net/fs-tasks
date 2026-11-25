@@ -13,8 +13,8 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use fs_interfaces::common_capnp::change_listener;
-use fs_interfaces::rpc::connect;
 use fs_interfaces::tasks_capnp::{items as wire_items, tasks};
+use fs_rpc::connect;
 use fs_tasks_core::{Error, Result as CoreResult};
 use tokio::sync::{mpsc, oneshot};
 

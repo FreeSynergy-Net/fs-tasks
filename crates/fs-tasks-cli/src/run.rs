@@ -4,9 +4,9 @@
 //! back as the text of the problem the server sent; the contract's problem types are not reinterpreted.
 
 use fs_interfaces::common_capnp;
-use fs_interfaces::rpc::{read_envelope, write_uuid};
 use fs_interfaces::tasks_capnp::{items, task, tasks};
 use fs_objects::ObjectId;
+use fs_rpc::{read_envelope, write_uuid};
 
 use crate::args::Command;
 use crate::fail::Failure;

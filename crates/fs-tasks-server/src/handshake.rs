@@ -9,7 +9,7 @@ use std::path::Path;
 use std::time::Duration;
 
 use fs_interfaces::common_capnp::control;
-use fs_interfaces::rpc::connect;
+use fs_rpc::connect;
 use tokio::time::timeout;
 
 /// The name the server of this program gives (`ServerIdentity`).

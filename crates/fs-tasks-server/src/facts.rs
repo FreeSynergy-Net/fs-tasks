@@ -4,8 +4,8 @@
 //! of the detail text (`coding.md` §2a) is stated here as `id`, `kind` and `issue`; the detail text
 //! stays as it was. The table is in `DESIGN.md`.
 
-use fs_interfaces::rpc::{Problem, problem_keys as keys};
 use fs_objects::Error as StoreError;
+use fs_rpc::{Problem, problem_keys as keys};
 use fs_tasks_core::Error;
 
 /// `kind` of a task.

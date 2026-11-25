@@ -22,7 +22,7 @@ pub(super) fn due_text(task: &Task) -> String {
 }
 
 pub(super) fn priority_text(task: &Task) -> String {
-    task.priority.map(|p| p.to_string()).unwrap_or_default()
+    task.priority.map_or_else(String::new, |p| p.to_string())
 }
 
 /// Does `term` (in lower case) occur in what the person reads of this task?

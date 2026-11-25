@@ -3,9 +3,9 @@
 //! Pattern: Command (executor) — split from `work` to keep the files short; the claim itself is `work::take`.
 
 use chrono::Utc;
-use fs_interfaces::rpc::write_uuid;
 use fs_interfaces::tasks_capnp::items;
 use fs_objects::ObjectId;
+use fs_rpc::write_uuid;
 use fs_tasks_core::Task;
 use fs_tasks_core::contract::readiness_from_wire;
 use fs_tasks_core::plan::Readiness;

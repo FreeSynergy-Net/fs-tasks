@@ -1,9 +1,9 @@
 //! The cursor of a page: a [`Place`] in the order of the tasks, as bytes a client hands back.
 //!
-//! Pattern: Adapter — the byte form lives in `fs_interfaces::rpc` (`encode_place`, `decode_place`)
+//! Pattern: Adapter — the byte form lives in `fs_rpc` (`encode_place`, `decode_place`)
 //! since `fs-interfaces` v0.49.1; this file only maps the tasks' place to it and back.
 
-use fs_interfaces::rpc::{PlaceParts, decode_place, encode_place};
+use fs_rpc::{PlaceParts, decode_place, encode_place};
 use fs_tasks_core::Place;
 
 /// The cursor that continues after `place`.

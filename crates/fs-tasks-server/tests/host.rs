@@ -2,9 +2,9 @@
 
 use std::sync::Arc;
 
-use fs_interfaces::rpc::connect;
 use fs_interfaces::tasks_capnp::tasks;
 use fs_objects::{Store, TursoStore};
+use fs_rpc::connect;
 use fs_tasks_core::{TaskItems, TaskRepo};
 use fs_tasks_server::host;
 

@@ -128,8 +128,8 @@ async fn a_cursor_that_is_not_ours_is_an_invalid_request() {
             let mut call = items.list_request();
             call.get().init_cursor().set_opaque(cursor);
             let error = call.send().promise.await.err().expect("refused");
-            let problem = fs_interfaces::rpc::Problem::from_error(&error).unwrap();
-            assert_eq!(problem.problem_type, fs_interfaces::rpc::INVALID_REQUEST);
+            let problem = fs_rpc::Problem::from_error(&error).unwrap();
+            assert_eq!(problem.problem_type, fs_rpc::INVALID_REQUEST);
         }
     })
     .await;

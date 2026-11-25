@@ -6,7 +6,7 @@
 use std::sync::Arc;
 
 use fs_interfaces::common_capnp::{change_listener, subscription};
-use fs_interfaces::rpc::{ChangeSender, Notice, change_channel, forward};
+use fs_rpc::{ChangeSender, Notice, change_channel, forward};
 use fs_tasks_core::{TaskChange, TaskFeed, TaskItems, TaskListener};
 
 struct ToChannel(ChangeSender<TaskChange>);

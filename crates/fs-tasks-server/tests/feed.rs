@@ -8,7 +8,7 @@ use std::rc::Rc;
 use capnp_rpc::new_client;
 use common::{create, items_of, with_server};
 use fs_interfaces::common_capnp::{change, change_listener};
-use fs_interfaces::rpc::{read_envelope, write_uuid};
+use fs_rpc::{read_envelope, write_uuid};
 
 #[derive(Clone, Default)]
 struct Seen(Rc<RefCell<Vec<String>>>);

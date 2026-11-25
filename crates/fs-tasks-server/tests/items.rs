@@ -4,8 +4,8 @@
 mod common;
 
 use common::{ICS, create, items_of, json, set_id, task_json, with_server};
-use fs_interfaces::rpc::{read_uuid, write_uuid};
 use fs_interfaces::tasks_capnp::{Relation, items};
+use fs_rpc::{read_uuid, write_uuid};
 use serde_json::Value;
 
 async fn found_by_id(items: &items::Client, id: uuid::Uuid) -> Option<Value> {

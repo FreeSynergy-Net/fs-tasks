@@ -3,9 +3,9 @@
 
 use std::sync::Arc;
 
-use fs_interfaces::rpc::{bind_socket, connect, serve};
 use fs_interfaces::tasks_capnp::{items, tasks};
 use fs_objects::{Store, TursoStore};
+use fs_rpc::{bind_socket, connect, serve};
 use fs_tasks_cli::{Command, Failure, Policy, parse, run_with};
 use fs_tasks_core::TaskRepo;
 use fs_tasks_server::TasksServer;
@@ -77,7 +77,7 @@ pub async fn raw_create(root: &tasks::Client, task: &Value) -> String {
     let mut req = items.create_request();
     req.get().set_jscalendar(task.to_string().as_str());
     let answer = req.send().promise.await.unwrap();
-    let id = fs_interfaces::rpc::read_envelope(
+    let id = fs_rpc::read_envelope(
         answer
             .get()
             .unwrap()

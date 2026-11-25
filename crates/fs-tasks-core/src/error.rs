@@ -8,7 +8,7 @@ use fs_objects::ObjectId;
 
 /// Largest task: its JSON plus the name in its envelope, as an answer carries both and the title counts
 /// twice. With the rest of the envelope that always fits a page of the contract
-/// (`fs_interfaces::rpc::MAX_INTAKE_BYTES`, half of `MAX_PAGE_BYTES`).
+/// (`fs_rpc::MAX_INTAKE_BYTES`, half of `MAX_PAGE_BYTES`).
 pub const MAX_TASK_BYTES: usize = 16 * 1024 * 1024;
 
 /// Result of every fallible operation of this crate.

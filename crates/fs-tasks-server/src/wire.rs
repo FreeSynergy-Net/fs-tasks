@@ -5,13 +5,13 @@
 
 use std::borrow::Cow;
 
-use fs_interfaces::rpc::{
-    MAX_PAGE_BYTES, capped, check_intake, invalid_request, read_object_id, write_envelope,
-    write_object_id,
-};
 use fs_interfaces::tasks_capnp::items;
 use fs_interfaces::{common_capnp, tasks_capnp};
 use fs_objects::ObjectId;
+use fs_rpc::{
+    MAX_PAGE_BYTES, capped, check_intake, invalid_request, read_object_id, write_envelope,
+    write_object_id,
+};
 use fs_tasks_core::contract::read_filter;
 use fs_tasks_core::{ImportReport, Revision, Task, TaskEntry, TaskQuery};
 

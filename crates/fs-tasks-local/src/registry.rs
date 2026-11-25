@@ -41,14 +41,11 @@ const CHILDREN: &[Child] = &[
 ];
 
 /// The domain of tasks.
-pub const DOMAIN: Domain = Domain {
-    prefix: PREFIX,
-    about: "tasks: lists, tasks, labels, grants, checklists, dependencies, alerts, links, day columns",
-    tables: &ALL,
-    channels: CHANNELS,
-    children: CHILDREN,
-    expiries: &[],
-    steps: &[
+pub const DOMAIN: Domain = Domain::new(
+    PREFIX,
+    "tasks: lists, tasks, labels, grants, checklists, dependencies, alerts, links, day columns",
+    &ALL,
+    &[
         Step::Create(&STEP_1),
         Step::Create(&STEP_2),
         Step::Create(&STEP_3),
@@ -56,4 +53,6 @@ pub const DOMAIN: Domain = Domain {
         Step::Create(&STEP_5),
         Step::Code("tasks_day_fill", day::fill),
     ],
-};
+)
+.with_channels(CHANNELS)
+.with_children(CHILDREN);

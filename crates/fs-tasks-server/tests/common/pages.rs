@@ -4,9 +4,9 @@
 
 use std::sync::Arc;
 
-use fs_interfaces::rpc::read_envelope;
 use fs_interfaces::tasks_capnp::{self, items, tasks};
 use fs_objects::{Store, TursoStore};
+use fs_rpc::read_envelope;
 use fs_tasks_core::TaskRepo;
 use fs_tasks_server::TasksServer;
 use uuid::Uuid;

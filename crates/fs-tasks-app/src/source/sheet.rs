@@ -30,8 +30,7 @@ pub(super) fn sheet_of(entry: &TaskEntry) -> TaskSheet {
     add(
         field::PERCENT,
         task.percent_complete
-            .map(|p| p.to_string())
-            .unwrap_or_default(),
+            .map_or_else(String::new, |p| p.to_string()),
     );
     add(
         field::EXTENDED,

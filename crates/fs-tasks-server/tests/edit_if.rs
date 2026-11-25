@@ -3,7 +3,7 @@
 mod common;
 
 use common::{create, edit_if, items_of, json, read_now, revision_of, set_id, with_server};
-use fs_interfaces::rpc::Problem;
+use fs_rpc::Problem;
 
 const CONFLICT: &str = "https://freesynergy.net/problems/tasks/conflict";
 const NOT_FOUND: &str = "https://freesynergy.net/problems/tasks/not-found";
@@ -39,7 +39,7 @@ async fn every_answer_carries_a_revision_and_each_write_changes_it() {
                 .unwrap()
                 .get_envelope()
                 .unwrap();
-            fs_interfaces::rpc::read_envelope(env).unwrap().id.as_uuid()
+            fs_rpc::read_envelope(env).unwrap().id.as_uuid()
         };
         assert_eq!(read_now(&items, id).await.0, first);
         let page = items.list_request().send().promise.await.unwrap();

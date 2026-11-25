@@ -6,9 +6,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use common::{ME, items_of, with_provider};
-use fs_interfaces::rpc::MAX_PAGE_BYTES;
 use fs_interfaces::{Capabilities, common_capnp};
 use fs_objects::{ObjectId, Store, TursoStore};
+use fs_rpc::MAX_PAGE_BYTES;
 use fs_tasks_core::{
     ImportReport, Place, Result, TaskEntry, TaskItems, TaskPage, TaskQuery, TaskRepo,
 };
@@ -76,7 +76,7 @@ async fn a_report_too_large_is_cut_and_keeps_every_created_id() {
 
         let ids = report.get_created().unwrap();
         assert_eq!(ids.len() as usize, created.len(), "created stays whole");
-        let read = |r: common_capnp::uuid::Reader<'_>| fs_interfaces::rpc::read_uuid(r).unwrap();
+        let read = |r: common_capnp::uuid::Reader<'_>| fs_rpc::read_uuid(r).unwrap();
         assert_eq!(read(ids.get(999)), created[999].as_uuid());
 
         let failed = texts(report.get_failed().unwrap());
@@ -132,10 +132,7 @@ async fn a_provider_without_a_store_names_no_instance() {
         |root| async move {
             let answer = root.support_report_request().send().promise.await.unwrap();
             let report = answer.get().unwrap().get_report().unwrap();
-            assert_eq!(
-                fs_interfaces::rpc::read_uuid(report.get_instance().unwrap()),
-                None
-            );
+            assert_eq!(fs_rpc::read_uuid(report.get_instance().unwrap()), None);
         },
     )
     .await;

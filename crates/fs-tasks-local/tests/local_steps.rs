@@ -82,11 +82,10 @@ async fn a_file_with_step_1_only_is_migrated_with_the_same_fingerprints() {
     let now = Arc::new(AtomicI64::new(START_MS));
     {
         static ONE: [Step; 1] = [Step::Create(&STEP_1)];
-        let old = fs_objects::v5::registry::Domain {
-            tables: &STEP_1,
-            steps: &ONE,
-            ..DOMAIN
-        };
+        let old = fs_objects::v5::registry::Domain::new(DOMAIN.prefix, DOMAIN.about, &STEP_1, &ONE)
+            .with_channels(DOMAIN.channels)
+            .with_children(DOMAIN.children)
+            .with_expiries(DOMAIN.expiries);
         let store = Store::open(&path, START_MS).await.unwrap();
         store.register_domain(&old, START_MS).await.unwrap();
     }
@@ -232,11 +231,11 @@ async fn a_file_of_run_2a_with_the_old_step_2_is_refused_until_the_first_main_me
             OLD_GRANT,
             fs_tasks_local::tables::CHECKLIST,
         ];
-        let old = fs_objects::v5::registry::Domain {
-            tables: &TABLES,
-            steps: &THREE,
-            ..DOMAIN
-        };
+        let old =
+            fs_objects::v5::registry::Domain::new(DOMAIN.prefix, DOMAIN.about, &TABLES, &THREE)
+                .with_channels(DOMAIN.channels)
+                .with_children(DOMAIN.children)
+                .with_expiries(DOMAIN.expiries);
         let store = Store::open(&path, START_MS).await.unwrap();
         store.register_domain(&old, START_MS).await.unwrap();
     }

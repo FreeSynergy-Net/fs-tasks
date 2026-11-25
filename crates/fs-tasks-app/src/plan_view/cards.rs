@@ -85,7 +85,7 @@ pub fn panel(snapshot: &Snapshot, entry: &TaskEntry) -> Panel {
     add("Assigned", people(task).join(", "));
     add(
         "Priority",
-        task.priority.map(|p| p.to_string()).unwrap_or_default(),
+        task.priority.map_or_else(String::new, |p| p.to_string()),
     );
     add("Labels", label_names(task).join(", "));
     add(

@@ -152,7 +152,7 @@ async fn edit_raw(root: &fs_interfaces::tasks_capnp::tasks::Client, id: &str, ta
         .get_items()
         .unwrap();
     let mut req = items.edit_request();
-    fs_interfaces::rpc::write_uuid(
+    fs_rpc::write_uuid(
         req.get().init_id(),
         Some(id.parse::<fs_objects::ObjectId>().unwrap().as_uuid()),
     );

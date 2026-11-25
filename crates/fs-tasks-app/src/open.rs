@@ -7,8 +7,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use fs_interfaces::rpc::default_socket;
 use fs_objects::{Store, TursoStore};
+use fs_rpc::default_socket;
 use fs_tasks_core::{TaskItems, TaskRepo};
 use fs_tasks_server::{Changes, RemoteItems, StartError};
 

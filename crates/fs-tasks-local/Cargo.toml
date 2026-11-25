@@ -11,9 +11,9 @@ publish = false
 # The fixed trait folder (tasks_v1, hash de4618e1...d46) and the zone-free helpers of the pilot live in the testdata crate.
 fs-tasks-testdata = { path = "../fs-tasks-testdata", version = "0.0.10" }
 # The v5 layer (store, ids, envelope, trash, purge), at the pin of the tagged fs-objects (v0.0.2; no lift to v0.0.3, no hold yet).
-fs-objects = { git = "https://github.com/FreeSynergy/fs-objects", tag = "v0.0.2", features = ["v5"] }
+fs-objects = { git = "https://github.com/FreeSynergy-Net/fs-objects", rev = "e38093f1ec61b7c9faaa6f6046f65addb11dcf46", version = "0.0.11", features = ["v5"] }
 # The shared types the layer and the trait speak (same tag as fs-tasks-testdata).
-fs-types = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.22" }
+fs-types = { git = "https://github.com/FreeSynergy-Net/fs-types", rev = "722d3ce0156711d40cb278f2e835e865d9448290", version = "0.0.7" }
 # The same engine and exact pin as fs-objects (rows are `turso::Value`).
 turso = { version = "=0.8.3", default-features = false }
 async-trait = "0.1"

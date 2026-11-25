@@ -6,8 +6,8 @@
 
 use std::sync::Arc;
 
-use fs_interfaces::rpc::{read_object_id, run_to_end};
 use fs_interfaces::tasks_capnp::items;
+use fs_rpc::{read_object_id, run_to_end};
 use fs_tasks_core::{Revision, TaskItems};
 
 use crate::errors::rpc_error;

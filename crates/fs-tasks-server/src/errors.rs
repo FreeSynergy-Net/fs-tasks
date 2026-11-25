@@ -3,7 +3,7 @@
 //! Pattern: Adapter — each error the core can name becomes a typed RFC 9457 problem, so a consumer
 //! can tell "not found" from "not possible" without reading a message.
 
-use fs_interfaces::rpc::{Problem, failed, problem_keys as keys, too_large_by, unsupported};
+use fs_rpc::{Problem, failed, problem_keys as keys, too_large_by, unsupported};
 use fs_tasks_core::{Error, MAX_TASK_BYTES};
 
 use crate::facts::with_facts;

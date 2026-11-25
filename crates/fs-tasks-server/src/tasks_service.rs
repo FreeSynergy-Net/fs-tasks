@@ -8,8 +8,8 @@ use std::sync::Arc;
 
 use capnp_rpc::new_client;
 use fs_interfaces::Unsupported;
-use fs_interfaces::rpc::{DEFAULT_PAGE_SIZE, unsupported, write_uuid};
 use fs_interfaces::tasks_capnp::tasks;
+use fs_rpc::{DEFAULT_PAGE_SIZE, unsupported, write_uuid};
 use fs_tasks_core::contract::CONTRACT_VERSION;
 use fs_tasks_core::{TaskFeed, TaskItems};
 
@@ -40,7 +40,7 @@ impl TasksServer {
         self
     }
 
-    /// The capability to hand to `fs_interfaces::rpc::serve`.
+    /// The capability to hand to `fs_rpc::serve`.
     #[must_use]
     pub fn into_client(self) -> tasks::Client {
         new_client(self)

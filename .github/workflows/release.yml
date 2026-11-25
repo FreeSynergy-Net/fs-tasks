@@ -8,7 +8,7 @@ permissions:
   packages: write
 jobs:
   release:
-    uses: FreeSynergy-Net/fs-release/.github/workflows/release.yml@b71b39f61ffc812bb93e2dcf906ecf0bbb44bb2a
+    uses: FreeSynergy-Net/fs-release/.github/workflows/release.yml@18614536a722d87d889480b45c5a4a14528322e5
     with:
       binaries: fs-tasks
       cargo-package: fs-tasks

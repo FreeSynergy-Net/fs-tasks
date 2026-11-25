@@ -1,107 +1,23 @@
-# FreeSynergy Tasks — know what to do next
+# FreeSynergy Tasks – data package
 
-**Nobody wants a Kanban board. People want to know what to do next.**
+fs-tasks is a **data package**: it holds no program code. Tasks, dependencies and boards are served by the module
+`planning` (repo `fs-modules-planning`, owner of the JSCalendar `Task`, RFC 8984); the program is the description of
+how to show them.
 
-FreeSynergy Tasks keeps what you or your group have to do, with a due date, a status, labels and links between tasks. Lists, status views and, later, boards and timelines are just different ways of looking at the same tasks.
+- `scaffold.toml` – the blueprint: program `tasks`, the module `planning` (0.0.5), the display components.
+- `forms/` – the frontends as forms descriptions (board, list, day and board variants).
+- `styles/` – style data of the frontends.
+- `docs/worker-protocol.md` – the old worker protocol (kept until card M6 moves it to fs-documentation).
 
-What is different here: a task follows the open JSCalendar standard (RFC 8984), and this program is its owner, so the calendar and every other program reach tasks only through one interface instead of keeping their own idea of a task. Your tasks import and export as iCalendar (VTODO), and the original text is kept. A task can start with you alone and be shared later.
+The package is one noarch RPM `fs-tasks` (`fs-blueprint package rpm`, built by CI on a tag). It requires the host
+(`fs-starter`), the module `fs-module-planning` and `freesynergy-filesystem`.
 
-## What it can do today
+## What moved
 
-Version 0.0.8 (unreleased until tagged). Latest tag: `v0.0.7`.
+Version 0.0.11 removed the old Rust code (core, server, command line, window, tests). Nothing is lost: the state before the
+conversion is the annotated tag `archive/pre-data-only` (commit `2f24768f967a5c42541aba8b9fd233772e2d3e1c`), and every
+piece that is not yet in a module has a card (M1 to M14) in the FreeSynergy checklist. Until those cards are done, the
+command line (`fs-tasks add/list/claim/next`), iCalendar import/export in the window and the status command check are not
+available from this package.
 
-- Create, edit, assign, label, relate, list and delete tasks. Find them by due date range, progress, label, or a word in the title or description.
-- Import and export iCalendar tasks (VTODO). Events in the same file are left for the calendar.
-- Tell other programs when a task is created, changed or deleted.
-- Refuse an overwrite when someone else changed the task meanwhile (compare-and-set).
-- Tasks marked sensitive are left out of exports unless you release them by name.
-- A small server that offers all of this over a local socket.
-- A window with three frontends, chosen in its menu **Frontend** and remembered: **Board** (columns by status, cards that say what blocks them; the start for a new installation), **Day list** (Today, Upcoming, Anytime, Someday, Logbook, your labels; tick a box to finish) and **Classic** (the first window: a list and a status view, search, create, edit, delete). Import and export work in all of them. `fs-tasks --plan classic|board|next` starts with one frontend this time only.
-- The calendar already shows tasks through this interface.
-
-The window is a client of the server over the socket (it starts the server if none runs). If a server holds the socket and does not answer, the start does not wait for ever: it ends it when it is this program of this user, otherwise it says so in a window (or on stderr) and, only for a process that is provably this program, asks whether to end it; another program is only named (PID, program), never ended. Exit codes: the window command ends with **3** when the server does not answer, the command line with **4** (3 stays the claim conflict there). **Not done:** the window does not reconnect if the server dies (restart it); the Classic frontend reads the list again only at its next action, while Board and Day list follow other clients at once.
-
-## Work board
-
-Workers (agents, API runs) work through `fs-tasks`; people see it on the Board. No server by hand: the first command starts it.
-
-```
-fs-tasks next --as claude-1 --project demo --json    # take the first ready task (exit 3 = claim lost)
-fs-tasks status <id> in-progress
-fs-tasks status <id> done --note 'built' --report out.md --cost 0.42
-```
-
-`claim`, `release`, `note`, `check`, `list --project --status`, `add --objective CMD`: see `docs/worker-protocol.md` (EN + DE). A check command is code: it runs only for tasks made on this machine by a trusted actor, for allowed programs, without a shell. One process (the server) holds the store; the command line, the window and workers are all its clients, so they work together while the window is open.
-
-## Versions
-
-In 0.0.x every step may break (the module `planning` and this description); the range in `forms/board.toml` says against which versions of the module it was written. In 0.0.x darf jeder Schritt brechen. The command set of `planning` (`catalog/commands.json`) has its own version (0.0.1), not the version of the crates (0.0.3): two numbers with two meanings.
-
-## Frontends as forms descriptions (prescribed, not yet imported)
-
-The three frontends (Board, Classic, Day list) are described as forms descriptions in `forms/` (components, slots, fields,
-menus, commands; import form, no code). What the component catalog cannot take yet is in `FEHLENDE-COMPONENTS.md`; open parts in
-`forms/PLATZHALTER.md`. The existing window code is unchanged.
-
-## Notes for 0.0.10
-
-A task typed in the entry line of the Board or the Day list takes the project, status or day of the view you typed it in, so it stays in view. If the view cannot hold it (Someday, Logbook) or the store refuses it, the screen says so; nothing vanishes silently.
-
-## Notes for 0.0.8
-
-- **Work board:** workers work through `fs-tasks` (`claim`, `next`, `status`, `note`, `check`); see above and `docs/worker-protocol.md`.
-- **One store:** the window is a client of the one server, which holds `objects.db`; closing the window leaves the server running.
-- **Renamed:** the menu **Face** is now **Frontend**; the remembered choice moves from the key `face` to `frontend` on its own.
-- **Limits:** no reconnect after the server dies; the Classic frontend does not follow other clients live (needs a reload function in `fs-components`); `check` is code and runs only for local tasks of trusted actors.
-
-## Notes for 0.0.7
-
-- **Two new frontends for the window** (Board and Day list, on `fs-components` v0.0.13), chosen in the menu **Frontend**; the choice is kept in `settings.json` in the data folder. What is not there: moving a card with the mouse (use "Move to" in the panel), and no one has run it on Windows. Details and limits in DESIGN.md, "Frontends".
-- **Comments do not live in the tasks program** (decided 2026-11-12): they belong to the comment topic (draft in `fs-interfaces`, target chosen by a setting, shown by the messages workbench) and refer to the task by its id. The tasks core has no comments of its own; the `COMMENT` lines of an iCalendar `VTODO` stay in the task as they were read and go out again unchanged.
-- **Boards** (core): a board is its own object with columns (name, limit, the progress values it stands for), the order of the cards in each column, and an optional label that says which tasks are on it. A task can be on several boards. Without a place of its own a card stands in the column its progress names. A column limit is only reported by the layout, a full column never refuses a card.
-- **Actors as assignees:** `assign_actor` assigns a person, an application or a service by its actor IRI (`freesynergy.net:actor`, `freesynergy.net:actorType`); it exports as an attendee of type `RESOURCE` (non-human) or `INDIVIDUAL`, and `tasks` can be asked for what is assigned to an actor.
-- **Execution fields** for runners, as vendor members (checked for form and size only, interpreted by nobody here): `freesynergy.net:run`, `result`, `attempts`, `error`, `claim`, `template`, `loop`. A claim is taken and given back with `claim` / `release_claim`; somebody else's live claim refuses with a conflict.
-
-## Notes for 0.0.6
-
-- **Faster dependency questions:** the readiness of many tasks at once, the `ready` filter and the cycle check of `relate` no longer walk the graph once per task. Measured on a chain of 5000 tasks (release build): a page of ready tasks 0.22 s (before: 117 s for a chain of 200), `relate` in front of the chain 19 ms. `readiness_many` is new in the core (not on the wire yet).
-- **`ready` filter** for lists and pages in the core (`TaskQuery::only_ready`); on the wire it needs a filter member in a later `fs-interfaces`.
-- **"Became ready" events** are sent for every task that was waiting and is ready after a change: when a task starts (a start-to-start tie), is completed, loses a relation, is deleted, or when a cycle is resolved; not for a task that was ready already.
-
-## Notes for 0.0.5
-
-- **Check your relations:** the documentation of the relation types `finishtostart`, `finishtofinish`, `starttostart` and `starttofinish` was reversed until 0.0.4. As in RFC 9253 section 4, **the task that holds the relation is the predecessor** (the other task cannot start or finish until this one does); `depends-on` is held by the dependent task. Relations created over the interface in the old, reversed sense have to be checked and swapped.
-- **Readiness:** a task now says whether it can be started: `ready`, `blocked` (by which tasks), `done`, `unknown` (a dependency this store does not hold), `dependencyCancelled` (a task it waits for was cancelled or failed: a person decides, nothing frees it by itself) and `conflict` (it is part of a dependency cycle). New calls `readiness`, `blockedBy`, `dependents`.
-- **Cycles:** `createRelation` refuses a relation that would close a dependency cycle (problem type `tasks/cycle`, status 409, the way round in the extension `path`). A cycle that arrives some other way (an edit, an import) is shown as `conflict`, not refused.
-- **Gap:** `createRelationWithGap` sets a lag (`P1D`) or lead (`-PT4H`) on a temporal relation. It is kept as the member `freesynergy.net:gap` and written to iCalendar as the RFC 9253 `GAP` parameter; an imported `GAP` is read into it.
-- **Schedule and ready filter:** the core can plan tasks with their durations and dependencies (earliest and latest start, slack), and the list can be limited to ready tasks (core only, not on the wire yet). The event "became ready" is sent as an update of the task.
-- The index of older tasks is completed (new fields for the reverse lookup) when the **server or the window** opens the store (`fs-tasks serve`, `fs-tasks`); the command line talks to the server. Until then a task of 0.0.4 or older shows too few dependents and may look ready.
-- `blockedBy` also returns the tasks a task waits for that were cancelled or failed (the contract text says "unfinished"); those are the ones a person must decide about.
-- Limits of the dependency check (see DESIGN.md): measured on a chain of 5000 tasks (release build), a `ready` page takes 0.22 s and a `relate` in front of the chain 19 ms; a store above 100 000 tasks or a graph above 20 000 tasks is refused for these questions.
-
-## Notes for 0.0.4
-
-- The documentation of the relation types `finishtostart`, `finishtofinish`, `starttostart` and `starttofinish` was reversed before. As in RFC 9253 section 4, **the task that holds the relation is the predecessor** (the other task cannot start or finish until this one does); `depends-on` is held by the dependent task. If you created such relations over the interface, check their direction.
-- Relations imported from iCalendar with the RFC names in capitals (`FINISHTOSTART`, `DEPENDS-ON`) are now recognised like ours in lower case. The export keeps its spelling.
-
-## What is not there yet
-
-- No real boards. The status view in the window is not a board: moving a card changes the task's status for everyone, and the window says so. Columns of your own, swimlanes and limits are not built.
-- No repeating-task engine. Repeating tasks are kept but not expanded, and the window cannot edit one occurrence.
-- The window cannot assign people, show relations, checklists, comments, attachments or reminders, and it has no undo.
-- The window reads the data directly instead of talking to the server (a version over the server is on branch `gui`), and "my next tasks" shows every open task because there is no sign-in yet.
-- The interface is a draft with one user (the calendar); it needs a second before it can be called stable.
-
-## Part of FreeSynergy
-
-Tasks is the "what next" of the project-management suite, together with history, resources, surveys and groups. FreeSynergy is a family of programs that are free for everyone, forever, and that keep your data yours. The documentation, the manifesto and the overall plan live in [fs-documentation](https://github.com/FreeSynergy/fs-documentation); the reading version is at <https://freesynergy.github.io/fs-documentation/>. Start with the [manifesto](https://freesynergy.github.io/fs-documentation/manifesto/) if you want to know why we do this.
-
-
-## For developers
-
-- One program, one command (ADR 0063): `fs-tasks` opens the window, `fs-tasks serve` serves the contract over a Unix socket, `fs-tasks list|show|add|done|delete|export|import` is the command line. Build without the window: `--no-default-features`.
-- Workspace crates: `fs-tasks` (the binary), `fs-tasks-core` (core, no GUI; also the list rules `lists::` and the calendar day `Day`, sorted from the app, see `DESIGN.md`), `fs-tasks-server`, `fs-tasks-cli` and `fs-tasks-app` (libraries behind the subcommands).
-- The contract is `tasks.capnp` in [fs-interfaces](https://github.com/FreeSynergy/fs-interfaces) (draft). Tasks owns it. Shared JSCalendar parts come from [fs-jscalendar](https://github.com/FreeSynergy/fs-jscalendar).
-- Build and test: `cargo build --workspace` and `cargo test --workspace`.
-- Design and the full state table: [DESIGN.md](DESIGN.md).
-- Licence: MIT OR Apache-2.0.
+Written with the help of Claude (Anthropic).

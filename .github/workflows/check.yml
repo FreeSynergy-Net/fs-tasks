@@ -10,6 +10,3 @@ permissions:
 jobs:
   check:
     uses: FreeSynergy-Net/fs-release/.github/workflows/check.yml@ccb018e91d8ee12e4b804225b8226b50a129ab6e
-    with:
-      # Software Vulkan (lavapipe) for the tests that start the window and draw a picture; a runner has no GPU
-      apt-packages: "mesa-vulkan-drivers libvulkan1 fonts-dejavu-core fonts-noto-core"

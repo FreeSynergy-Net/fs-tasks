@@ -1,3 +1,5 @@
+# Release of the data package fs-tasks on a version tag (fs-release caller, pinned): ONE noarch RPM `fs-tasks` (kind data, built from scaffold.toml).
+# No binary, no Cargo package: the program is data (forms/, styles/) plus the modules named in scaffold.toml.
 name: release
 on:
   push: { tags: ["v*"] }
@@ -8,15 +10,13 @@ permissions:
   packages: write
 jobs:
   release:
-    uses: FreeSynergy-Net/fs-release/.github/workflows/release.yml@ccb018e91d8ee12e4b804225b8226b50a129ab6e
+    uses: FreeSynergy-Net/fs-release/.github/workflows/release.yml@05a4a6a4e927931410d7ff262ac8f5af084f6766
     with:
-      binaries: fs-tasks
-      cargo-package: fs-tasks
+      kind: data
       name: fs-tasks
-      kind: app
-      app-id: net.freesynergy.Tasks
+      binaries: ""
       macos: false
-      windows-targets: ""   # Unix sockets and Unix paths for now
+      windows-targets: ""
     secrets:
       GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
       GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}

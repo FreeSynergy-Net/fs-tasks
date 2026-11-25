@@ -1,10 +1,10 @@
-# Blueprint of fs-tasks (schema 2, ADR 0099 addendum 2026-11-18). Target state after the conversion (plan V1 pilot);
-# the module is fs-modules-planning (tag v0.0.1 exists); the forms description lies in forms/.
+# Blueprint of fs-tasks (schema 2, ADR 0099 addendum 2026-11-18). Data-only package;
+# the module is planning (fs-modules-planning, tag v0.0.5); the forms description lies in forms/.
 schema = 2
 
 [program]
 name = "tasks"
-version = "0.0.1"
+version = "0.0.11"
 skeleton = "0.1.0"
 capability = "tasks"
 summary = { en = "Tasks, dependencies and boards", de = "Aufgaben, Abhängigkeiten und Boards" }
@@ -18,9 +18,9 @@ provides = [{ contract = "dependency.evaluate", version = "0.1" }, { contract = 
 
 # Art 1: the planning module (fs-modules-planning) owns the type Task (JSCalendar Task, RFC 8984; VTODO, RFC 5545).
 [[module]]
-name = "fs-modules-planning"
+name = "planning"
 kind = "standard"
-version = "0.0.1"
+version = "0.0.5"
 
 # Art 3: display only, named for the frontend manifest.
 [[module]]
@@ -35,44 +35,10 @@ version = "0.0.29"
 
 [[type]]
 name = "Task"
-module = "fs-modules-planning"
+module = "planning"
 
 # The main view is a forms description (written by task V-F); the board columns come from a column source (basic list: RFC 8984 progress; states belong to the run, ADR 0103).
 [frontend]
 standard = "board"
 layout = "forms/board.toml"
 covers = ["Items.list", "Items.query", "Items.create", "Items.editIf", "Items.readiness"]
-
-# Exceptions: rules without a standard or module (list LISTE-tasks-regeln-ohne-standard, C07/C08/C09/C11/C17).
-# The talk records lie in fs-documentation (conventions/talks/), decisions of the owner 2026-11-18/19; ADR 0103.
-[[exception]]
-what = "Status command of a task (more than yes/no: OK, WARNING, CRITICAL, UNKNOWN as in the Monitoring Plugins): runs only for local origin and a trusted creator, only listed programs without a shell, bash only for scripts/, time limit 1 to 3600 s"
-why = "decision of the owner: the status command is more than yes/no, and its safety rules belong to the workflow step, checked by the run (fs-flow); no module or standard describes it today, the code moves with the conversion"
-checked = ["fs-modules-planning"]
-alternatives = ["workflow step in fs-flow (status command)", "drop the check command"]
-talk = "conventions/talks/2026-11-18-tasks-pruefbefehl-policy.md"
-paths = ["crates/fs-tasks-cli/src/policy.rs", "crates/fs-tasks-cli/src/check.rs"]
-
-[[exception]]
-what = "Refuses titles, notes, commands and reports that carry recognisable key patterns"
-why = "decision of the owner: a general building block for all programs with text input (modes off, warn, block; preset block), not only fs-tasks; pattern set from the gitleaks rules (licence to be checked), offer move into the vault (ADR 0067); the block does not come before V1, so the code stays here until it does"
-checked = ["fs-modules-planning"]
-alternatives = ["general secret-guard building block for all programs with text input (modes off/warn/block, preset block)"]
-talk = "conventions/talks/2026-11-18-tasks-geheimnis-sperre.md"
-paths = ["crates/fs-tasks-cli/src/secrets.rs"]
-
-[[exception]]
-what = "Existing USD cost field of a finished task (`--cost`, `cost_usd`); it is removed, not carried over"
-why = "decision of the owner: no USD field; instead measure and booking lines (time measured, free quantity, own factor or rate, station, role, actor) in the run; invoices and evaluation only in fs-invoices (ADR 0103)"
-checked = ["fs-modules-planning"]
-alternatives = ["booking lines in the run (fs-flow) and invoices in fs-invoices"]
-talk = "conventions/talks/2026-11-18-tasks-kosten.md"
-paths = ["crates/fs-tasks-cli/src/args_work.rs", "crates/fs-tasks-cli/src/work.rs", "crates/fs-tasks-cli/src/args.rs"]
-
-[[exception]]
-what = "Execution fields of a runner (run, result, attempts, error, loop) with size limits"
-why = "RFC 8984 only gives the form of vendor members; the content and size rules are ours"
-checked = ["fs-modules-planning"]
-alternatives = ["module fs-flow (not there yet)"]
-talk = "conventions/talks/2026-11-18-tasks-ausfuehrungsfelder.md"
-paths = ["crates/fs-tasks-core/src/model/exec.rs"]

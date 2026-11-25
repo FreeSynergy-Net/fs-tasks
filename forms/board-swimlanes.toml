@@ -32,15 +32,10 @@
 #   progress      -> (number, percentComplete) NO slot on block board/board-card (card-facts takes facts only; progress is a bar, not a fact)     offen
 #   time-zone     -> NO slot on the card (card-facts full); `due` stays an instant with Z, showing it in the zone is the host's job            offen
 #
-# LANE LIST (empty lanes, name, order) -- offen, NOT bindable with the format as it is: planning 908f1c1f serves the list as a SECOND source,
-# form `rows@1.0.0` type `Lane`, scope `lanes:<axis>[:<board>]` (axes state, assignee, lane). Three things are missing and none lies in this file:
-#   (1) the scope of `[[source]]` is a closed word (`all`, `selected-list`; fs-forms-layout words.rs), `lanes:assignee` is refused by the reader;
-#       a Lane source with `selected-list` would be answered by the module with form-source-unknown-scope (404) -- so no second source is declared;
-#   (2) a binding names no source (only the block has `source = n`), so slot `lanes` cannot be told to take its heads from source 2;
-#   (3) the host does not yet choose the `rows` entry by the source `type` (Task/Lane) nor draw lane heads from a second source (fs-starter P9).
-# Because of this the old hint "lanes stay empty" is replaced by this paragraph: lanes WITH cards come from the cards (grouping `assignee`);
-# lanes WITHOUT a card (the stored empty lane) are not drawn. Known gaps of the module (planning 908f1c1f, not hidden): column `recurrenceRule`
-# of rows@1.0.0 stays empty, `relatedTo` carries one value only, and the seed has no empty assignee lane.
+# LANE LIST (empty lanes, name, order): declared as source 2 (form `rows@1.0.0` type `Lane`, scope `lanes:assignee`, format 4) and bound to slot `lanes`
+# with `source = 2`. Honest state: the heads (also empty lanes) are drawn only when the host (paket S, fs-starter) reads the second source and
+# fs-components brings lane_plan/heads; until then the lanes come from the cards (grouping `assignee`) as before. Known gaps of the module
+# (planning 908f1c1f, not hidden): column `recurrenceRule` of rows@1.0.0 stays empty, `relatedTo` carries one value only, and the seed has no empty assignee lane.
 #
 # NOT bound here, and why (offen, not faked): colour of a card (`color`, 1.3.0 channel; board-card has no colour slot),
 # description (1.3.0 channel; no slot on the card, card-facts is full), column limit (`column-limit`, 1.3.0 channel; no slot on
@@ -49,7 +44,7 @@
 # .scratch/woche-11-23/form/BERICHT-p8.md.
 #
 # Theme: style = "office" (the layer of ADR 0074, tokens in styles/office.tokens.json). No colour, size or font in this file.
-schema = 3
+schema = 4
 kind = "frontend"
 id = "board-swimlanes"
 extends = "net.freesynergy.Tasks"
@@ -68,6 +63,14 @@ n = 1
 contract = "planning@>=0.0.1, <0.1.0"
 type = "Task"
 scope = "selected-list"
+
+# Source 2 = the lane list of the module (rows@1.0.0 type Lane, axis assignee); only slot `lanes` takes its heads from it.
+[[source]]
+elem = "source:2"
+n = 2
+contract = "planning@>=0.0.1, <0.1.0"
+type = "Lane"
+scope = "lanes:assignee"
 
 # ---- page "board-swimlanes": a workbench with the side list and the main area.
 [[page]]
@@ -142,6 +145,7 @@ elem = "binding:board-swimlanes/main/lanes/0"
 slot = "lanes"
 nth = 0
 grouping = "assignee"
+source = 2
 
 [[page.place.bind]]
 elem = "binding:board-swimlanes/main/move/0"

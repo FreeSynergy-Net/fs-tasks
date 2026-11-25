@@ -186,7 +186,7 @@ role = "input"
 
 # Field names of the planning catalog 908f1c1f (rows@1.0.0 type Task, ENTSCHEID cards-1-4-0 (e)): `progress` = the status word (JSCalendar progress),
 # `taskStatus` = the fine status (RFC 10051), `percentComplete`, `recurrenceRule`, `privacy` (was `sensitive`). `offen`: the module leaves the
-# column `recurrenceRule` empty (no RRULE text yet) and sends ONE `relatedTo` value only; the grid has no column slot, so rows@1.0.0 is not bound here.
+# column `recurrenceRule` empty (no RRULE text yet) and sends ONE `relatedTo` value only; the grid has no column slot. These fields come from rows@1.0.0 Task; the host does not read that entry yet (P9), so the inputs stay empty until it does.
 [[page.place]]
 elem = "block:edit/f-status"
 at = "f-status"

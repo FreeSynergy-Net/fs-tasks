@@ -14,8 +14,8 @@ repository.workspace = true
 test-access = ["fs-components-app/test-access"]
 
 [dependencies]
-fs-tasks-core = { path = "../fs-tasks-core" }
-fs-tasks-server = { path = "../fs-tasks-server" }
+fs-tasks-core = { path = "../fs-tasks-core", version = "0.0.10" }
+fs-tasks-server = { path = "../fs-tasks-server", version = "0.0.10" }
 fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.22", features = ["rpc"] }
 fs-objects = { git = "https://github.com/FreeSynergy/fs-objects", tag = "v0.0.1" }
 fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.13" }

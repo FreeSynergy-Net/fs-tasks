@@ -20,9 +20,9 @@ gui = ["dep:fs-tasks-app"]
 test-access = ["gui", "fs-tasks-app/test-access"]
 
 [dependencies]
-fs-tasks-server = { path = "../fs-tasks-server" }
-fs-tasks-cli = { path = "../fs-tasks-cli" }
-fs-tasks-app = { path = "../fs-tasks-app", optional = true }
+fs-tasks-server = { path = "../fs-tasks-server", version = "0.0.10" }
+fs-tasks-cli = { path = "../fs-tasks-cli", version = "0.0.10" }
+fs-tasks-app = { path = "../fs-tasks-app", version = "0.0.10", optional = true }
 
 [dev-dependencies]
 fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.22", features = ["rpc"] }

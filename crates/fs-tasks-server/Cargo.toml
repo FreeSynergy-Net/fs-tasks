@@ -12,7 +12,7 @@ rust-version.workspace = true
 name = "fs_tasks_server"
 
 [dependencies]
-fs-tasks-core = { path = "../fs-tasks-core", features = ["contract"] }
+fs-tasks-core = { path = "../fs-tasks-core", version = "0.0.10", features = ["contract"] }
 fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.22", features = ["rpc"] }
 fs-objects = { git = "https://github.com/FreeSynergy/fs-objects", tag = "v0.0.1" }
 capnp = "0.27"

@@ -9,7 +9,7 @@ publish = false
 
 [dependencies]
 # The fixed trait folder (tasks_v1, hash de4618e1...d46) and the zone-free helpers of the pilot live in the testdata crate.
-fs-tasks-testdata = { path = "../fs-tasks-testdata" }
+fs-tasks-testdata = { path = "../fs-tasks-testdata", version = "0.0.10" }
 # The v5 layer (store, ids, envelope, trash, purge), at the pin of the tagged fs-objects (v0.0.2; no lift to v0.0.3, no hold yet).
 fs-objects = { git = "https://github.com/FreeSynergy/fs-objects", tag = "v0.0.2", features = ["v5"] }
 # The shared types the layer and the trait speak (same tag as fs-tasks-testdata).

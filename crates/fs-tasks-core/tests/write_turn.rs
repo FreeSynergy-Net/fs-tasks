@@ -54,7 +54,11 @@ impl ObjectRepository for Plain {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn another_write_does_not_wait_for_the_judgement_of_a_change() {
-    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let store: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     let fast = TaskRepo::new(store.clone(), ME);
     let mut head_id = None;
     for i in 0..6 {
@@ -109,7 +113,11 @@ impl ObjectQuery for Counting {
 /// those reads the graph (a new task in front of a long chain is not made to scan it).
 #[tokio::test]
 async fn only_a_change_that_can_free_somebody_is_judged() {
-    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let store: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     let plain = TaskRepo::new(store.clone(), ME);
     let mut ids = Vec::new();
     for i in 0..4 {

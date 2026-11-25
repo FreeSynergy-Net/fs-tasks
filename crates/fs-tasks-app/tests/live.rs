@@ -42,7 +42,11 @@ fn wait_for(limit: Duration, mut done: impl FnMut() -> bool) -> bool {
 fn a_card_moves_to_in_progress_when_another_client_changes_the_task() {
     let rt = tokio::runtime::Runtime::new().unwrap();
     let repo = rt.block_on(async {
-        let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+        let store: Arc<dyn Store> = Arc::new(
+            TursoStore::open_with(":memory:", fs_objects::testing::options())
+                .await
+                .unwrap(),
+        );
         Arc::new(TaskRepo::new(store, "https://localhost/actors/owner"))
     });
     let dir = tempfile::tempdir().unwrap();

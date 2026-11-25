@@ -51,7 +51,11 @@ fn texts(list: capnp::text_list::Reader<'_>) -> Vec<String> {
 
 #[tokio::test(flavor = "current_thread")]
 async fn a_report_too_large_is_cut_and_keeps_every_created_id() {
-    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let store: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     let feed = Arc::new(TaskRepo::new(store, ME));
     let created: Vec<ObjectId> = (0..1000)
         .map(|_| fs_objects::Envelope::new("Task", "x").id)
@@ -101,7 +105,11 @@ async fn a_report_too_large_is_cut_and_keeps_every_created_id() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn a_report_that_fits_is_untouched_and_one_long_text_is_cut() {
-    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let store: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     let feed = Arc::new(TaskRepo::new(store, ME));
     let provider = Talkative(ImportReport {
         skipped: vec!["a".into(), "b".into()],
@@ -124,7 +132,11 @@ async fn a_report_that_fits_is_untouched_and_one_long_text_is_cut() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn a_provider_without_a_store_names_no_instance() {
-    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let store: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     let feed = Arc::new(TaskRepo::new(store, ME));
     with_provider(
         Arc::new(Talkative(ImportReport::default())),

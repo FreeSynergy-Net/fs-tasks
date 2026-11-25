@@ -47,7 +47,11 @@ impl ObjectQuery for Editing {
 
 #[tokio::test]
 async fn an_edit_during_the_scan_changes_nothing_about_who_is_in_it() {
-    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let store: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     let plain = TaskRepo::new(store.clone(), ME);
     for i in 0..30 {
         let mut t = Task::new(format!("t{i}"));
@@ -86,7 +90,11 @@ async fn an_edit_during_the_scan_changes_nothing_about_who_is_in_it() {
 /// "tasks without an id key"); it is stored later than the others, so it comes at the end of the scan.
 #[tokio::test]
 async fn a_task_created_during_the_scan_with_a_smaller_id_is_no_error() {
-    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let store: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     let plain = TaskRepo::new(store.clone(), ME);
     for i in 0..30 {
         let mut t = Task::new(format!("t{i}"));

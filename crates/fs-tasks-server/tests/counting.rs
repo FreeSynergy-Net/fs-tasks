@@ -58,7 +58,11 @@ const PAGE: usize = 8;
 /// Rows read to page through `n` tasks with `how`.
 async fn rows_for(n: usize, how: Read) -> (usize, usize) {
     let counting = Arc::new(Counting {
-        store: Arc::new(TursoStore::open_in_memory().await.unwrap()),
+        store: Arc::new(
+            TursoStore::open_with(":memory:", fs_objects::testing::options())
+                .await
+                .unwrap(),
+        ),
         rows: AtomicUsize::new(0),
     });
     let repo = Arc::new(TaskRepo::with_backend(

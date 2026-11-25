@@ -57,7 +57,11 @@ struct Served {
 fn served() -> Served {
     let rt = tokio::runtime::Runtime::new().unwrap();
     let repo = rt.block_on(async {
-        let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+        let store: Arc<dyn Store> = Arc::new(
+            TursoStore::open_with(":memory:", fs_objects::testing::options())
+                .await
+                .unwrap(),
+        );
         Arc::new(TaskRepo::new(store, "https://localhost/actors/owner"))
     });
     let dir = tempfile::tempdir().unwrap();

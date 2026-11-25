@@ -9,7 +9,11 @@ use fs_tasks_server::{RemoteItems, host};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn a_call_without_an_answer_in_time_says_so() {
-    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let store: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     let repo = Arc::new(TaskRepo::new(store, "https://local.invalid/users/owner"));
     let dir = tempfile::tempdir().unwrap();
     let socket = dir.path().join("run").join("tasks.sock");
@@ -26,7 +30,11 @@ async fn a_call_without_an_answer_in_time_says_so() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn the_counter_test_with_the_normal_limit_the_same_call_answers() {
-    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let store: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     let repo = Arc::new(TaskRepo::new(store, "https://local.invalid/users/owner"));
     let dir = tempfile::tempdir().unwrap();
     let socket = dir.path().join("run").join("tasks.sock");

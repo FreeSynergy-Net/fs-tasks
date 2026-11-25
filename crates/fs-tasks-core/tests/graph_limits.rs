@@ -11,7 +11,11 @@ use fs_tasks_core::{Error, Relation, Task, TaskItems, TaskQuery, TaskRepo};
 
 /// 40 tasks in a chain, a store whose graph limit is 30 and whose scan limit is 50.
 async fn chain(n: usize) -> (TaskRepo, Vec<fs_objects::ObjectId>) {
-    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let store: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     let r = TaskRepo::new(store, ME).with_graph_limits(30, 50);
     let mut ids = Vec::new();
     for i in 0..n {

@@ -7,7 +7,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use fs_objects::{Store, TursoStore};
+use fs_objects::{OpenOptions, Store, TursoStore};
 use fs_rpc::default_socket;
 use fs_tasks_core::{TaskItems, TaskRepo};
 use fs_tasks_server::{Changes, RemoteItems, StartError};
@@ -125,9 +125,16 @@ fn client(args: &Args) -> Result<Opened, OpenError> {
 fn own(args: &Args, runtime: &tokio::runtime::Runtime) -> Result<Opened, OpenError> {
     let store: Arc<dyn Store> = runtime
         .block_on(async {
+            let owner = fs_tasks_core::store_owner(ACTOR)
+                .map_err(|e| fs_objects::Error::Invalid(e.to_string()))?;
+            let options = OpenOptions {
+                allow_sensitive_unencrypted: args.store.is_none(),
+                ..OpenOptions::default()
+            }
+            .with_owner(owner);
             match &args.store {
-                Some(file) => TursoStore::open(file).await,
-                None => TursoStore::open_in_memory().await,
+                Some(file) => TursoStore::open_with(file, options).await,
+                None => TursoStore::open_with(":memory:", options).await,
             }
         })
         .map(|s| Arc::new(s) as Arc<dyn Store>)

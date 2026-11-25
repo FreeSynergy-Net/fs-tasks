@@ -10,7 +10,11 @@ use fs_tasks_core::{Task, TaskItems, TaskRepo};
 use serde_json::json;
 
 async fn repo() -> TaskRepo {
-    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let store: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     TaskRepo::new(store, "https://local.invalid/users/owner")
 }
 

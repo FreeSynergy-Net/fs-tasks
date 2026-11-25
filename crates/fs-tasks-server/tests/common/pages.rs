@@ -117,7 +117,11 @@ where
     F: FnOnce(tasks::Client) -> Fut,
     Fut: Future<Output = ()>,
 {
-    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let store: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     let repo = Arc::new(TaskRepo::new(store, ME));
     with_tasks_server(
         TasksServer::new(repo.clone(), repo).with_page_size(size),

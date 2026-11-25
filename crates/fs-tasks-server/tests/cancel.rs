@@ -73,7 +73,11 @@ async fn stored(items: &items::Client) -> u32 {
 #[tokio::test(flavor = "current_thread")]
 async fn an_import_dropped_while_it_waits_at_a_step_still_finishes() {
     let gated = Arc::new(Gated {
-        store: Arc::new(TursoStore::open_in_memory().await.unwrap()),
+        store: Arc::new(
+            TursoStore::open_with(":memory:", fs_objects::testing::options())
+                .await
+                .unwrap(),
+        ),
         reached: Notify::new(),
         gate: Semaphore::new(0),
     });

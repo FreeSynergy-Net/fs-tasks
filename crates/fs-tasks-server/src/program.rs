@@ -6,7 +6,7 @@
 use std::ffi::OsString;
 use std::sync::Arc;
 
-use fs_objects::{Store, TursoStore};
+use fs_objects::{OpenOptions, Store, TursoStore};
 use fs_rpc::{
     ServerIdentity, ServerOptions, default_data_dir, prepare_data_dir, run_until_signal_as,
 };
@@ -51,9 +51,13 @@ pub fn serve_command(args: impl IntoIterator<Item = OsString>) -> i32 {
         crate::early::until_signal(async move {
             correct_data_dir(&data)?;
             let data = prepare_data_dir(&data)?;
-            let store = TursoStore::open(data.join("objects.db"))
-                .await
-                .map_err(std::io::Error::other)?;
+            let owner = fs_tasks_core::store_owner(&actor).map_err(std::io::Error::other)?;
+            let store = TursoStore::open_with(
+                data.join("objects.db"),
+                OpenOptions::default().with_owner(owner),
+            )
+            .await
+            .map_err(std::io::Error::other)?;
             let store: Arc<dyn Store> = Arc::new(store);
             let mut repo = TaskRepo::new(store, actor);
             if let Some(instance) = instance {

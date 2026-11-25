@@ -26,8 +26,14 @@ pub struct World {
 impl World {
     pub fn new() -> Self {
         let runtime = Runtime::new().unwrap();
-        let store: Arc<dyn Store> =
-            Arc::new(runtime.block_on(TursoStore::open_in_memory()).unwrap());
+        let store: Arc<dyn Store> = Arc::new(
+            runtime
+                .block_on(TursoStore::open_with(
+                    ":memory:",
+                    fs_objects::testing::options(),
+                ))
+                .unwrap(),
+        );
         let repo = Arc::new(TaskRepo::new(store.clone(), ME));
         let adapter = Arc::new(TaskAdapter::new(repo.clone(), runtime.handle().clone()));
         Self {

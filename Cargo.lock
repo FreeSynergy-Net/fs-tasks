@@ -1829,6 +1829,7 @@ dependencies = [
  "fs-interfaces",
  "fs-jscalendar",
  "fs-objects",
+ "fs-types",
  "serde",
  "serde_json",
  "tempfile",

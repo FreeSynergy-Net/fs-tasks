@@ -217,7 +217,7 @@ fn a_server_of_another_program_is_named_and_left_alone() {
             fs_rpc::ServerIdentity::new("fs-other", "1"),
             || async {
                 let store: Arc<dyn fs_objects::Store> = Arc::new(
-                    fs_objects::TursoStore::open_in_memory()
+                    fs_objects::TursoStore::open_with(":memory:", fs_objects::testing::options())
                         .await
                         .map_err(std::io::Error::other)?,
                 );

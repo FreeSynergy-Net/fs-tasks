@@ -106,25 +106,23 @@ fn a_server_that_cannot_start_is_explained_with_its_cause_not_only_a_hint() {
 }
 
 #[test]
-fn a_data_folder_named_with_data_is_never_corrected() {
+fn a_data_path_that_is_a_file_is_refused_and_left_as_it_is() {
+    // fs-rpc (9cbce63c) tightens an open folder of this user by itself, also one named with `--data`; what it refuses is
+    // a path that is no folder. The refusal ends the start with code 1 and touches nothing.
     let dir = tempfile::tempdir().unwrap();
-    let mine = dir.path().join("mine");
-    make(&mine, 0o755);
+    let file = dir.path().join("mine");
+    std::fs::write(&file, b"not a folder").unwrap();
     let status = Command::new(env!("CARGO_BIN_EXE_fs-tasks"))
         .args(["serve", "--socket"])
         .arg(dir.path().join("x.sock"))
         .arg("--data")
-        .arg(&mine)
+        .arg(&file)
         .env("LC_ALL", "en_US.UTF-8")
         .output_limited();
     assert_eq!(
         status.status.code(),
         Some(1),
-        "the transport refuses an open folder"
+        "the transport refuses a file"
     );
-    assert_eq!(
-        mode(&mine),
-        0o755,
-        "and it is not closed behind the person's back"
-    );
+    assert_eq!(std::fs::read(&file).unwrap(), b"not a folder");
 }

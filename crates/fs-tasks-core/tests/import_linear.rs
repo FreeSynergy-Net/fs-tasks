@@ -88,7 +88,11 @@ fn ics(first: usize, n: usize) -> String {
 /// Work and index lookups to import `n` new tasks into a store that holds `before` others.
 async fn work_for(before: usize, n: usize) -> (usize, usize) {
     let charging = Arc::new(Charging {
-        store: Arc::new(TursoStore::open_in_memory().await.unwrap()),
+        store: Arc::new(
+            TursoStore::open_with(":memory:", fs_objects::testing::options())
+                .await
+                .unwrap(),
+        ),
         work: AtomicUsize::new(0),
         lookups: AtomicUsize::new(0),
     });
@@ -136,7 +140,11 @@ async fn importing_twice_the_tasks_costs_twice_the_work() {
 #[tokio::test]
 async fn known_uids_are_skipped_also_when_they_come_twice_in_one_text() {
     let charging = Arc::new(Charging {
-        store: Arc::new(TursoStore::open_in_memory().await.unwrap()),
+        store: Arc::new(
+            TursoStore::open_with(":memory:", fs_objects::testing::options())
+                .await
+                .unwrap(),
+        ),
         work: AtomicUsize::new(0),
         lookups: AtomicUsize::new(0),
     });

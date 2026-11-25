@@ -18,7 +18,11 @@ fn task(title: &str) -> Task {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn reads_writes_and_hears_changes_over_the_socket() {
-    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let store: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     let repo = Arc::new(TaskRepo::new(store, "https://local.invalid/users/owner"));
     let dir = tempfile::tempdir().unwrap();
     let socket = dir.path().join("run").join("tasks.sock");

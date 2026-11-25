@@ -12,7 +12,11 @@ use fs_tasks_core::{Task, TaskItems, TaskQuery, TaskRepo};
 /// A store of `tied + others` tasks of which the first `tied` share one `published` instant; what the `ready` page, the
 /// `ready` list and the plain list find with a scan chunk of `chunk`.
 async fn counts(tied: usize, others: usize, chunk: usize) -> (usize, usize, usize) {
-    let source: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let source: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     let plain = TaskRepo::new(source.clone(), ME);
     for i in 0..tied + others {
         let mut t = Task::new(format!("t{i}"));
@@ -22,7 +26,11 @@ async fn counts(tied: usize, others: usize, chunk: usize) -> (usize, usize, usiz
     let objects = source.query(&Query::new().of_type("Task")).await.unwrap();
     assert_eq!(objects.len(), tied + others);
     let fixed = objects[0].envelope.published;
-    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let store: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     for (i, mut o) in objects.into_iter().enumerate() {
         if i < tied {
             o.envelope.published = fixed;
@@ -76,7 +84,11 @@ async fn ties_in_the_middle_of_other_tasks_and_a_chunk_that_cuts_them() {
 /// out, instead of ending short.
 #[tokio::test]
 async fn ties_without_an_id_key_are_an_error_with_the_hint_not_a_short_scan() {
-    let source: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let source: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     let plain = TaskRepo::new(source.clone(), ME);
     for i in 0..5 {
         let mut t = Task::new(format!("t{i}"));
@@ -85,7 +97,11 @@ async fn ties_without_an_id_key_are_an_error_with_the_hint_not_a_short_scan() {
     }
     let objects = source.query(&Query::new().of_type("Task")).await.unwrap();
     let fixed = objects[0].envelope.published;
-    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let store: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     for mut o in objects {
         o.envelope.published = fixed;
         o.index.remove("id_key");

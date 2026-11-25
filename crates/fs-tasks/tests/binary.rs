@@ -198,7 +198,7 @@ fn it_refuses_an_instance_that_is_no_domain() {
 }
 
 #[test]
-fn it_refuses_bad_arguments_and_a_data_directory_others_can_read() {
+fn it_refuses_bad_arguments_and_a_data_path_that_is_no_folder() {
     let run = |args: &[&str]| {
         Command::new(env!("CARGO_BIN_EXE_fs-tasks"))
             .arg("serve")
@@ -216,11 +216,10 @@ fn it_refuses_bad_arguments_and_a_data_directory_others_can_read() {
         Some(2)
     );
 
-    // A folder named with `--data` that others can read is refused, not corrected (see `tests/datadir.rs`).
+    // A path named with `--data` that is no folder is refused (an open folder is tightened by the transport, see `tests/datadir.rs`).
     let dir = tempfile::tempdir().unwrap();
     let open = dir.path().join("open");
-    std::fs::create_dir(&open).unwrap();
-    std::fs::set_permissions(&open, PermissionsExt::from_mode(0o755)).unwrap();
+    std::fs::write(&open, b"x").unwrap();
     let socket = dir.path().join("x.sock");
     let (socket, open) = (socket.to_str().unwrap(), open.to_str().unwrap());
     assert_eq!(run(&["--socket", socket, "--data", open]), Some(1));

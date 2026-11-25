@@ -57,7 +57,11 @@ impl TaskListener for Log {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_reopen_during_the_judgement_of_a_completion_announces_nothing() {
-    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let store: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     let fast = TaskRepo::new(store.clone(), ME);
     let mut x = Task::new("x");
     x.uid = "x".into();
@@ -116,7 +120,11 @@ async fn a_reopen_during_the_judgement_of_a_completion_announces_nothing() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_call_returns_only_after_its_own_announcement_was_sent() {
     for _round in 0..8 {
-        let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+        let store: Arc<dyn Store> = Arc::new(
+            TursoStore::open_with(":memory:", fs_objects::testing::options())
+                .await
+                .unwrap(),
+        );
         let fast = TaskRepo::new(store.clone(), ME);
         let mut firsts = Vec::new();
         let mut seconds = Vec::new();
@@ -161,7 +169,11 @@ async fn a_call_returns_only_after_its_own_announcement_was_sent() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn two_writers_freeing_one_task_announce_it_once() {
     for _round in 0..8 {
-        let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+        let store: Arc<dyn Store> = Arc::new(
+            TursoStore::open_with(":memory:", fs_objects::testing::options())
+                .await
+                .unwrap(),
+        );
         let fast = TaskRepo::new(store.clone(), ME);
         let mut xs = Vec::new();
         for name in ["x", "y"] {

@@ -22,7 +22,11 @@ pub async fn repo() -> TaskRepo {
 
 /// The repository and a handle to its store (for undo and count checks).
 pub async fn setup() -> (TaskRepo, Arc<dyn Store>) {
-    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let store: Arc<dyn Store> = Arc::new(
+        TursoStore::open_with(":memory:", fs_objects::testing::options())
+            .await
+            .unwrap(),
+    );
     (TaskRepo::new(store.clone(), ME), store)
 }
 

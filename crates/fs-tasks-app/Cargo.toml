@@ -26,6 +26,7 @@ serde_json = "1"
 tokio = { version = "1", features = ["rt-multi-thread"] }
 
 [dev-dependencies]
+fs-objects = { git = "https://github.com/FreeSynergy-Net/fs-objects", rev = "e38093f1ec61b7c9faaa6f6046f65addb11dcf46", version = "0.0.11", features = ["testing"] }
 tempfile = "3"
 async-trait = "0.1"
 fs-components-render = { git = "https://github.com/FreeSynergy-Net/fs-components", rev = "9ab4ac280fb2354d41fdbc15bdbed92664a016de", version = "0.1.0" }

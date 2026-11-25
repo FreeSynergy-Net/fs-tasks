@@ -109,9 +109,14 @@ fn a_big_store_is_renewed_in_the_background_and_the_old_picture_serves_meanwhile
     );
     assert_eq!(s.rows(&RowQuery::default(), 0, 5).unwrap().len(), 5);
     let until = Instant::now() + Duration::from_secs(120);
-    while told.load(Ordering::SeqCst) == 0 && Instant::now() < until {
+    // Wait for the renewed picture itself, not for the first notice: a notice may belong to the first load, which
+    // runs in the background and can end after `on_change` is set (a slow runner saw 700 instead of 701).
+    while cache.current().unwrap().entries.len() != big + 1 && Instant::now() < until {
         std::thread::sleep(Duration::from_millis(50));
     }
-    assert_eq!(told.load(Ordering::SeqCst), 1, "the window is told once");
     assert_eq!(cache.current().unwrap().entries.len(), big + 1);
+    assert!(
+        told.load(Ordering::SeqCst) >= 1,
+        "the window is told at least once"
+    );
 }

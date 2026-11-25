@@ -1,7 +1,7 @@
 # cargo-nextest profiles for fs-tasks (workflow testlauf, CLAUDE.md §4: little but often). Naming convention as fs-forms/fs-components.
 # Geprüft mit `cargo nextest list` (C4 Batch 3). Zuordnung nach Binary-Namen.
 # Stufen: quick (Unit/Modell, ohne picture) | picture (gezeichnete Bilder, GPU/Software-Vulkan, nie in quick) | release (nur CI, alles).
-# Weitere Stufen (time/socket/security/platform) bewusst nicht definiert: kein belegter eindeutiger Treffer; Handprüfung siehe BERICHT-nextest-b3.md.
+# time, security, socket, platform deliberately NOT defined (checked with `nextest list --all-features`, 445 tests): time -- perf*, hang, slow, cancel, *race are time-dependent but have no stress marker in the name and no measured need; security -- fs-tasks-core::actors is claims/assignment, no rights (C3 review), no restricted|security test; platform -- datadir checks folder modes (0755) on every OS, only the hang/group tests are cfg(unix) and sit in no unique binary set. Revisit when a test earns the stage.
 
 [profile.default]
 fail-fast = false

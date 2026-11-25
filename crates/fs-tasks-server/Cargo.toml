@@ -26,6 +26,7 @@ tokio = { version = "1", features = ["rt", "sync", "time", "net", "signal"] }
 rustix = { version = "1", features = ["process", "fs", "param"] }
 
 [dev-dependencies]
+fs-interfaces = { git = "https://github.com/FreeSynergy-Net/fs-interfaces", rev = "83b96e30ae3f8a04a222fa5a34dc4ad29306cdf2", version = "0.2.0", features = ["fake"] }
 fs-objects = { git = "https://github.com/FreeSynergy-Net/fs-objects", rev = "e38093f1ec61b7c9faaa6f6046f65addb11dcf46", version = "0.0.11", features = ["testing"] }
 tempfile = "3"
 uuid = "1"

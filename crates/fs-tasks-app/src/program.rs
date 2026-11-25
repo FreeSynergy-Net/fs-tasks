@@ -5,6 +5,8 @@
 
 use std::sync::Arc;
 
+use fs_interfaces::owner::LocalOwner;
+
 use crate::args::{Args, HELP, Plan, parse};
 use crate::frontend::{Frontend, Preference};
 use crate::frontends::{FrontendOptions, Frontends};
@@ -24,10 +26,10 @@ use fs_tasks_server::{Changes, Lang, StartError};
 /// never silent: it goes to stderr as code and parameters plus the sentence; the exit code is 1, or 3 when the server
 /// holds the socket and does not answer (then a window says it and asks whether to end it, if a window is possible).
 #[must_use]
-pub fn app_command(argv: &[String]) -> i32 {
+pub fn app_command(argv: &[String], owner: &dyn LocalOwner) -> i32 {
     // After "yes" the server was ended: one more try, no more (a server that is silent again is the person's to look at).
     for attempt in 0..2 {
-        match run(argv) {
+        match run(argv, owner) {
             Ok(()) => return 0,
             Err(OpenError::Text(message)) => {
                 eprintln!("fs-tasks: {message}");
@@ -69,7 +71,7 @@ fn settings_file(args: &Args) -> Option<std::path::PathBuf> {
     data_dir().map(|dir| dir.join("settings.json"))
 }
 
-fn run(argv: &[String]) -> Result<(), OpenError> {
+fn run(argv: &[String], owner: &dyn LocalOwner) -> Result<(), OpenError> {
     // The typing test reads what is typed into the fields: the registry must be on BEFORE the first field is made, so
     // before the window is built. A debug-only feature, off in a release.
     #[cfg(feature = "test-access")]
@@ -80,7 +82,7 @@ fn run(argv: &[String]) -> Result<(), OpenError> {
         return Ok(());
     }
     let runtime = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    let opened = open(&options, &runtime)?;
+    let opened = open(&options, &runtime, owner)?;
     let items = opened.items;
     let handle = runtime.handle().clone();
 

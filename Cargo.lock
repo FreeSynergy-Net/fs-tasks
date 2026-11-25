@@ -1742,6 +1742,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs-person"
+version = "0.0.1"
+source = "git+https://github.com/FreeSynergy-Net/fs-modules-person?rev=eee2508abffa278bf22f6987393f44139884300f#eee2508abffa278bf22f6987393f44139884300f"
+dependencies = [
+ "async-trait",
+ "fs-interfaces",
+ "fs-objects",
+ "fs-types",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "fs-person-service"
+version = "0.0.1"
+source = "git+https://github.com/FreeSynergy-Net/fs-modules-person?rev=eee2508abffa278bf22f6987393f44139884300f#eee2508abffa278bf22f6987393f44139884300f"
+dependencies = [
+ "capnp",
+ "capnp-rpc",
+ "fs-interfaces",
+ "fs-objects",
+ "fs-person",
+ "fs-rpc",
+ "fs-types",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "fs-rpc"
 version = "0.1.4"
 source = "git+https://github.com/FreeSynergy-Net/fs-rpc?rev=56f5cc399bbbb566f74d59d4c5b76005ce653697#56f5cc399bbbb566f74d59d4c5b76005ce653697"
@@ -1776,6 +1805,8 @@ name = "fs-tasks"
 version = "0.0.10"
 dependencies = [
  "fs-interfaces",
+ "fs-objects",
+ "fs-person-service",
  "fs-rpc",
  "fs-tasks-app",
  "fs-tasks-cli",
@@ -1829,7 +1860,6 @@ dependencies = [
  "fs-interfaces",
  "fs-jscalendar",
  "fs-objects",
- "fs-types",
  "serde",
  "serde_json",
  "tempfile",

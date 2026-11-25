@@ -31,7 +31,6 @@ pub mod ical;
 mod interface;
 pub mod lists;
 pub mod model;
-mod owner;
 pub mod plan;
 mod repo;
 mod revision;
@@ -46,7 +45,6 @@ pub use interface::{
     TaskChange, TaskEntry, TaskFeed, TaskItems, TaskListener, TaskPage, TaskQuery,
 };
 pub use model::{Participant, RecurrenceRule, Relation, Task};
-pub use owner::store_owner;
 pub use repo::{CONTENT_TYPE, CONTEXT, IndexReport, TASK_TYPE, TaskRepo};
 pub use revision::Revision;
 pub use time::{Zone, parse_utc as utc};

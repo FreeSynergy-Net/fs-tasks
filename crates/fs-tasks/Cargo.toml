@@ -18,14 +18,43 @@ default = ["gui"]
 gui = ["dep:fs-tasks-app"]
 # The text of the fields can be read by the typing test (debug builds only, see fs-tasks-app).
 test-access = ["gui", "fs-tasks-app/test-access"]
+# A FIXED owner instead of the person "me" of the module person: for the tests that run the program as a process. Never shipped.
+fake-owner = ["fs-interfaces/fake"]
 
 [dependencies]
 fs-tasks-server = { path = "../fs-tasks-server", version = "0.0.10" }
 fs-tasks-cli = { path = "../fs-tasks-cli", version = "0.0.10" }
+fs-interfaces = { git = "https://github.com/FreeSynergy-Net/fs-interfaces", rev = "83b96e30ae3f8a04a222fa5a34dc4ad29306cdf2", version = "0.2.0" }
+fs-objects = { git = "https://github.com/FreeSynergy-Net/fs-objects", rev = "e38093f1ec61b7c9faaa6f6046f65addb11dcf46", version = "0.0.11" }
+# The owner is the person "me" of the module person, asked from its service and never made up.
+fs-person-service = { git = "https://github.com/FreeSynergy-Net/fs-modules-person", rev = "eee2508abffa278bf22f6987393f44139884300f", version = "0.0.1", features = ["client"] }
 fs-tasks-app = { path = "../fs-tasks-app", version = "0.0.10", optional = true }
 
 [dev-dependencies]
-fs-interfaces = { git = "https://github.com/FreeSynergy-Net/fs-interfaces", rev = "83b96e30ae3f8a04a222fa5a34dc4ad29306cdf2", version = "0.2.0" }
 fs-rpc = { git = "https://github.com/FreeSynergy-Net/fs-rpc", rev = "56f5cc399bbbb566f74d59d4c5b76005ce653697", version = "0.1.4" }
 tokio = { version = "1", features = ["full"] }
 tempfile = "3"
+
+[[test]]
+name = "dispatch"
+required-features = ["fake-owner"]
+
+[[test]]
+name = "window"
+required-features = ["fake-owner"]
+
+[[test]]
+name = "hang"
+required-features = ["fake-owner"]
+
+[[test]]
+name = "worker"
+required-features = ["fake-owner"]
+
+[[test]]
+name = "binary"
+required-features = ["fake-owner"]
+
+[[test]]
+name = "datadir"
+required-features = ["fake-owner"]

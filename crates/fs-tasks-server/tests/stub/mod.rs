@@ -33,12 +33,15 @@ pub fn stub_main() {
         return;
     };
     if let Some(data) = std::env::var_os(SERVE) {
-        let code = fs_tasks_server::serve_command([
-            "--socket".into(),
-            socket.into_os_string(),
-            "--data".into(),
-            data,
-        ]);
+        let code = fs_tasks_server::serve_command(
+            [
+                "--socket".into(),
+                socket.into_os_string(),
+                "--data".into(),
+                data,
+            ],
+            &fs_interfaces::owner::fake::FixedOwner(fs_interfaces::owner::fake::sample()),
+        );
         std::process::exit(code);
     }
     let mut name = socket.clone().into_os_string();

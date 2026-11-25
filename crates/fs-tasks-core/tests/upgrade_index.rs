@@ -6,7 +6,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use fs_objects::{Envelope, OpenOptions, Store, StoredObject, TursoStore};
+use fs_objects::{Envelope, Store, StoredObject, TursoStore};
 use fs_tasks_core::{Error, TaskItems, TaskQuery, TaskRepo};
 
 const ME: &str = "https://local.invalid/users/owner";
@@ -21,12 +21,9 @@ fn copy_fixture(to: &Path) -> std::path::PathBuf {
 
 async fn open(path: &Path) -> (TaskRepo, Arc<dyn Store>) {
     let store: Arc<dyn Store> = Arc::new(
-        TursoStore::open_with(
-            path,
-            OpenOptions::default().with_owner(fs_tasks_core::store_owner(ME).unwrap()),
-        )
-        .await
-        .unwrap(),
+        TursoStore::open_with(path, fs_objects::testing::options())
+            .await
+            .unwrap(),
     );
     (TaskRepo::new(store.clone(), ME), store)
 }

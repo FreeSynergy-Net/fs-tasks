@@ -7,9 +7,27 @@
 
 use std::ffi::OsString;
 
+#[cfg_attr(feature = "fake-owner", allow(dead_code))]
+mod person_owner;
+
 fn main() {
     let words: Vec<String> = std::env::args().skip(1).collect();
-    std::process::exit(dispatch(&words));
+    let running = std::env::current_exe().unwrap_or_default();
+    std::process::exit(dispatch(&words, &*source(&running)));
+}
+
+/// The source of the local owner: the person "me" of the module `person` (a test build with the feature `fake-owner`
+/// answers a fixed one; it is never shipped).
+#[cfg(not(feature = "fake-owner"))]
+fn source(running: &std::path::Path) -> Box<dyn fs_interfaces::owner::LocalOwner> {
+    person_owner::person_owner(running)
+}
+
+#[cfg(feature = "fake-owner")]
+fn source(_running: &std::path::Path) -> Box<dyn fs_interfaces::owner::LocalOwner> {
+    Box::new(fs_interfaces::owner::fake::FixedOwner(
+        fs_interfaces::owner::fake::sample(),
+    ))
 }
 
 /// Options only the window has; the command line does not know them.
@@ -30,20 +48,20 @@ const WINDOW_OPTIONS: [&str; 13] = [
     "--export-sensitive",
 ];
 
-fn dispatch(words: &[String]) -> i32 {
+fn dispatch(words: &[String], owner: &dyn fs_interfaces::owner::LocalOwner) -> i32 {
     match words.split_first() {
         Some((first, rest)) if first == "serve" => {
-            fs_tasks_server::serve_command(rest.iter().map(OsString::from))
+            fs_tasks_server::serve_command(rest.iter().map(OsString::from), owner)
         }
-        Some((first, rest)) if first == "app" => window(rest),
+        Some((first, rest)) if first == "app" => window(rest, owner),
         // The version, for people and for the package smoke test (`fs-tasks --version`): name, version, exit 0.
         Some((first, _)) if first == "--version" || first == "-V" => {
             println!("fs-tasks {}", env!("CARGO_PKG_VERSION"));
             0
         }
-        None => window(&[]),
+        None => window(&[], owner),
         // The window's own options may stand without the word `app` (`fs-tasks --size 1000x640`).
-        Some(_) if routes_to_window(words) => window(words),
+        Some(_) if routes_to_window(words) => window(words, owner),
         Some(_) => fs_tasks_cli::cli_command(words),
     }
 }
@@ -56,12 +74,12 @@ fn routes_to_window(words: &[String]) -> bool {
 }
 
 #[cfg(feature = "gui")]
-fn window(args: &[String]) -> i32 {
-    fs_tasks_app::app_command(args)
+fn window(args: &[String], owner: &dyn fs_interfaces::owner::LocalOwner) -> i32 {
+    fs_tasks_app::app_command(args, owner)
 }
 
 #[cfg(not(feature = "gui"))]
-fn window(args: &[String]) -> i32 {
+fn window(args: &[String], _owner: &dyn fs_interfaces::owner::LocalOwner) -> i32 {
     if args.is_empty() {
         println!("{}", fs_tasks_cli::HELP);
         0

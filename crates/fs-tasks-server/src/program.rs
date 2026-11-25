@@ -6,6 +6,7 @@
 use std::ffi::OsString;
 use std::sync::Arc;
 
+use fs_interfaces::owner::LocalOwner;
 use fs_objects::{OpenOptions, Store, TursoStore};
 use fs_rpc::{
     ServerIdentity, ServerOptions, default_data_dir, prepare_data_dir, run_until_signal_as,
@@ -18,10 +19,12 @@ use crate::datadir_text::{Lang, fault_text, tightened_text};
 
 const USAGE: &str = "fs-tasks serve [--socket PATH] [--data DIR] [--actor IRI] [--instance DOMAIN]\nDefaults: $XDG_RUNTIME_DIR/freesynergy/tasks.sock, $XDG_DATA_HOME/freesynergy/tasks, the local owner";
 
-/// Run the server with `args` (the words after `serve`); the exit code: 0 after a signal or `--help`,
+/// Pattern: Strategy (the source of the local owner is given from outside, `LocalOwner`, as in fs-modules-planning).
+/// Run the server with `args` (the words after `serve`) for the person `owner` names (read once, before anything is bound
+/// or opened; it is the owner of the store); the exit code: 0 after a signal or `--help`,
 /// 2 for a mistake in the arguments, 1 when serving failed.
 #[must_use]
-pub fn serve_command(args: impl IntoIterator<Item = OsString>) -> i32 {
+pub fn serve_command(args: impl IntoIterator<Item = OsString>, owner: &dyn LocalOwner) -> i32 {
     let options = match ServerOptions::parse("tasks", args) {
         Ok(Some(options)) => options,
         Ok(None) => {
@@ -31,6 +34,14 @@ pub fn serve_command(args: impl IntoIterator<Item = OsString>) -> i32 {
         Err(problem) => {
             eprintln!("fs-tasks serve: {problem}");
             return 2;
+        }
+    };
+    // Without a "me" the service does not start: there is no anonymous owner and no placeholder.
+    let owner = match owner.owner() {
+        Ok(owner) => owner,
+        Err(why) => {
+            eprintln!("fs-tasks serve: {why}");
+            return 1;
         }
     };
     let ServerOptions {
@@ -51,10 +62,9 @@ pub fn serve_command(args: impl IntoIterator<Item = OsString>) -> i32 {
         crate::early::until_signal(async move {
             correct_data_dir(&data)?;
             let data = prepare_data_dir(&data)?;
-            let owner = fs_tasks_core::store_owner(&actor).map_err(std::io::Error::other)?;
             let store = TursoStore::open_with(
                 data.join("objects.db"),
-                OpenOptions::default().with_owner(owner),
+                OpenOptions::default().with_owner(owner.clone()),
             )
             .await
             .map_err(std::io::Error::other)?;

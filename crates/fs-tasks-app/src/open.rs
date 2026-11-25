@@ -7,6 +7,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use fs_interfaces::owner::LocalOwner;
 use fs_objects::{OpenOptions, Store, TursoStore};
 use fs_rpc::default_socket;
 use fs_tasks_core::{TaskItems, TaskRepo};
@@ -122,10 +123,15 @@ fn client(args: &Args) -> Result<Opened, OpenError> {
 }
 
 /// A store in this process: `--store`, or memory (a picture, an export).
-fn own(args: &Args, runtime: &tokio::runtime::Runtime) -> Result<Opened, OpenError> {
+fn own(
+    args: &Args,
+    runtime: &tokio::runtime::Runtime,
+    owner: &dyn LocalOwner,
+) -> Result<Opened, OpenError> {
     let store: Arc<dyn Store> = runtime
         .block_on(async {
-            let owner = fs_tasks_core::store_owner(ACTOR)
+            let owner = owner
+                .owner()
                 .map_err(|e| fs_objects::Error::Invalid(e.to_string()))?;
             let options = OpenOptions {
                 allow_sensitive_unencrypted: args.store.is_none(),
@@ -168,11 +174,15 @@ fn own(args: &Args, runtime: &tokio::runtime::Runtime) -> Result<Opened, OpenErr
 ///
 /// # Errors
 /// The text says why the server or the store could not be reached.
-pub fn open(args: &Args, runtime: &tokio::runtime::Runtime) -> Result<Opened, OpenError> {
+pub fn open(
+    args: &Args,
+    runtime: &tokio::runtime::Runtime,
+    owner: &dyn LocalOwner,
+) -> Result<Opened, OpenError> {
     if is_client(args) {
         client(args)
     } else {
-        own(args, runtime)
+        own(args, runtime, owner)
     }
 }
 

@@ -17,11 +17,11 @@ test-access = ["fs-components-app/test-access"]
 fs-tasks-core = { path = "../fs-tasks-core", version = "0.0.10" }
 fs-tasks-server = { path = "../fs-tasks-server", version = "0.0.10" }
 fs-interfaces = { git = "https://github.com/FreeSynergy-Net/fs-interfaces", rev = "83b96e30ae3f8a04a222fa5a34dc4ad29306cdf2", version = "0.2.0" }
-fs-rpc = { git = "https://github.com/FreeSynergy-Net/fs-rpc", rev = "56f5cc399bbbb566f74d59d4c5b76005ce653697", version = "0.1.4" }
+fs-rpc = { git = "https://github.com/FreeSynergy-Net/fs-rpc", rev = "9585ed181fc98db7e504272f451a10245dca7f1a", version = "0.1.4" }
 fs-objects = { git = "https://github.com/FreeSynergy-Net/fs-objects", rev = "e38093f1ec61b7c9faaa6f6046f65addb11dcf46", version = "0.0.11" }
-fs-components-app = { git = "https://github.com/FreeSynergy-Net/fs-components", rev = "06a77a6a052b5fa23c81d81d0866ad0b59f8bec9", version = "0.1.0" }
-fs-components-widgets = { git = "https://github.com/FreeSynergy-Net/fs-components", rev = "06a77a6a052b5fa23c81d81d0866ad0b59f8bec9", version = "0.1.0" }
-fs-components-workbenches = { git = "https://github.com/FreeSynergy-Net/fs-components", rev = "06a77a6a052b5fa23c81d81d0866ad0b59f8bec9", version = "0.1.0" }
+fs-components-app = { git = "https://github.com/FreeSynergy-Net/fs-components", rev = "2ffa1c4d5caa90c9d2bbda6e471e4a979910ae90", version = "0.1.0" }
+fs-components-widgets = { git = "https://github.com/FreeSynergy-Net/fs-components", rev = "2ffa1c4d5caa90c9d2bbda6e471e4a979910ae90", version = "0.1.0" }
+fs-components-workbenches = { git = "https://github.com/FreeSynergy-Net/fs-components", rev = "2ffa1c4d5caa90c9d2bbda6e471e4a979910ae90", version = "0.1.0" }
 serde_json = "1"
 tokio = { version = "1", features = ["rt-multi-thread"] }
 
@@ -29,4 +29,4 @@ tokio = { version = "1", features = ["rt-multi-thread"] }
 fs-objects = { git = "https://github.com/FreeSynergy-Net/fs-objects", rev = "e38093f1ec61b7c9faaa6f6046f65addb11dcf46", version = "0.0.11", features = ["testing"] }
 tempfile = "3"
 async-trait = "0.1"
-fs-components-render = { git = "https://github.com/FreeSynergy-Net/fs-components", rev = "06a77a6a052b5fa23c81d81d0866ad0b59f8bec9", version = "0.1.0" }
+fs-components-render = { git = "https://github.com/FreeSynergy-Net/fs-components", rev = "2ffa1c4d5caa90c9d2bbda6e471e4a979910ae90", version = "0.1.0" }

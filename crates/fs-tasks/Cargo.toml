@@ -27,11 +27,11 @@ fs-tasks-cli = { path = "../fs-tasks-cli", version = "0.0.10" }
 fs-interfaces = { git = "https://github.com/FreeSynergy-Net/fs-interfaces", rev = "83b96e30ae3f8a04a222fa5a34dc4ad29306cdf2", version = "0.2.0" }
 fs-objects = { git = "https://github.com/FreeSynergy-Net/fs-objects", rev = "e38093f1ec61b7c9faaa6f6046f65addb11dcf46", version = "0.0.11" }
 # The owner is the person "me" of the module person, asked from its service and never made up.
-fs-person-service = { git = "https://github.com/FreeSynergy-Net/fs-modules-person", rev = "eee2508abffa278bf22f6987393f44139884300f", version = "0.0.1", features = ["client"] }
+fs-person-service = { git = "https://github.com/FreeSynergy-Net/fs-modules-person", rev = "36604aa5b9de34f3788be56607f9b5983079ce59", version = "0.0.1", features = ["client"] }
 fs-tasks-app = { path = "../fs-tasks-app", version = "0.0.10", optional = true }
 
 [dev-dependencies]
-fs-rpc = { git = "https://github.com/FreeSynergy-Net/fs-rpc", rev = "56f5cc399bbbb566f74d59d4c5b76005ce653697", version = "0.1.4" }
+fs-rpc = { git = "https://github.com/FreeSynergy-Net/fs-rpc", rev = "9585ed181fc98db7e504272f451a10245dca7f1a", version = "0.1.4" }
 tokio = { version = "1", features = ["full"] }
 tempfile = "3"
 

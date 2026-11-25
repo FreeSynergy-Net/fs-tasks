@@ -14,7 +14,7 @@ name = "fs_tasks_server"
 [dependencies]
 fs-tasks-core = { path = "../fs-tasks-core", version = "0.0.10", features = ["contract"] }
 fs-interfaces = { git = "https://github.com/FreeSynergy-Net/fs-interfaces", rev = "83b96e30ae3f8a04a222fa5a34dc4ad29306cdf2", version = "0.2.0" }
-fs-rpc = { git = "https://github.com/FreeSynergy-Net/fs-rpc", rev = "56f5cc399bbbb566f74d59d4c5b76005ce653697", version = "0.1.4" }
+fs-rpc = { git = "https://github.com/FreeSynergy-Net/fs-rpc", rev = "9585ed181fc98db7e504272f451a10245dca7f1a", version = "0.1.4" }
 fs-objects = { git = "https://github.com/FreeSynergy-Net/fs-objects", rev = "e38093f1ec61b7c9faaa6f6046f65addb11dcf46", version = "0.0.11" }
 capnp = "0.27"
 capnp-rpc = "0.27"

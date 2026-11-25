@@ -33,8 +33,8 @@ jobs:
       - uses: FreeSynergy-Net/fs-release/actions/setup-rust@18614536a722d87d889480b45c5a4a14528322e5
         with:
           cache-key: typing-test
-      - name: Build the window (debug, with the read-only text access of the test; the feature is refused in a release build)
-        run: cargo build --locked -p fs-tasks --features test-access
+      - name: Build the window (debug, with the read-only text access of the test and a fixed owner instead of the module person; both only in this test build)
+        run: cargo build --locked -p fs-tasks --features test-access,fake-owner
       - uses: FreeSynergy-Net/fs-release/actions/typing-test@18614536a722d87d889480b45c5a4a14528322e5
         with:
           app-binary: target/debug/fs-tasks

@@ -1,10 +1,10 @@
 # Blueprint of fs-tasks (schema 2, ADR 0099 addendum 2026-11-18). Data-only package;
-# the module is planning (fs-modules-planning, tag v0.0.5); the forms description lies in forms/.
+# the module is planning (fs-modules-planning, tag v0.0.8); the forms description lies in forms/.
 schema = 2
 
 [program]
 name = "tasks"
-version = "0.0.11"
+version = "0.0.12"
 skeleton = "0.1.0"
 capability = "tasks"
 summary = { en = "Tasks, dependencies and boards", de = "Aufgaben, Abhängigkeiten und Boards" }
@@ -20,7 +20,7 @@ provides = [{ contract = "dependency.evaluate", version = "0.1" }, { contract = 
 [[module]]
 name = "planning"
 kind = "standard"
-version = "0.0.5"
+version = "0.0.8"
 
 # Art 3: display only, named for the frontend manifest.
 [[module]]

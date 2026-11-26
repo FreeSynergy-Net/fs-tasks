@@ -25,9 +25,9 @@
 #                    The card itself does NOT show the people in charge: card-facts is full, no other card slot (offen).
 #   lane          -> NOT bound. In 1.4.0 `lane` is the BOARD of the card (unchanged), no longer the lane of the swimlane view.
 #   order         -> slot `order` order `rank` (read only, the sequence as shown)  BOUND
-#   move          -> slot `move` command `card.move`; writes column, after, before, lane (after/before by the module)  BOUND
+#   move          -> slot `drop` command `card.move`; writes column, after, before, lane (after/before by the module)  BOUND
 #   create        -> slot `quick-add` command `task.create`; needs title, column, lane  BOUND
-#   remove        -> slot `card-menu` command `task.delete`, confirm            BOUND
+#   remove        -> slot `menu` command `task.delete`, confirm            BOUND
 #   column-label  -> bound by the MODULE (catalog/forms.json, key `map`), no key in this file; NO slot to show it (block board has no label slot for the column name; board-column has part `name` only)   offen
 #   progress      -> (number, percentComplete) NO slot on block board/board-card (card-facts takes facts only; progress is a bar, not a fact)     offen
 #   time-zone     -> NO slot on the card (card-facts full); `due` stays an instant with Z, showing it in the zone is the host's job            offen
@@ -117,8 +117,8 @@ field = "progress"
 role = "compact"
 
 [[page.place.bind]]
-elem = "binding:board-swimlanes/main/card-menu/0"
-slot = "card-menu"
+elem = "binding:board-swimlanes/main/menu/0"
+slot = "menu"
 nth = 0
 command = "task.delete"
 
@@ -148,8 +148,8 @@ grouping = "assignee"
 source = 2
 
 [[page.place.bind]]
-elem = "binding:board-swimlanes/main/move/0"
-slot = "move"
+elem = "binding:board-swimlanes/main/drop/0"
+slot = "drop"
 nth = 0
 command = "card.move"
 
@@ -182,18 +182,21 @@ block = "partial-notice"
 # ---- actions: drop a card (move), entry row (create), delete (confirm: data is lost)
 [[action]]
 elem = "action:1"
+at = "block:board-swimlanes/main"
 trigger = "quick-add"
 source = 1
 command = "task.create"
 
 [[action]]
 elem = "action:2"
+at = "block:board-swimlanes/main"
 trigger = "drop"
 source = 1
 command = "card.move"
 
 [[action]]
 elem = "action:3"
+at = "block:board-swimlanes/main"
 trigger = "menu"
 source = 1
 command = "task.delete"

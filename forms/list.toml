@@ -331,13 +331,7 @@ nth = 0
 field = "privacy"
 role = "input"
 
-# ---- actions: a task is started from the menu (new task); an unsaved change blocks "new" (rule of the form, F-005)
-[[action]]
-elem = "action:1"
-trigger = "menu"
-source = 1
-command = "task.create"
-
+# ---- actions: "new task" is the menu entry menu:1.0 (a gesture without a place is no action); delete is a button of the page
 [[action]]
 elem = "action:2"
 trigger = "button"

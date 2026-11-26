@@ -87,6 +87,7 @@ text = "tasks-day-empty-text"
 # ---- actions: Enter in the entry line = create (F-009 analogue)
 [[action]]
 elem = "action:1"
+at = "block:day/add"
 trigger = "quick-add"
 source = 1
 command = "task.create"

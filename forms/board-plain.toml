@@ -47,8 +47,8 @@ field = "due"
 role = "compact"
 
 [[page.place.bind]]
-elem = "binding:board/main/card-menu/0"
-slot = "card-menu"
+elem = "binding:board/main/menu/0"
+slot = "menu"
 nth = 0
 command = "task.delete"
 
@@ -71,8 +71,8 @@ nth = 0
 grouping = "board"
 
 [[page.place.bind]]
-elem = "binding:board/main/move/0"
-slot = "move"
+elem = "binding:board/main/drop/0"
+slot = "drop"
 nth = 0
 command = "card.move"
 
@@ -99,18 +99,21 @@ text = "tasks-board-plain-empty-text"
 # actions: drag a card (move), entry row (create), delete (confirm: data is lost)
 [[action]]
 elem = "action:1"
+at = "block:board/main"
 trigger = "quick-add"
 source = 1
 command = "task.create"
 
 [[action]]
 elem = "action:2"
+at = "block:board/main"
 trigger = "drop"
 source = 1
 command = "card.move"
 
 [[action]]
 elem = "action:3"
+at = "block:board/main"
 trigger = "menu"
 source = 1
 command = "task.delete"

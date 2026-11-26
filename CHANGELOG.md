@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.0.12
+
 - 0.0.12 (data package, workflow release-flow): the descriptions of main 57ce3b44 are packed: `forms/board*.toml` and `day.toml` bind the gesture slots of contract 0.5.0 (`drop`, `menu`) and every `[[action]]` names its place with `at` (package 0.0.11 lacks `at` and is refused by the host since fs-interfaces 2354f440: `layout-error-action-invalid cause=at-missing`). `scaffold.toml`: program 0.0.12, module `planning` 0.0.8 (planning 0.0.8 needs the module person 0.0.3 and creates the anchor person at first start). Proven in a Fedora 45 container before the tag: `fs-starter --check-system --program tasks` red=0 (report `.scratch/sonnet/c1-inst-10-BERICHT.md`, attempt 7). Written with the help of Claude (Anthropic).
 - 0.0.12 (Daten-Paket, Workflow release-flow): gepackt sind die Beschreibungen von main 57ce3b44: `forms/board*.toml` und `day.toml` binden die Gesten-Slots des Vertrags 0.5.0 (`drop`, `menu`), und jede `[[action]]` nennt ihren Ort mit `at` (Paket 0.0.11 hat kein `at` und wird vom Host seit fs-interfaces 2354f440 abgelehnt: `layout-error-action-invalid cause=at-missing`). `scaffold.toml`: Programm 0.0.12, Modul `planning` 0.0.8 (planning 0.0.8 braucht das Modul person 0.0.3 und legt die Anker-Person beim ersten Start an). Vor dem Tag im Fedora-45-Container belegt: `fs-starter --check-system --program tasks` red=0 (Bericht `.scratch/sonnet/c1-inst-10-BERICHT.md`, Anlauf 7). Mit Hilfe von Claude (Anthropic) geschrieben.
 

@@ -4,7 +4,7 @@ fs-tasks is a **data package**: it holds no program code. Tasks, dependencies an
 `planning` (repo `fs-modules-planning`, owner of the JSCalendar `Task`, RFC 8984); the program is the description of
 how to show them.
 
-- `scaffold.toml` – the blueprint: program `tasks`, the module `planning` (0.0.5), the display components.
+- `scaffold.toml` – the blueprint: program `tasks`, the module `planning` (0.0.8), the display components.
 - `forms/` – the frontends as forms descriptions (board, list, day and board variants).
 - `styles/` – style data of the frontends.
 - `docs/worker-protocol.md` – the old worker protocol (kept until card M6 moves it to fs-documentation).
